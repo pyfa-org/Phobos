@@ -16,11 +16,6 @@ from phobos.writer.jsonWriter import JsonWriter
 from phobos.remoteSvc import discover as discoverSvc
 from phobos.rowSetProcessor import RowSetProcessor
 
-def processRowSet(tableName, rowSet, output, indent):
-	print("processing {}".format(tableName))
-	header, lines = RowSetProcessor(tableName, rowSet).run()
-	JsonWriter(tableName, header, lines, output, 4 if args.indent else None).run()
-
 if __name__ == "__main__":
 	try:
 		major = sys.version_info.major
@@ -42,11 +37,17 @@ if __name__ == "__main__":
 	parser.add_argument("-t", "--tables", help="comma-separated list of table names to dump (all tables are dumped by default)")
 	args = parser.parse_args()
 
-	# Initialize reverence object, get tables and write them out to json
+	# Needed args & helpers
 	eve = blue.EVE(args.eve, cachepath=args.cache, server=args.server)
 	cfg = eve.getconfigmgr()
 	indent = 4 if args.indent else None
 	output = args.output
+
+	# Helper function
+	def processRowSet(tableName, rowSet):
+		print("processing {}".format(tableName))
+		header, lines = RowSetProcessor(tableName, rowSet).run()
+		JsonWriter(tableName, header, lines, output, 4 if args.indent else None).run()
 
 	# If -t is present, only dump the specified tables
 	if(args.tables != None):
@@ -54,10 +55,10 @@ if __name__ == "__main__":
 			try:
 				t = tableName.split("_", 2)
 				if(len(t) == 2):
-					rowSet = getattr(eve.RemoveSvc(t[0]), t[1])()
+					rowSet = getattr(eve.RemoteSvc(t[0]), t[1])()
 				else:
 					rowSet = getattr(cfg, t[0])
-				processRowSet(tableName, rowSet, output, indent)
+				processRowSet(tableName, rowSet)
 			except:
 				print("failed to process {}".format(tableName))
 	else:
@@ -65,7 +66,7 @@ if __name__ == "__main__":
 		for tableName in cfg.tables:
 			try:
 				rowSet = getattr(cfg, tableName)
-				processRowSet(tableName, rowSet, output, indent)
+				processRowSet(tableName, rowSet)
 			except:
 				print("failed to process {}".format(tableName))
 
@@ -74,15 +75,8 @@ if __name__ == "__main__":
 			tableName = "{}_{}".format(service, call)
 			try:
 				rowSet = getattr(eve.RemoveSvc(service), call)()
-				processRowSet(tableName, rowSet, output, indent)
+				processRowSet(tableName, rowSet)
 			except:
 				print("failed to process {}".format(tableName))
 
-	"""
-	#Debug code
-	from reverence import blue
-	from eve2sql.processor.rowSetProcessor import RowSetProcessor
-	eve = blue.EVE(args.eve, cachepath=args.cache, server=args.server)
-	rowSet = getattr(eve.RemoteSvc("agentMgr"), "GetAgentsInSpace")()
-	RowSetProcessor("agentMgr_GetAgentsInSpace", rowSet).run()
-	"""
+	print("all done")
