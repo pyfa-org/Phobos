@@ -45,8 +45,8 @@ if __name__ == "__main__":
 		try:
 			rowSet = getattr(cfg, tableName)
 			header, lines = RowSetProcessor(tableName, rowSet).run()
-		except IOError:
-			print("failed to read {}".format(tableName))
+		except:
+			print("failed to process {}".format(tableName))
 		else:
 			JsonWriter(tableName, header, lines, args.output).run()
 
@@ -57,8 +57,8 @@ if __name__ == "__main__":
 		try:
 			rowSet = getattr(eve.RemoteSvc(service), call)()
 			header, lines = RowSetProcessor(tableName, rowSet).run()
-		except IOError:
-			print("Failed to read {}".format(tableName))
+		except:
+			print("Failed to process {}".format(tableName))
 		else:
 			JsonWriter(tableName, header, lines, args.output, indent=4 if args.indent else None).run()
 
