@@ -74,7 +74,7 @@ if __name__ == "__main__":
 		for service, call in discoverSvc(eve):
 			tableName = "{}_{}".format(service, call)
 			try:
-				rowSet = getattr(eve.RemoveSvc(service), call)()
+				rowSet = getattr(eve.RemoteSvc(service), call)()
 				processRowSet(tableName, rowSet)
 			except:
 				print("failed to process {}".format(tableName))
