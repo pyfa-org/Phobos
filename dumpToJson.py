@@ -45,10 +45,9 @@ if __name__ == "__main__":
 		try:
 			rowSet = getattr(cfg, tableName)
 			header, lines = RowSetProcessor(tableName, rowSet).run()
+			JsonWriter(tableName, header, lines, args.output).run()
 		except:
 			print("failed to process {}".format(tableName))
-		else:
-			JsonWriter(tableName, header, lines, args.output).run()
 
 	# Process remote service calls
 	for service, call in discoverSvc(eve):
@@ -57,10 +56,9 @@ if __name__ == "__main__":
 		try:
 			rowSet = getattr(eve.RemoteSvc(service), call)()
 			header, lines = RowSetProcessor(tableName, rowSet).run()
-		except:
-			print("Failed to process {}".format(tableName))
-		else:
 			JsonWriter(tableName, header, lines, args.output, indent=4 if args.indent else None).run()
+		except:
+			print("Failed to process {}".format(tableName))-
 
 	"""
 	#Debug code
