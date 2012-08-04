@@ -122,7 +122,7 @@ class FilterRowSet(Row):
 class FsdLoader(RowSetProcessor):
 	"""FSD loader"""
 	def getHeader(self):
-		return self.rowSet.schema['valueTypes']['attributes'].keys()
+		return self.rowSet.schema['valueTypes']['attributes'].keys() + ['id']
 
 	def getLines(self, header):
 		data = []
@@ -132,7 +132,7 @@ class FsdLoader(RowSetProcessor):
 		# The headerdata acts as an index through which we can loop to get all valid keys
 		for info in index:
 			datarow = {}
-			id = datarow['id'] = info['key']
+			id = info['key']
 			for k in header:
 				# Sadly, No get method is available
 				try:
@@ -140,7 +140,8 @@ class FsdLoader(RowSetProcessor):
 				except KeyError:
 					datarow[k] = None
 
-			if len(datarow) > 1:
+			if len(datarow) > 0:
+				datarow['id'] = id
 				data.append(datarow)
 
 		return data

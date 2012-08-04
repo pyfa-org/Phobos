@@ -67,6 +67,8 @@ if __name__ == "__main__":
 			try:
 				rowSet = getattr(cfg, tableName)
 				processRowSet(tableName, rowSet)
+			except KeyboardInterrupt:
+				raise
 			except:
 				print("failed to process {}".format(tableName))
 
@@ -76,6 +78,8 @@ if __name__ == "__main__":
 			try:
 				rowSet = getattr(eve.RemoteSvc(service), call)()
 				processRowSet(tableName, rowSet)
+			except KeyboardInterrupt:
+				raise
 			except:
 				print("failed to process {}".format(tableName))
 
