@@ -12,24 +12,46 @@ import reverence.fsd
 from reverence.blue import DBRow
 from phobos.writer.jsonWriter import JsonWriter
 from copy import copy
+from reverence.config import _localized
+
 
 class RowSetProcessor:
 	"""Main row set processing class"""
 	__metaclass__ = ABCMeta
 
-	def __new__(cls, tableName, rowSet):
+	def __new__(cls, tableName, rowSet, cfg):
 		typeId = getattr(rowSet, '__guid__', type(rowSet))
-		return object.__new__(typeMap.get(typeId, Row), tableName, rowSet)
+		return object.__new__(typeMap.get(typeId, Row), tableName, rowSet, cfg)
 
-	def __init__(self, tableName, rowSet):
+	def __init__(self, tableName, rowSet, cfg):
 		self.rowSet = rowSet
 		self.tableName = tableName
+		self.cfg = cfg
 
 	def run(self):
 		guid = getattr(self.rowSet, "__guid__", None)
+		cfg = self.cfg
 
 		header = self.getHeader()
 		lines = self.getLines(header)
+
+		# Process localizations
+		for k in header:
+			warned = False
+			# If the key ends with ID and we have an identical key that doesn't, we need to grab a translation
+			if k[-2:] == "ID":
+				if k[:-2] in header:
+					# Both keys exist, grab localizations
+					# First, figure out what ids we need to change data at
+					localIdIdx = header.index(k)
+					textIdx = header.index(k[:-2])
+					for line in lines:
+						try:
+							line[textIdx] = self.cfg._localization.GetByMessageID(line[localIdIdx])[0]
+						except:
+							if not warned:
+								print("Translation failed on {}[{}]".format(self.tableName, k))
+								warned = True
 
 		return header, lines
 

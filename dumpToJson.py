@@ -35,10 +35,11 @@ if __name__ == "__main__":
 	parser.add_argument("-o", "--output", help="Output folder for the json files", required=True)
 	parser.add_argument("-i", "--indent", action="store_true", help="Use pretty indentation for json files", default=False)
 	parser.add_argument("-t", "--tables", help="comma-separated list of table names to dump (all tables are dumped by default)")
+	parser.add_argument("-l", "--language", help="Which language to dump in. Suggested values: de, ru, en-us, ja, zh, fr, it, es", default="en-us")
 	args = parser.parse_args()
 
 	# Needed args & helpers
-	eve = blue.EVE(args.eve, cachepath=args.cache, server=args.server)
+	eve = blue.EVE(args.eve, cachepath=args.cache, server=args.server, languageID=args.language)
 	cfg = eve.getconfigmgr()
 	indent = 4 if args.indent else None
 	output = args.output
@@ -46,7 +47,7 @@ if __name__ == "__main__":
 	# Helper function
 	def processRowSet(tableName, rowSet):
 		print("processing {}".format(tableName))
-		header, lines = RowSetProcessor(tableName, rowSet).run()
+		header, lines = RowSetProcessor(tableName, rowSet, cfg).run()
 		JsonWriter(tableName, header, lines, output, 4 if args.indent else None).run()
 
 	# If -t is present, only dump the specified tables
