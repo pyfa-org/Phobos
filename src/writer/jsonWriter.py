@@ -8,7 +8,7 @@ included with the distribution).
 """
 
 import json
-import os.path
+import os
 
 class JsonWriter:
 	"""Json writer, takes input from the rowSetProcessor and writes it out to json files in the given folder, one file per table"""
@@ -32,5 +32,6 @@ class JsonWriter:
 			except:
 				print(line)
 				raise
-
+		if not os.path.exists(self.folder):
+			os.makedirs(self.folder, mode=0o755)
 		json.dump(dataList, open(os.path.join(self.folder, "{}.json".format(self.tableName)), "w"), indent=self.indent, encoding='cp1252')

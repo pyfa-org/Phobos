@@ -7,14 +7,21 @@ This code is free software; you can redistribute it and/or modify
 it under the terms of the BSD license (see the file LICENSE.txt
 included with the distribution).
 """
+
+
 import argparse
+import os.path
 import sys
+from ConfigParser import ConfigParser
+from datetime import datetime
+from time import mktime
 
 from reverence import blue
 
 from phobos.writer.jsonWriter import JsonWriter
 from phobos.remoteSvc import discover as discoverSvc
 from phobos.rowSetProcessor import RowSetProcessor
+
 
 if __name__ == "__main__":
 	try:
@@ -30,7 +37,6 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="This scripts dumps effects from an sqlite cache dump to mongo")
 	parser.add_argument("-e", "--eve", help="path to eve folder", required=True)
 	parser.add_argument("-c", "--cache", help="path to eve cache folder", required=True)
-	parser.add_argument("-d", "--dump", help="path to SQLite dump file, including file name")
 	parser.add_argument("-s", "--server", default='tranquility', help="If we're dealing with a singularity cache")
 	parser.add_argument("-o", "--output", help="Output folder for the json files", required=True)
 	parser.add_argument("-i", "--indent", action="store_true", help="Use pretty indentation for json files", default=False)
@@ -39,16 +45,38 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	# Needed args & helpers
-	eve = blue.EVE(args.eve, cachepath=args.cache, server=args.server, languageID=args.language)
+	evePath = os.path.expanduser(args.eve)
+	cachePath = os.path.expanduser(args.cache)
+	outPath = os.path.expanduser(args.output)
+
+	eve = blue.EVE(evePath, cachepath=cachePath, server=args.server, languageID=args.language)
 	cfg = eve.getconfigmgr()
 	indent = 4 if args.indent else None
-	output = args.output
 
 	# Helper function
 	def processRowSet(tableName, rowSet):
 		print("processing {}".format(tableName))
 		header, lines = RowSetProcessor(tableName, rowSet, cfg).run()
-		JsonWriter(tableName, header, lines, output, 4 if args.indent else None).run()
+		JsonWriter(tableName, header, lines, outPath, 4 if args.indent else None).run()
+
+	def processMetadata():
+		tableName = "metadata"
+		print("processing {}".format(tableName))
+		# Read client version
+		header = ["fieldName", "fieldValue"]
+		lines = []
+		try:
+			config = ConfigParser()
+			config.read(os.path.join(evePath, "common.ini"))
+			eveVersion = config.getint("main", "build")
+		except:
+			print("failed to detect client version")
+			eveVersion = None
+		lines.append({"fieldName": "clientBuild", "fieldValue": eveVersion})
+		# Generate UNIX-style timestamp of current UTC time
+		timestamp = int(mktime(datetime.utcnow().timetuple()))
+		lines.append({"fieldName": "dumpTime", "fieldValue": timestamp})
+		JsonWriter(tableName, header, lines, outPath, 4 if args.indent else None).run()
 
 	# If -t is present, only dump the specified tables
 	if(args.tables != None):
@@ -60,6 +88,8 @@ if __name__ == "__main__":
 				else:
 					rowSet = getattr(cfg, t[0])
 				processRowSet(tableName, rowSet)
+			except KeyboardInterrupt:
+				raise
 			except:
 				print("failed to process {}".format(tableName))
 	else:
@@ -83,5 +113,7 @@ if __name__ == "__main__":
 				raise
 			except:
 				print("failed to process {}".format(tableName))
+
+	processMetadata()
 
 	print("all done")
