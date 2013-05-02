@@ -14,23 +14,23 @@ from reverence import blue
 _join = os.path.join
 
 def _readfile(filename):
-	with open(filename, "rb") as f:
-		return f.read()
+    with open(filename, "rb") as f:
+        return f.read()
 
 def discover(eve):
-	"""
-	Discover available remote service calls from cache fails.
-	A call being listed here will not necessarily succeed
-	"""
-	cache = eve.getcachemgr()
+    """
+    Discover available remote service calls from cache fails.
+    A call being listed here will not necessarily succeed
+    """
+    cache = eve.getcachemgr()
 
-	s = set()
-	for filename in glob.glob(_join(cache.machocachepath, 'CachedMethodCalls', '*.cache')):
-		info, data = blue.marshal.Load(_readfile(filename))
-		service, call = info[0:2]
-		if isinstance(service, tuple):
-			service = service[0]
+    s = set()
+    for filename in glob.glob(_join(cache.machocachepath, 'CachedMethodCalls', '*.cache')):
+        info, data = blue.marshal.Load(_readfile(filename))
+        service, call = info[0:2]
+        if isinstance(service, tuple):
+            service = service[0]
 
-		s.add((service, call))
+        s.add((service, call))
 
-	return s
+    return s

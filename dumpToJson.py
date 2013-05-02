@@ -24,96 +24,96 @@ from phobos.rowSetProcessor import RowSetProcessor
 
 
 if __name__ == "__main__":
-	try:
-		major = sys.version_info.major
-		minor = sys.version_info.minor
-	except AttributeError:
-		major = sys.version_info[0]
-		minor = sys.version_info[1]
-	if major != 2 or minor < 7:
-		sys.stderr.write("This application requires Python 2.7 to run, but {0}.{1} was used\n".format(major, minor))
-		sys.exit()
+    try:
+        major = sys.version_info.major
+        minor = sys.version_info.minor
+    except AttributeError:
+        major = sys.version_info[0]
+        minor = sys.version_info[1]
+    if major != 2 or minor < 7:
+        sys.stderr.write("This application requires Python 2.7 to run, but {0}.{1} was used\n".format(major, minor))
+        sys.exit()
 
-	parser = argparse.ArgumentParser(description="This scripts dumps effects from an sqlite cache dump to mongo")
-	parser.add_argument("-e", "--eve", help="path to eve folder", required=True)
-	parser.add_argument("-c", "--cache", help="path to eve cache folder", required=True)
-	parser.add_argument("-s", "--server", default='tranquility', help="If we're dealing with a singularity cache")
-	parser.add_argument("-o", "--output", help="Output folder for the json files", required=True)
-	parser.add_argument("-i", "--indent", action="store_true", help="Use pretty indentation for json files", default=False)
-	parser.add_argument("-t", "--tables", help="comma-separated list of table names to dump (all tables are dumped by default)")
-	parser.add_argument("-l", "--language", help="Which language to dump in. Suggested values: de, ru, en-us, ja, zh, fr, it, es", default="en-us")
-	args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="This scripts dumps effects from an sqlite cache dump to mongo")
+    parser.add_argument("-e", "--eve", help="path to eve folder", required=True)
+    parser.add_argument("-c", "--cache", help="path to eve cache folder", required=True)
+    parser.add_argument("-s", "--server", default='tranquility', help="If we're dealing with a singularity cache")
+    parser.add_argument("-o", "--output", help="Output folder for the json files", required=True)
+    parser.add_argument("-i", "--indent", action="store_true", help="Use pretty indentation for json files", default=False)
+    parser.add_argument("-t", "--tables", help="comma-separated list of table names to dump (all tables are dumped by default)")
+    parser.add_argument("-l", "--language", help="Which language to dump in. Suggested values: de, ru, en-us, ja, zh, fr, it, es", default="en-us")
+    args = parser.parse_args()
 
-	# Needed args & helpers
-	evePath = os.path.expanduser(args.eve)
-	cachePath = os.path.expanduser(args.cache)
-	outPath = os.path.expanduser(args.output)
+    # Needed args & helpers
+    evePath = os.path.expanduser(args.eve)
+    cachePath = os.path.expanduser(args.cache)
+    outPath = os.path.expanduser(args.output)
 
-	eve = blue.EVE(evePath, cachepath=cachePath, server=args.server, languageID=args.language)
-	cfg = eve.getconfigmgr()
-	indent = 4 if args.indent else None
+    eve = blue.EVE(evePath, cachepath=cachePath, server=args.server, languageID=args.language)
+    cfg = eve.getconfigmgr()
+    indent = 4 if args.indent else None
 
-	# Helper function
-	def processRowSet(tableName, rowSet):
-		print("processing {}".format(tableName))
-		header, lines = RowSetProcessor(tableName, rowSet, cfg).run()
-		JsonWriter(tableName, header, lines, outPath, 4 if args.indent else None).run()
+    # Helper function
+    def processRowSet(tableName, rowSet):
+        print("processing {}".format(tableName))
+        header, lines = RowSetProcessor(tableName, rowSet, cfg).run()
+        JsonWriter(tableName, header, lines, outPath, 4 if args.indent else None).run()
 
-	def processMetadata():
-		tableName = "metadata"
-		print("processing {}".format(tableName))
-		# Read client version
-		header = ["fieldName", "fieldValue"]
-		lines = []
-		try:
-			config = ConfigParser()
-			config.read(os.path.join(evePath, "common.ini"))
-			eveVersion = config.getint("main", "build")
-		except:
-			print("failed to detect client version")
-			eveVersion = None
-		lines.append({"fieldName": "clientBuild", "fieldValue": eveVersion})
-		# Generate UNIX-style timestamp of current UTC time
-		timestamp = int(mktime(datetime.utcnow().timetuple()))
-		lines.append({"fieldName": "dumpTime", "fieldValue": timestamp})
-		JsonWriter(tableName, header, lines, outPath, 4 if args.indent else None).run()
+    def processMetadata():
+        tableName = "metadata"
+        print("processing {}".format(tableName))
+        # Read client version
+        header = ["fieldName", "fieldValue"]
+        lines = []
+        try:
+            config = ConfigParser()
+            config.read(os.path.join(evePath, "common.ini"))
+            eveVersion = config.getint("main", "build")
+        except:
+            print("failed to detect client version")
+            eveVersion = None
+        lines.append({"fieldName": "clientBuild", "fieldValue": eveVersion})
+        # Generate UNIX-style timestamp of current UTC time
+        timestamp = int(mktime(datetime.utcnow().timetuple()))
+        lines.append({"fieldName": "dumpTime", "fieldValue": timestamp})
+        JsonWriter(tableName, header, lines, outPath, 4 if args.indent else None).run()
 
-	# If -t is present, only dump the specified tables
-	if(args.tables != None):
-		for tableName in args.tables.split(","):
-			try:
-				t = tableName.split("_", 2)
-				if(len(t) == 2):
-					rowSet = getattr(eve.RemoteSvc(t[0]), t[1])()
-				else:
-					rowSet = getattr(cfg, t[0])
-				processRowSet(tableName, rowSet)
-			except KeyboardInterrupt:
-				raise
-			except:
-				print("failed to process {}".format(tableName))
-	else:
-		# Process bulkdata tables
-		for tableName in cfg.tables:
-			try:
-				rowSet = getattr(cfg, tableName)
-				processRowSet(tableName, rowSet)
-			except KeyboardInterrupt:
-				raise
-			except:
-				print("failed to process {}".format(tableName))
+    # If -t is present, only dump the specified tables
+    if(args.tables != None):
+        for tableName in args.tables.split(","):
+            try:
+                t = tableName.split("_", 2)
+                if(len(t) == 2):
+                    rowSet = getattr(eve.RemoteSvc(t[0]), t[1])()
+                else:
+                    rowSet = getattr(cfg, t[0])
+                processRowSet(tableName, rowSet)
+            except KeyboardInterrupt:
+                raise
+            except:
+                print("failed to process {}".format(tableName))
+    else:
+        # Process bulkdata tables
+        for tableName in cfg.tables:
+            try:
+                rowSet = getattr(cfg, tableName)
+                processRowSet(tableName, rowSet)
+            except KeyboardInterrupt:
+                raise
+            except:
+                print("failed to process {}".format(tableName))
 
-		# Process remote service calls
-		for service, call in discoverSvc(eve):
-			tableName = "{}_{}".format(service, call)
-			try:
-				rowSet = getattr(eve.RemoteSvc(service), call)()
-				processRowSet(tableName, rowSet)
-			except KeyboardInterrupt:
-				raise
-			except:
-				print("failed to process {}".format(tableName))
+        # Process remote service calls
+        for service, call in discoverSvc(eve):
+            tableName = "{}_{}".format(service, call)
+            try:
+                rowSet = getattr(eve.RemoteSvc(service), call)()
+                processRowSet(tableName, rowSet)
+            except KeyboardInterrupt:
+                raise
+            except:
+                print("failed to process {}".format(tableName))
 
-	processMetadata()
+    processMetadata()
 
-	print("all done")
+    print("all done")
