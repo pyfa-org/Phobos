@@ -20,7 +20,7 @@ class RowSetProcessor:
     __metaclass__ = ABCMeta
 
     def __new__(cls, tableName, rowSet, cfg):
-        typeId = getattr(rowSet, '__guid__', type(rowSet))
+        typeId = getattr(rowSet, '__guid__', rowSet.__class__.__name__)
         return object.__new__(typeMap.get(typeId, Row), tableName, rowSet, cfg)
 
     def __init__(self, tableName, rowSet, cfg):
@@ -234,15 +234,15 @@ class Skip(RowSetProcessor):
         return []
 
 typeMap = {'util.FilterRowset': FilterRowSet,
-           reverence.fsd.DictLoader: FsdLoader,
-           reverence.fsd.IndexLoader: FsdLoader,
+           'DictLoader': FsdLoader,
+           'IndexLoader': FsdLoader,
            'util.IndexedRowLists': IndexedRowLists,
            'dbutil.CRowset': CRowSet,
            'dbutil.CFilterRowset': CFilterRowSet,
            'dbutil.CIndexedRowset': CIndexedRowSet,
-           int: Primitive,
-           unicode: Primitive,
-           dict: Dict,
-           tuple: Skip,
+           'int': Primitive,
+           'unicode': Primitive,
+           'dict': Dict,
+           'tuple': Skip,
            'util.KeyVal': Skip,} # There's only one call using this one: holoscreenMgr_GetTwoHourCache, its used to return two tables in one. Skipping till I figure out an elegant way to solve that
 
