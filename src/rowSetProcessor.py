@@ -143,27 +143,29 @@ class FilterRowSet(Row):
 
 class FsdLoader(RowSetProcessor):
     """FSD loader"""
+
     def getHeader(self):
-        return self.rowSet.schema['valueTypes']['attributes'].keys() + ['id']
+        header = ['id'] + self.rowSet.schema['valueTypes']['attributes'].keys()
+        return header
 
     def getLines(self, header):
-        data = []
-        rowSet = self.rowSet
-        index = self.rowSet.headerData
+        # As we process id field manually, remove it
+        # from header list
+        header = filter(lambda h: h != 'id', header)
 
-        # The headerdata acts as an index through which we can loop to get all valid keys
-        for info in index:
+        data = []
+
+        for id_, fsdContainer in self.rowSet.iteritems():
             datarow = {}
-            id = info['key']
-            for k in header:
-                # Sadly, No get method is available
+            for h in header:
+                # Get method is not available
                 try:
-                    datarow[k] = rowSet[id][k]
+                    datarow[h] = fsdContainer[h]
                 except KeyError:
-                    datarow[k] = None
+                    datarow[h] = None
 
             if len(datarow) > 0:
-                datarow['id'] = id
+                datarow['id'] = id_
                 data.append(datarow)
 
         return data
@@ -245,4 +247,3 @@ typeMap = {'util.FilterRowset': FilterRowSet,
            'dict': Dict,
            'tuple': Skip,
            'util.KeyVal': Skip,} # There's only one call using this one: holoscreenMgr_GetTwoHourCache, its used to return two tables in one. Skipping till I figure out an elegant way to solve that
-
