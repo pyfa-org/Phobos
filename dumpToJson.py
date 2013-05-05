@@ -1,12 +1,14 @@
-"""Cache dumper script, uses phobos to dump a json dump to disk
+#===============================================================================
+# Copyright (C) 2012 Diego Duclos
+# Copyright (C) 2013 Anton Vorobyov
+#
+# This code is free software; you can redistribute it and/or modify
+# it under the terms of the BSD license (see the file LICENSE.txt
+# included with the distribution).
+#===============================================================================
 
-Copyright (c) 2012 Diego "Sakari" Duclos <sakari@evefit.org>
-Copyright (c) 2012 Romain "Artefact2" Dalmaso <artefact2@gmail.com>
 
-This code is free software; you can redistribute it and/or modify
-it under the terms of the BSD license (see the file LICENSE.txt
-included with the distribution).
-"""
+"""Cache dumper script, uses phobos to dump a json dump to disk"""
 
 
 import argparse

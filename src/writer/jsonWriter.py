@@ -1,14 +1,16 @@
-"""JSON writer
+#===============================================================================
+# Copyright (C) 2012 Diego Duclos
+# Copyright (C) 2013 Anton Vorobyov
+#
+# This code is free software; you can redistribute it and/or modify
+# it under the terms of the BSD license (see the file LICENSE.txt
+# included with the distribution).
+#===============================================================================
 
-Copyright (c) 2012 Diego "Sakari" Duclos <sakari@evefit.org>
-
-This code is free software; you can redistribute it and/or modify
-it under the terms of the BSD license (see the file LICENSE.txt
-included with the distribution).
-"""
 
 import json
 import os
+
 
 class JsonWriter:
     """Json writer, takes input from the rowSetProcessor and writes it out to json files in the given folder, one file per table"""
