@@ -58,7 +58,7 @@ setup(
     author_email = "sakari@evefit.org",
 
     packages = ["phobos", "phobos.writer"],
-    package_dir = {"phobos": "src"},
+    package_dir = {"phobos": "phobos"},
 )
 
 
