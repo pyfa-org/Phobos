@@ -14,6 +14,7 @@
 
 import argparse
 import os.path
+import sqlite3
 import sys
 from ConfigParser import ConfigParser
 from datetime import datetime
@@ -115,6 +116,24 @@ if __name__ == '__main__':
             except:
                 print('failed to process {}'.format(tableName))
 
+        # Process SQLite from bulkdata folder
+        bulkSqlitePath = os.path.join(evePath, 'bulkdata', 'mapbulk.db')
+        conn = sqlite3.connect(bulkSqlitePath, detect_types=sqlite3.PARSE_COLNAMES | sqlite3.PARSE_DECLTYPES)
+        # Go through master table to detect real tables
+        for masterRow in conn.execute('SELECT * FROM sqlite_master WHERE type = "table"'):
+            tableName = masterRow[1]
+            rowSet = []
+            # Gather column names
+            columnNames = []
+            for columnData in conn.execute(u'PRAGMA table_info({0})'.format(tableName)):
+                columnNames.append(columnData[1])
+            columnRange = range(len(columnNames))
+            statement = u"SELECT {0} FROM {1}".format(u", ".join(columnNames), tableName)
+            for row in conn.execute(statement):
+                dictRow = dict((columnNames[i], row[i]) for i in columnRange)
+                rowSet.append(dictRow)
+            processRowSet(tableName, rowSet)
+        conn.close()
 
     processMetadata()
 

@@ -233,6 +233,17 @@ class Primitive(RowSetProcessor):
     def getLines(self, header):
         return [{'value': self.rowSet}]
 
+class List(RowSetProcessor):
+    def getHeader(self):
+        """List of dictionaries. Here we suppose each row has coherent header set."""
+        if len > 0:
+            return list(self.rowSet[0].iterkeys())
+        else:
+            return []
+
+    def getLines(self, header):
+        return self.rowSet
+
 class Skip(RowSetProcessor):
     def getHeader(self):
         print("Skipped {}".format(self.tableName))
@@ -251,5 +262,6 @@ typeMap = {'util.FilterRowset': FilterRowSet,
            'int': Primitive,
            'unicode': Primitive,
            'dict': Dict,
+           'list': List,
            'tuple': Skip,
            'util.KeyVal': Skip,} # There's only one call using this one: holoscreenMgr_GetTwoHourCache, its used to return two tables in one. Skipping till I figure out an elegant way to solve that
