@@ -11,11 +11,9 @@ Install it:
 python27 setup.py install
 
 Dump stuff:
-python2.7 dumpToJson.py --eve c:/games/eve/ --cache c:/users/username/appdata/local/CCP/EVE/c_games_eve_tranquility/cache --output c:/tq
+python2.7 dumpToJson.py --eve c:/games/eve/ --cache c:/users/username/appdata/local/CCP/EVE/c_games_eve_tranquility/cache --json c:/tq
 
 Or discover available service calls in your cache:
 python2.7 discoverRemoteSvcCalls.py --eve c:/games/eve/ --cache c:/users/username/appdata/local/CCP/EVE/c_games_eve_tranquility/cache
 
-Optionally, specify the -t argument to only dump certain tables to json
-
-Please note that the output folder has to exist already.
+Optionally, specify the -t argument to only dump certain tables to json.
