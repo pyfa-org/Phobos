@@ -13,12 +13,10 @@ RowProcessing entry point, will initialize a subclass of
 the correct type to process the given rowset
 """
 
+
 from abc import ABCMeta, abstractmethod
-import reverence.fsd
-from reverence.blue import DBRow
-from phobos.writer.jsonWriter import JsonWriter
-from copy import copy
-from reverence.config import _localized
+
+import reverence
 
 
 class RowSetProcessor:
@@ -35,9 +33,6 @@ class RowSetProcessor:
         self.cfg = cfg
 
     def run(self):
-        guid = getattr(self.rowSet, "__guid__", None)
-        cfg = self.cfg
-
         header = self.getHeader()
         lines = self.getLines(header)
 
@@ -96,7 +91,7 @@ class Dict(RowSetProcessor):
         elif isinstance(curr, list):
             for v in curr:
                 header.update(self._getHeader(v))
-        elif isinstance(curr, DBRow):
+        elif isinstance(curr, reverence.blue.DBRow):
             return curr.__header__.Keys()
         elif isinstance(curr, tuple):
             # If we're dealing with a tuple, we have no choice but to generate keys ourselves
@@ -125,7 +120,7 @@ class Dict(RowSetProcessor):
 
             lines.append(line)
 
-        elif isinstance(curr, DBRow):
+        elif isinstance(curr, reverence.blue.DBRow):
             lines.append(curr)
         else:
             lines.append({'key': key, 'value': curr})
@@ -147,11 +142,11 @@ class FilterRowSet(Row):
 
         return data
 
-class FsdLoader(RowSetProcessor):
-    """FSD loader"""
+class FsdDict(RowSetProcessor):
+    """FSD dictionary"""
 
     def getHeader(self):
-        header = ['id'] + self.rowSet.schema['valueTypes']['attributes'].keys()
+        header = ['id'] + self.rowSet.header
         return header
 
     def getLines(self, header):
@@ -166,14 +161,23 @@ class FsdLoader(RowSetProcessor):
             for h in header:
                 # Get method is not available
                 try:
-                    datarow[h] = fsdContainer[h]
+                    value = fsdContainer[h]
                 except KeyError:
-                    datarow[h] = None
+                    value = None
+                if isinstance(value, reverence.fsd.FSD_NamedVector):
+                    value = self.__namedVectorToDict(value)
+                datarow[h] = value
 
             if len(datarow) > 0:
                 datarow['id'] = id_
                 data.append(datarow)
 
+        return data
+
+    def __namedVectorToDict(self, namedVector):
+        data = {}
+        for k, v in namedVector.schema['aliases'].iteritems():
+            data[k] = namedVector.data[v]
         return data
 
 class IndexedRowLists(RowSetProcessor):
@@ -253,8 +257,7 @@ class Skip(RowSetProcessor):
         return []
 
 typeMap = {'util.FilterRowset': FilterRowSet,
-           'DictLoader': FsdLoader,
-           'IndexLoader': FsdLoader,
+           'FSD_Dict': FsdDict,
            'util.IndexedRowLists': IndexedRowLists,
            'dbutil.CRowset': CRowSet,
            'dbutil.CFilterRowset': CFilterRowSet,
