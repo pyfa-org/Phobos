@@ -14,6 +14,7 @@
 
 import argparse
 import os.path
+import re
 import sqlite3
 import sys
 from ConfigParser import ConfigParser
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--cache', help='path to eve cache folder', required=True)
     parser.add_argument('-s', '--server', default='tranquility', help='server which was specified in EVE shortcut, defaults to tranquility')
     parser.add_argument('-j', '--json', help='output folder for the json files')
-    parser.add_argument('-t', '--tables', help='comma-separated list of table names to dump (all tables are dumped by default)')
+    parser.add_argument('-t', '--tables', help='|-separated list of table names to dump (all tables are dumped by default)')
     parser.add_argument('-l', '--language', help='Which language to dump in. Suggested values: de, ru, en-us, ja, zh, fr, it, es', default='en-us')
     args = parser.parse_args()
 
@@ -82,18 +83,50 @@ if __name__ == '__main__':
 
     # If -t is present, only dump the specified tables
     if(args.tables != None):
-        for tableName in args.tables.split(','):
+
+        def getArg(argString):
+            argString = argString.strip()
+            if argString == 'None':
+                return None
             try:
-                t = tableName.split('_', 2)
-                if(len(t) == 2):
-                    rowSet = getattr(eve.RemoteSvc(t[0]), t[1])()
+                numFloat = float(argString)
+                numInt = int(argString)
+            except ValueError:
+                return argString
+            else:
+                if '.' not in argString and numFloat == numInt:
+                    return numInt
                 else:
-                    rowSet = getattr(cfg, t[0])
+                    return numFloat
+
+        for tableName in args.tables.split('|'):
+            try:
+                match = re.match('(?P<svcName>[^\(\)]+)\((?P<svcArgs>[^\(\)]*)\)_(?P<callName>[^\(\)]+)\((?P<callArgs>[^\(\)]*)\)', tableName)
+                if match:
+                    svcName = str(match.group('svcName'))
+                    svcArgsString = match.group('svcArgs')
+                    if len(svcArgsString) > 0:
+                        svcArgs = tuple(getArg(argString) for argString in svcArgsString.split(','))
+                    else:
+                        svcArgs = ()
+                    callName = str(match.group('callName'))
+                    callArgsString = match.group('callArgs')
+                    if len(callArgsString) > 0:
+                        callArgs = tuple(getArg(argString) for argString in callArgsString.split(','))
+                    else:
+                        callArgs = ()
+                    if len(svcArgs) > 0:
+                        service = (svcName, tuple(svcArgs))
+                    else:
+                        service = svcName
+                    rowSet = getattr(eve.RemoteSvc(service), callName)(*callArgs)
+                else:
+                    rowSet = getattr(cfg, tableName)
                 processRowSet(tableName, rowSet)
             except KeyboardInterrupt:
                 raise
-            except:
-                print('failed to process {}'.format(tableName))
+            #except:
+            #    print('failed to process {}'.format(tableName))
     else:
         # Process bulkdata tables
         for tableName in cfg.tables:
@@ -106,10 +139,19 @@ if __name__ == '__main__':
                 print('failed to process {}'.format(tableName))
 
         # Process remote service calls
-        for service, call in discoverSvc(eve):
+        for serviceName, serviceArgs, callName, callArgs in discoverSvc(eve):
             try:
-                tableName = '{}_{}'.format(service, call)
-                rowSet = getattr(eve.RemoteSvc(service), call)()
+                tableName = u'{}({})_{}({})'.format(
+                    serviceName,
+                    ', '.join(unicode(arg) for arg in serviceArgs),
+                    callName,
+                    ', '.join(unicode(arg) for arg in callArgs)
+                )
+                if len(serviceArgs) > 0:
+                    service = (serviceName, serviceArgs)
+                else:
+                    service = serviceName
+                rowSet = getattr(eve.RemoteSvc(service), callName)(*callArgs)
                 processRowSet(tableName, rowSet)
             except KeyboardInterrupt:
                 raise

@@ -31,10 +31,17 @@ def discover(eve):
     s = set()
     for filename in glob.glob(_join(cache.machocachepath, 'CachedMethodCalls', '*.cache')):
         info, data = blue.marshal.Load(_readfile(filename))
-        service, call = info[0:2]
+        service, callName = info[0:2]
+        callArgs = info[2:]
         if isinstance(service, tuple):
-            service = service[0]
-
-        s.add((service, call))
+            serviceName = service[0]
+            if len(service) != 2:
+                print('service {} has unexpected info format, skipping it'.format(serviceName))
+                continue
+            serviceArgs = service[1]
+        else:
+            serviceName = service
+            serviceArgs = ()
+        s.add((serviceName, serviceArgs, callName, callArgs))
 
     return s

@@ -19,7 +19,6 @@ import sys
 
 from reverence import blue
 
-from phobos.helpers.args import getArgs
 from phobos.remoteSvc import discover
 
 if __name__ == "__main__":
@@ -41,5 +40,5 @@ if __name__ == "__main__":
 
     eve = blue.EVE(args.eve, cachepath=args.cache, server=args.server)
 
-    for service, call in discover(eve):
-        print(service, call)
+    for serviceName, serviceArgs, callName, callArgs in discover(eve):
+        print(serviceName, serviceArgs, callName, callArgs)

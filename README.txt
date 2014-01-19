@@ -8,7 +8,7 @@ The writers are made to be extendible, when more writers get written, they'll be
 
 Basic usage:
 Install it:
-python27 setup.py install
+python2.7 setup.py install
 
 Dump stuff:
 python2.7 dumpToJson.py --eve c:/games/eve/ --cache c:/users/username/appdata/local/CCP/EVE/c_games_eve_tranquility/cache --json c:/tq
