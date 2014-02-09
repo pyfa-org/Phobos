@@ -12,10 +12,8 @@
 
 
 import glob
-import os.path
+import os
 from reverence import blue
-
-_join = os.path.join
 
 def _readfile(filename):
     with open(filename, "rb") as f:
@@ -29,8 +27,17 @@ def discover(eve):
     cache = eve.getcachemgr()
 
     s = set()
-    for filename in glob.glob(_join(cache.machocachepath, 'CachedMethodCalls', '*.cache')):
-        info, data = blue.marshal.Load(_readfile(filename))
+    cachedCallsDir = os.path.join(cache.machocachepath, 'CachedMethodCalls')
+    for filename in os.listdir(cachedCallsDir):
+        filepath = os.path.join(cachedCallsDir, filename)
+        fileext = os.path.splitext(filename)[1]
+        if not os.path.isfile(filepath) or fileext != '.cache':
+            continue
+        try:
+            info, data = blue.marshal.Load(_readfile(filepath))
+        except:
+            print('cached method call in file {} cannot be loaded, skipping it'.format(filename))
+            continue
         service, callName = info[0:2]
         callArgs = info[2:]
         if isinstance(service, tuple):

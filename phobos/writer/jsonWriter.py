@@ -12,6 +12,18 @@ import json
 import os
 
 
+class StubbingEncoder(json.JSONEncoder):
+    """
+    Objects which cannot be serialized are replaced with stub
+    """
+
+    def default(self, o):
+        try:
+            return json.JSONEncoder.default(o)
+        except TypeError:
+            return 'unserializable class {}'.format(type(o).__name__)
+
+
 class JsonWriter:
     """Json writer, takes input from the rowSetProcessor and writes it out to json files in the given folder, one file per table"""
     def __init__(self, tableName, header, lines, folder, indent=None):
@@ -36,4 +48,10 @@ class JsonWriter:
                 raise
         if not os.path.exists(self.folder):
             os.makedirs(self.folder, mode=0o755)
-        json.dump(dataList, open(os.path.join(self.folder, "{}.json".format(self.tableName)), "w"), indent=self.indent, encoding='cp1252')
+        json.dump(
+            dataList,
+            open(os.path.join(self.folder, '{}.json'.format(self.tableName)), 'w'),
+            cls=StubbingEncoder,
+            indent=self.indent,
+            encoding='cp1252'
+        )

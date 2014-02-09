@@ -125,8 +125,8 @@ if __name__ == '__main__':
                 processRowSet(tableName, rowSet)
             except KeyboardInterrupt:
                 raise
-            #except:
-            #    print('failed to process {}'.format(tableName))
+            except:
+                print('failed to process {}'.format(tableName))
     else:
         # Process bulkdata tables
         for tableName in cfg.tables:
