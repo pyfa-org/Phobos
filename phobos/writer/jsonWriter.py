@@ -21,12 +21,7 @@ class StubbingEncoder(json.JSONEncoder):
 
     def default(self, o):
         if isinstance(o, reverence.fsd.FSD_Dict):
-            new = {}
-            for k, v in o.iteritems():
-                k = self.encode(k)
-                v = self.encode(v)
-                new[k] = v
-            return new
+            return dict(o)
         return 'unserializable class {}'.format(type(o))
 
 
