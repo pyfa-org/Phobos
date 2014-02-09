@@ -11,6 +11,8 @@
 import json
 import os
 
+import reverence
+
 
 class StubbingEncoder(json.JSONEncoder):
     """
@@ -18,10 +20,14 @@ class StubbingEncoder(json.JSONEncoder):
     """
 
     def default(self, o):
-        try:
-            return json.JSONEncoder.default(o)
-        except TypeError:
-            return 'unserializable class {}'.format(type(o).__name__)
+        if isinstance(o, reverence.fsd.FSD_Dict):
+            new = {}
+            for k, v in o.iteritems():
+                k = self.encode(k)
+                v = self.encode(v)
+                new[k] = v
+            return new
+        return 'unserializable class {}'.format(type(o))
 
 
 class JsonWriter:
