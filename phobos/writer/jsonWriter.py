@@ -22,6 +22,14 @@ class StubbingEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, reverence.fsd.FSD_Dict):
             return dict(o)
+        if isinstance(o, reverence.fsd._FixedSizeList):
+            return tuple(o)
+        if isinstance(o, reverence.fsd.FSD_Object):
+            new = {}
+            for attrName in o.attributes:
+                if hasattr(o, attrName):
+                    new[attrName] = getattr(o, attrName)
+            return new
         return 'unserializable class {}'.format(type(o))
 
 
