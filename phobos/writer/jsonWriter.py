@@ -27,8 +27,7 @@ class StubbingEncoder(json.JSONEncoder):
         if isinstance(o, reverence.fsd.FSD_Object):
             new = {}
             for attrName in o.attributes:
-                if hasattr(o, attrName):
-                    new[attrName] = getattr(o, attrName)
+                new[attrName] = getattr(o, attrName, None)
             return new
         return 'unserializable class {}'.format(type(o))
 
