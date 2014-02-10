@@ -10,6 +10,7 @@
 
 import json
 import os
+from collections import OrderedDict
 
 import reverence
 
@@ -29,6 +30,13 @@ class StubbingEncoder(json.JSONEncoder):
             for attrName in o.attributes:
                 new[attrName] = getattr(o, attrName, None)
             return new
+        if isinstance(o, reverence.fsd.FSD_NamedVector):
+            vector = OrderedDict()
+            aliasData = o.schema['aliases']
+            for alias in sorted(aliasData, key=aliasData.get):
+                index = aliasData[alias]
+                vector[alias] = o.data[index]
+            return vector
         return 'unserializable class {}'.format(type(o))
 
 
