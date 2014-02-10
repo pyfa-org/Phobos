@@ -48,7 +48,7 @@ class RowSetProcessor:
                     textIdx = header.index(k[:-2])
                     for line in lines:
                         try:
-                            line[textIdx] = self.cfg._localization.GetByMessageID(line[localIdIdx])[0]
+                            line[textIdx] = self.cfg._localization.GetByMessageID(line[localIdIdx])
                         except:
                             if not warned:
                                 print("Translation failed on {}[{}]".format(self.tableName, k))
