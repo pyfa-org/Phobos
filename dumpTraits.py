@@ -22,19 +22,18 @@ MISC_BONUS_TYPE = -2
 def striptags(text):
     return tags.sub("", text)
 
-def getbonuses(bonusdata):
-    for i, data in bonusdata.iteritems():
-        if hasattr(data, 'bonus'):
-            value = round(data.bonus, 1)
-            if int(data.bonus) == data.bonus:
-                value = int(data.bonus)
-            text = cfg._localization.GetByLabel('UI/InfoWindow/TraitWithNumber', color="", value=value, unit=cfg.dgmunits.Get(data.unitID).displayName, bonusText=cfg._localization.GetByMessageID(data.nameID))
-        else:
-            text = cfg._localization.GetByLabel('UI/InfoWindow/TraitWithoutNumber', color="", bonusText=cfg._localization.GetByMessageID(data.nameID))
+def getbonus(data):
+    if hasattr(data, 'bonus'):
+        value = round(data.bonus, 1)
+        if int(data.bonus) == data.bonus:
+            value = int(data.bonus)
+        text = cfg._localization.GetByLabel('UI/InfoWindow/TraitWithNumber', color="", value=value, unit=cfg.dgmunits.Get(data.unitID).displayName, bonusText=cfg._localization.GetByMessageID(data.nameID))
+    else:
+        text = cfg._localization.GetByLabel('UI/InfoWindow/TraitWithoutNumber', color="", bonusText=cfg._localization.GetByMessageID(data.nameID))
 
-        bonus, text = text.split("<t>")
+    bonus, text = text.split("<t>")
 
-        return "%s %s" % (striptags(bonus), striptags(text))
+    return "%s %s" % (striptags(bonus), striptags(text))
 
 
 def gettraits(fsdId, fsdType):
@@ -43,9 +42,10 @@ def gettraits(fsdId, fsdType):
         return typeTraits
     typeBonuses = fsdType.infoBubbleTypeBonuses
     for skillTypeID, skillData in typeBonuses.iteritems():
-        bonus = getbonuses(skillData)
-        traitLine = {'typeID': fsdId, 'skillID': skillTypeID, 'bonusText': bonus}
-        typeTraits.append(traitLine)
+        for bonusData in skillData.itervalues():
+            bonus = getbonus(bonusData)
+            traitLine = {'typeID': fsdId, 'skillID': skillTypeID, 'bonusText': bonus}
+            typeTraits.append(traitLine)
 
     return typeTraits
 
@@ -83,6 +83,8 @@ if __name__ == '__main__':
 
     for fsdId, fsdType in cfg.fsdTypeOverrides.iteritems():
         traitList.extend(gettraits(fsdId, fsdType))
+        if fsdId == 23913:
+            print(gettraits(fsdId, fsdType))
 
 
     with open(os.path.join(jsonPath, 'phobostraits.json'), 'w') as f:
