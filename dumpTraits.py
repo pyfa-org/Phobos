@@ -1,4 +1,7 @@
-"""Cache dumper script, uses phobos to dump a json dump to disk"""
+"""
+Cache dumper script, uses phobos to dump a json dump to disk.
+Based on example from reverence.
+"""
 
 
 import argparse
@@ -34,16 +37,17 @@ def getbonuses(bonusdata):
         return "%s %s" % (striptags(bonus), striptags(text))
 
 
-def gettraits(fsdType):
+def gettraits(fsdId, fsdType):
+    typeTraits = []
     if not hasattr(fsdType, 'infoBubbleTypeBonuses'):
-        return None
-    type_traits = {}
+        return typeTraits
     typeBonuses = fsdType.infoBubbleTypeBonuses
     for skillTypeID, skillData in typeBonuses.iteritems():
-        type_skill_traits = type_traits.setdefault(skillTypeID, [])
-        type_skill_traits.append(getbonuses(skillData))
+        bonus = getbonuses(skillData)
+        traitLine = {'typeID': fsdId, 'skillID': skillTypeID, 'bonusText': bonus}
+        typeTraits.append(traitLine)
 
-    return type_traits
+    return typeTraits
 
 
 
@@ -75,14 +79,12 @@ if __name__ == '__main__':
     eve = blue.EVE(evePath, cachepath=cachePath, server=args.server, languageID=args.language)
     cfg = eve.getconfigmgr()
 
-    idTraitMap = {}
+    traitList = []
 
     for fsdId, fsdType in cfg.fsdTypeOverrides.iteritems():
-        traits = gettraits(fsdType)
-        if traits is not None:
-            idTraitMap[fsdId] = traits
+        traitList.extend(gettraits(fsdId, fsdType))
 
 
     with open(os.path.join(jsonPath, 'phobostraits.json'), 'w') as f:
-        json.dump(idTraitMap, f, indent=4, encoding='cp1252')
+        json.dump(traitList, f, indent=4, encoding='cp1252')
 
