@@ -83,9 +83,6 @@ if __name__ == '__main__':
 
     for fsdId, fsdType in cfg.fsdTypeOverrides.iteritems():
         traitList.extend(gettraits(fsdId, fsdType))
-        if fsdId == 23913:
-            print(gettraits(fsdId, fsdType))
-
 
     with open(os.path.join(jsonPath, 'phobostraits.json'), 'w') as f:
         json.dump(traitList, f, indent=4, encoding='cp1252')
