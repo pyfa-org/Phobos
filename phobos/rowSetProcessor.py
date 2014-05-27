@@ -14,6 +14,7 @@ the correct type to process the given rowset
 """
 
 
+import re
 from abc import ABCMeta, abstractmethod
 
 import reverence
@@ -48,11 +49,15 @@ class RowSetProcessor:
                     textIdx = header.index(k[:-2])
                     for line in lines:
                         try:
-                            line[textIdx] = self.cfg._localization.GetByMessageID(line[localIdIdx])
+                            localizedText = self.cfg._localization.GetByMessageID(line[localIdIdx])
                         except:
                             if not warned:
                                 print("Translation failed on {}[{}]".format(self.tableName, k))
                                 warned = True
+                        else:
+                            # Check if localized version is a stub
+                            if not re.match('<NO TEXT, messageID=[0-9]+, param={.*}>', localizedText):
+                                line[textIdx] = localizedText
 
         return header, lines
 
