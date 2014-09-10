@@ -19,7 +19,8 @@ class MetadataMiner(AbstractMiner):
 
     def get_table(self, table_name):
         if table_name != 'metadata':
-            raise TableNameError('"{}" is not available for this miner'.format(table_name))
+            msg = 'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
+            raise TableNameError(msg)
         header = ['field_name', 'field_value']
         lines = []
         # Read client version
