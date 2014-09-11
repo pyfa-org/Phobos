@@ -35,14 +35,15 @@ class MetadataMiner(AbstractMiner):
     """
 
     def __init__(self, path_eve):
+        self._table_name = 'metadata'
         self.path_eve = path_eve
 
     def tablename_iter(self):
-        for table_name in ('metadata',):
+        for table_name in (self._table_name,):
             yield table_name
 
     def get_table(self, table_name):
-        if table_name != 'metadata':
+        if table_name != self._table_name:
             msg = 'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
             raise TableNameError(msg)
         header = ['field_name', 'field_value']

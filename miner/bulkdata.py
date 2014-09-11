@@ -40,4 +40,5 @@ class BulkdataMiner(AbstractMiner):
 
     def get_table(self, table_name):
         lines = []
+        bulk_table = getattr(self.cfg, table_name)
         return lines

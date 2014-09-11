@@ -22,6 +22,7 @@ import sys
 
 
 if __name__ == '__main__':
+
     try:
         major = sys.version_info.major
         minor = sys.version_info.minor
