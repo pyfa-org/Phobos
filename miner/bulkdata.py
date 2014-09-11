@@ -21,6 +21,7 @@
 from reverence import blue
 
 from .abstract_miner import AbstractMiner
+from .exception import TableNameError
 
 
 class BulkdataMiner(AbstractMiner):
@@ -40,5 +41,9 @@ class BulkdataMiner(AbstractMiner):
 
     def get_table(self, table_name):
         lines = []
-        bulk_table = getattr(self.cfg, table_name)
+        try:
+            bulk_table = getattr(self.cfg, table_name)
+        except AttributeError as e:
+            msg = 'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
+            raise TableNameError(msg)
         return lines

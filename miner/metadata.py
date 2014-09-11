@@ -53,6 +53,8 @@ class MetadataMiner(AbstractMiner):
             config = ConfigParser()
             config.read(os.path.join(self.path_eve, 'start.ini'))
             eve_version = config.getint('main', 'build')
+        except KeyboardInterrupt:
+            raise
         except:
             sys.stderr.write('failed to detect client version\n')
             eve_version = None
