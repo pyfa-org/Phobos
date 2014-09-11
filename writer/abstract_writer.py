@@ -22,6 +22,10 @@ from abc import ABCMeta, abstractmethod
 
 
 class AbstractWriter(object):
+    """
+    Abstract class, which defines interface to objects
+    which write tables into some kind of persistent storage.
+    """
     __metaclass__ = ABCMeta
 
     @abstractmethod

@@ -24,8 +24,13 @@ from .abstract_miner import AbstractMiner
 
 
 class BulkdataMiner(AbstractMiner):
+    """
+    Class, responsible for fetching data out of bulkdata, which is included
+    with EVE client.
+    """
 
     def __init__(self, path_eve, path_cache, server):
+        # Initialize reverence
         eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
         self.cfg = eve.getconfigmgr()
 

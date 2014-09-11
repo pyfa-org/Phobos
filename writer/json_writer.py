@@ -25,11 +25,16 @@ from .abstract_writer import AbstractWriter
 
 
 class JsonWriter(AbstractWriter):
+    """
+    Class, which stores fetched data on storage as JSON files.
+    """
+
     def __init__(self, folder, indent=None):
         self.folder = folder
         self.indent = indent
 
     def write(self, table_name, lines):
+        # Create folder structure to path, if not created yet
         if not os.path.exists(self.folder):
             os.makedirs(self.folder, mode=0o755)
         json.dump(

@@ -22,12 +22,22 @@ from abc import ABCMeta, abstractmethod
 
 
 class AbstractMiner(object):
+    """
+    Abstract class, which defines interface to all data miners
+    used in Phobos.
+    """
     __metaclass__ = ABCMeta
 
     @abstractmethod
     def tablename_iter(self):
+        """
+        Provide an iterator over tables provided by miner.
+        """
         pass
 
     @abstractmethod
     def get_table(self, table_name):
+        """
+        Fetch data from specified table as list of objects.
+        """
         pass

@@ -29,6 +29,10 @@ from .exception import TableNameError
 
 
 class MetadataMiner(AbstractMiner):
+    """
+    Provide some metadata on when this data dump has been made
+    and which data source has been used for that.
+    """
 
     def __init__(self, path_eve):
         self.path_eve = path_eve
