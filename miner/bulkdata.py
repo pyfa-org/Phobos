@@ -21,6 +21,7 @@
 from reverence import blue
 
 from .abstract_miner import AbstractMiner
+from .eve_normalize import EveNormalizer
 from .exception import TableNameError
 
 
@@ -36,7 +37,7 @@ class BulkdataMiner(AbstractMiner):
         self.cfg = eve.getconfigmgr()
 
     def tablename_iter(self):
-        for table_name in self.cfg.tables:
+        for table_name in sorted(self.cfg.tables):
             yield table_name
 
     def get_table(self, table_name):
