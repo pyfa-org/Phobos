@@ -1,3 +1,23 @@
+#===============================================================================
+# Copyright (C) 2014 Anton Vorobyov
+#
+# This file is part of Phobos.
+#
+# Phobos is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Phobos is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with Phobos. If not, see <http://www.gnu.org/licenses/>.
+#===============================================================================
+
+
 import os.path
 import sys
 from ConfigParser import ConfigParser
@@ -27,11 +47,11 @@ class MetadataMiner(AbstractMiner):
         try:
             config = ConfigParser()
             config.read(os.path.join(self.path_eve, 'start.ini'))
-            eveVersion = config.getint('main', 'build')
+            eve_version = config.getint('main', 'build')
         except:
             sys.stderr.write('failed to detect client version\n')
-            eveVersion = None
-        lines.append({header[0]: 'client_build', header[1]: eveVersion})
+            eve_version = None
+        lines.append({header[0]: 'client_build', header[1]: eve_version})
         # Generate UNIX-style timestamp of current UTC time
         timestamp = int(mktime(datetime.utcnow().timetuple()))
         lines.append({header[0]: 'dump_time', header[1]: timestamp})
