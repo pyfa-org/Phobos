@@ -44,14 +44,24 @@ class EveNormalizer(object):
         method = self._conversion_map[obj_type]
         return method(self, obj)
 
-    def _pythonize_dbrow(self, obj):
+    def _pythonize_list(self, obj):
         """
-        DBRow is similar to python dictionary, but its keys are
-        accessed in different way.
+        For objects which have access interface similar to
+        python lists, but actually have different class.
+        """
+        container = []
+        for item in obj:
+            container.append(self._route_object(item))
+        return container
+
+    def _pythonize_dict(self, obj):
+        """
+        For objects which have access interface similar to
+        python dictionaries, but actually have different class.
         """
         container = {}
-        for key in obj.__header__.Keys():
-            value = obj[key]
+        for key, value in obj.iteritems():
+            # Keys are assumed to be python primitives
             container[key] = self._route_object(value)
         return container
 
@@ -65,13 +75,46 @@ class EveNormalizer(object):
             container.append(self._route_object(element))
         return container
 
+    def _pythonize_dbrow(self, obj):
+        """
+        DBRow is similar to python dictionary, but its keys are
+        accessed via hidden '__header__' attribute.
+        """
+        container = {}
+        for key in obj.__header__.Keys():
+            value = obj[key]
+            # Keys are assumed to be python primitives
+            container[key] = self._route_object(value)
+        return container
+
+    def _pythonize_fsdobj(self, obj):
+        """
+        FSD object is similar to python dictionary, but its keys are
+        accessed via 'attributes' attribute.
+        """
+        container = {}
+        for key in obj.attributes:
+            # Sometimes values are missing
+            value = getattr(obj, key, None)
+            # Keys are assumed to be python primitives
+            container[key] = self._route_object(value)
+        return container
+
     def _primitive(self, obj):
         return obj
 
     _conversion_map = {
         'blue.DBRow': _pythonize_dbrow,
         'dbutil.CRowset': _pythonize_crowset,
+        '_FixedSizeList': _pythonize_list,
+        'FSD_Dict': _pythonize_dict,
+        'FSD_Object': _pythonize_fsdobj,
         'util.IndexRowset': _pythonize_crowset,
+        'bool': _primitive,
+        'float': _primitive,
         'int': _primitive,
+        'long': _primitive,
+        'NoneType': _primitive,
+        'str': _primitive,
         'unicode': _primitive
     }
