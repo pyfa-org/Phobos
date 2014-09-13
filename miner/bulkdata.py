@@ -41,10 +41,10 @@ class BulkdataMiner(AbstractMiner):
             yield table_name
 
     def get_table(self, table_name):
-        lines = []
         try:
             bulk_table = getattr(self.cfg, table_name)
-        except AttributeError as e:
+        except AttributeError:
             msg = 'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
             raise TableNameError(msg)
+        lines = EveNormalizer().run(bulk_table)
         return lines

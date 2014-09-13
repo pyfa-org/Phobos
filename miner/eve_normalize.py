@@ -19,12 +19,6 @@
 #===============================================================================
 
 
-from abc import ABCMeta, abstractmethod
-
-
-CONTAINER_MAP = {
-}
-
 
 class EveNormalizer(object):
     """
@@ -32,19 +26,52 @@ class EveNormalizer(object):
     'rows' and converts all eve-specific data structures into
     python built-in types.
     """
-    __metaclass__ = ABCMeta
 
-    def __new__(cls, eve_container):
-        container_type = getattr(eve_container, '__guid__', eve_container.__class__.__name__)
-        return object.__new__(CONTAINER_MAP[container_type], eve_container)
+    def run(self, eve_container):
+        """
+        Entry point for conversion jobs. Runs method which recursively
+        changes contents of passed container to present them in pythonized
+        data structures.
+        """
+        data = self._route_object(eve_container)
+        return data
 
-    def __init__(self, eve_container):
-        self.eve_container = eve_container
+    def _route_object(self, obj):
+        """
+        Pick proper method for passed object and invoke it.
+        """
+        obj_type = getattr(obj, '__guid__', obj.__class__.__name__)
+        method = self._conversion_map[obj_type]
+        return method(self, obj)
 
-    def run(self):
-        return self._get_lines()
+    def _pythonize_dbrow(self, obj):
+        """
+        DBRow is similar to python dictionary, but its keys are
+        accessed in different way.
+        """
+        container = {}
+        for key in obj.__header__.Keys():
+            value = obj[key]
+            container[key] = self._route_object(value)
+        return container
 
-    @abstractmethod
-    def _get_lines(self):
-        pass
+    def _pythonize_crowset(self, obj):
+        """
+        CRowset for our needs behaves like regular list, only its
+        contents are hidden under 'lines' attribute.
+        """
+        container = []
+        for element in obj.lines:
+            container.append(self._route_object(element))
+        return container
 
+    def _primitive(self, obj):
+        return obj
+
+    _conversion_map = {
+        'blue.DBRow': _pythonize_dbrow,
+        'dbutil.CRowset': _pythonize_crowset,
+        'util.IndexRowset': _pythonize_crowset,
+        'int': _primitive,
+        'unicode': _primitive
+    }
