@@ -63,6 +63,13 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
+    def _pythonize_cindexed_rowset(self, obj):
+        """
+        CIndexedRowset is dictionary-like container, where we
+        need just values.
+        """
+        return self._pythonize_list(obj.values())
+
     def _pythonize_crowset(self, obj):
         """
         CRowset for our needs behaves like regular list, only its
@@ -145,6 +152,7 @@ class EveNormalizer(object):
     _conversion_map = {
         'blue.DBRow': _pythonize_dbrow,
         'dbutil.CRowset': _pythonize_crowset,
+        'dbutil.CIndexedRowset': _pythonize_cindexed_rowset,
         '_FixedSizeList': _pythonize_list,
         'FSD_Dict': _pythonize_dict,
         'FSD_MultiIndex': _pythonize_dict,
