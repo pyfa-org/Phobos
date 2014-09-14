@@ -19,7 +19,6 @@
 
 
 import os.path
-import sys
 from ConfigParser import ConfigParser
 from datetime import datetime
 from time import mktime
@@ -56,7 +55,7 @@ class MetadataMiner(AbstractMiner):
         except KeyboardInterrupt:
             raise
         except:
-            sys.stderr.write('failed to detect client version\n')
+            print('    failed to detect client version')
             eve_version = None
         lines.append({header[0]: 'client_build', header[1]: eve_version})
         # Generate UNIX-style timestamp of current UTC time

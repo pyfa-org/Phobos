@@ -41,7 +41,7 @@ class EveNormalizer(object):
         Pick proper method for passed object and invoke it.
         """
         try:
-            obj_type = getattr(obj, '__guid__', obj.__class__.__name__)
+            obj_type = getattr(obj, '__guid__', type(obj).__name__)
         # Work around for reverence issue #23
         except TypeError:
             obj_type = obj.__class__.__name__
@@ -91,6 +91,14 @@ class EveNormalizer(object):
             container[key] = self._route_object(value)
         return container
 
+    def _pythonize_filterrowset(self, obj):
+        """
+        FilterRowset is very similar to indexed rowlists, but with few facilities
+        on top of that (whoch we don't really need) and dictionary with data is stored
+        in 'items' attribute, rather than on object itself.
+        """
+        return self._pythonize_indexed_rowlists(obj.items)
+
     def _pythonize_indexed_rowlists(self, obj):
         """
         Indexed row list is dictionary, where keys are some indexes and
@@ -137,13 +145,17 @@ class EveNormalizer(object):
         'dbutil.CRowset': _pythonize_crowset,
         '_FixedSizeList': _pythonize_list,
         'FSD_Dict': _pythonize_dict,
+        'FSD_MultiIndex': _pythonize_dict,
         'FSD_NamedVector': _pythonize_fsdnamedvector,
         'FSD_Object': _pythonize_fsdobj,
+        'util.FilterRowset': _pythonize_filterrowset,
         'util.IndexedRowLists': _pythonize_indexed_rowlists,
         'util.IndexRowset': _pythonize_crowset,
         'bool': _primitive,
+        'dict': _pythonize_dict,
         'float': _primitive,
         'int': _primitive,
+        'list': _pythonize_list,
         'long': _primitive,
         'NoneType': _primitive,
         'str': _primitive,

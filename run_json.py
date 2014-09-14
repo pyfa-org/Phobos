@@ -66,6 +66,18 @@ if __name__ == '__main__':
         print('Miner {}:'.format(type(miner).__name__))
         for table_name in miner.tablename_iter():
             print('  processing {}'.format(table_name))
-            table_data = miner.get_table(table_name)
-            for writer in writers:
-                writer.write(table_name, table_data)
+            # Consume errors thrown by miners, just print a message about it
+            try:
+                table_data = miner.get_table(table_name)
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                print('    failed to fetch data - {}: {}'.format(type(e).__name__, e))
+            else:
+                for writer in writers:
+                    try:
+                        writer.write(table_name, table_data)
+                    except KeyboardInterrupt:
+                        raise
+                    except Exception as e:
+                        print('    failed to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
