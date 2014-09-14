@@ -92,7 +92,7 @@ class EveNormalizer(object):
         on top of that (whoch we don't really need) and dictionary with data is stored
         in 'items' attribute, rather than on object itself.
         """
-        return self._pythonize_indexed_rowlists(obj.items)
+        return self._pythonize_indexed_lists(obj.items)
 
     def _pythonize_fsd_named_vector(self, obj):
         """
@@ -122,11 +122,11 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
-    def _pythonize_indexed_rowlists(self, obj):
+    def _pythonize_indexed_lists(self, obj):
         """
-        Indexed row list is dictionary, where keys are some indexes and
-        values are lists of rows. We assume we do not need keys, thus everything
-        is converted into single list.
+        CFilterRowsets and IndexedRowLists are dictionary, where keys are some
+        indices and values are lists of rows. We assume we do not need keys,
+        thus everything is converted into single list.
         """
         # Chain all sublists into single list and pass it
         # to regular iterable processor
@@ -151,6 +151,7 @@ class EveNormalizer(object):
     _conversion_map = {
         'blue.DBRow': _pythonize_dbrow,
         'dbutil.CRowset': _pythonize_iterable,
+        'dbutil.CFilterRowset': _pythonize_indexed_lists,
         'dbutil.CIndexedRowset': _pythonize_c_indexed_rowset,
         '_FixedSizeList': _pythonize_iterable,
         'FSD_Dict': _pythonize_map,
@@ -158,7 +159,7 @@ class EveNormalizer(object):
         'FSD_NamedVector': _pythonize_fsd_named_vector,
         'FSD_Object': _pythonize_fsd_object,
         'util.FilterRowset': _pythonize_filter_rowset,
-        'util.IndexedRowLists': _pythonize_indexed_rowlists,
+        'util.IndexedRowLists': _pythonize_indexed_lists,
         'util.IndexRowset': _pythonize_index_rowset,
         'util.KeyVal': _pythonize_keyval,
         'bool': _primitive,
