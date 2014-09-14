@@ -68,7 +68,7 @@ class EveNormalizer(object):
         CRowset for our needs behaves like regular list, only its
         contents are hidden under 'lines' attribute.
         """
-        return tuple(self._route_object(i) for i in obj.lines)
+        return tuple(self._route_object(i) for i in obj)
 
     def _pythonize_dbrow(self, obj):
         """
@@ -103,6 +103,13 @@ class EveNormalizer(object):
             for row in sublist:
                 container.append(self._route_object(row))
         return tuple(container)
+
+    def _pythonize_index_rowset(self, obj):
+        """
+        IndexRowset is similar to CRowset, but list of data is accessed
+        via 'lines' attribute.
+        """
+        return self._pythonize_crowset(obj.lines)
 
     def _pythonize_fsdobj(self, obj):
         """
@@ -145,7 +152,7 @@ class EveNormalizer(object):
         'FSD_Object': _pythonize_fsdobj,
         'util.FilterRowset': _pythonize_filterrowset,
         'util.IndexedRowLists': _pythonize_indexed_rowlists,
-        'util.IndexRowset': _pythonize_crowset,
+        'util.IndexRowset': _pythonize_index_rowset,
         'bool': _primitive,
         'dict': _pythonize_dict,
         'float': _primitive,
