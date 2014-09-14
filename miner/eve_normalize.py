@@ -40,11 +40,7 @@ class EveNormalizer(object):
         """
         Pick proper method for passed object and invoke it.
         """
-        try:
-            obj_type = getattr(obj, '__guid__', type(obj).__name__)
-        # Work around for reverence issue #23
-        except TypeError:
-            obj_type = obj.__class__.__name__
+        obj_type = getattr(obj, '__guid__', type(obj).__name__)
         method = self._conversion_map[obj_type]
         return method(self, obj)
 
