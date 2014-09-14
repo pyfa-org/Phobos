@@ -19,7 +19,7 @@
 
 
 from .bulkdata import BulkdataMiner
-from miner.cached_calls import CachedCallsMiner
+from .cached_calls import CachedCallsMiner
 from .metadata import MetadataMiner
 
 
