@@ -53,10 +53,7 @@ class EveNormalizer(object):
         For objects which have access interface similar to
         python lists, but actually have different class.
         """
-        container = []
-        for item in obj:
-            container.append(self._route_object(item))
-        return container
+        return tuple(self._route_object(i) for i in obj)
 
     def _pythonize_dict(self, obj):
         """
@@ -65,8 +62,9 @@ class EveNormalizer(object):
         """
         container = {}
         for key, value in obj.iteritems():
-            # Keys are assumed to be python primitives
-            container[key] = self._route_object(value)
+            proc_key = self._route_object(key)
+            proc_value = self._route_object(value)
+            container[proc_key] = proc_value
         return container
 
     def _pythonize_crowset(self, obj):
@@ -87,8 +85,10 @@ class EveNormalizer(object):
         container = {}
         for key in obj.__header__.Keys():
             value = obj[key]
+            proc_key = self._route_object(key)
+            proc_value = self._route_object(value)
             # Keys are assumed to be python primitives
-            container[key] = self._route_object(value)
+            container[proc_key] = proc_value
         return container
 
     def _pythonize_filterrowset(self, obj):
@@ -120,8 +120,9 @@ class EveNormalizer(object):
         for key in obj.attributes:
             # Sometimes values are missing
             value = getattr(obj, key, None)
-            # Keys are assumed to be python primitives
-            container[key] = self._route_object(value)
+            proc_key = self._route_object(key)
+            proc_value = self._route_object(value)
+            container[proc_key] = proc_value
         return container
 
     def _pythonize_fsdnamedvector(self, obj):
@@ -133,8 +134,9 @@ class EveNormalizer(object):
         name_data = obj.schema['aliases']
         for name, index in name_data.items():
             value = obj.data[index]
-            # Names are assumed to be python primitives
-            container[name] = self._route_object(value)
+            proc_name = self._route_object(name)
+            proc_value = self._route_object(value)
+            container[proc_name] = proc_value
         return container
 
     def _primitive(self, obj):
@@ -159,5 +161,6 @@ class EveNormalizer(object):
         'long': _primitive,
         'NoneType': _primitive,
         'str': _primitive,
+        'tuple': _pythonize_list,
         'unicode': _primitive
     }
