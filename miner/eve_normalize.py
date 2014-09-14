@@ -19,6 +19,8 @@
 #===============================================================================
 
 
+from itertools import chain
+
 
 class EveNormalizer(object):
     """
@@ -44,17 +46,17 @@ class EveNormalizer(object):
         method = self._conversion_map[obj_type]
         return method(self, obj)
 
-    def _pythonize_list(self, obj):
+    def _pythonize_iterable(self, obj):
         """
         For objects which have access interface similar to
-        python lists, but actually have different class.
+        python iterables, but are actually non-builtins.
         """
         return tuple(self._route_object(i) for i in obj)
 
-    def _pythonize_dict(self, obj):
+    def _pythonize_map(self, obj):
         """
         For objects which have access interface similar to
-        python dictionaries, but actually have different class.
+        python dictionaries, but are actually non-builtins.
         """
         container = {}
         for key, value in obj.iteritems():
@@ -68,14 +70,7 @@ class EveNormalizer(object):
         CIndexedRowset is dictionary-like container, where we
         need just values.
         """
-        return self._pythonize_list(obj.values())
-
-    def _pythonize_crowset(self, obj):
-        """
-        CRowset for our needs behaves like regular list, only its
-        contents are hidden under 'lines' attribute.
-        """
-        return tuple(self._route_object(i) for i in obj)
+        return self._pythonize_iterable(obj.values())
 
     def _pythonize_dbrow(self, obj):
         """
@@ -105,18 +100,15 @@ class EveNormalizer(object):
         values are lists of rows. We assume we do not need keys, thus everything
         is converted into single list.
         """
-        container = []
-        for sublist in obj.values():
-            for row in sublist:
-                container.append(self._route_object(row))
-        return tuple(container)
+        # Chain all sublists into single list and pass it
+        # to regular iterable processor
+        return self._pythonize_iterable(chain(*obj.values()))
 
     def _pythonize_index_rowset(self, obj):
         """
-        IndexRowset is similar to CRowset, but list of data is accessed
-        via 'lines' attribute.
+        IndexRowset has list of data is accessed via 'lines' attribute.
         """
-        return self._pythonize_crowset(obj.lines)
+        return self._pythonize_iterable(obj.lines)
 
     def _pythonize_fsdobj(self, obj):
         """
@@ -151,24 +143,24 @@ class EveNormalizer(object):
 
     _conversion_map = {
         'blue.DBRow': _pythonize_dbrow,
-        'dbutil.CRowset': _pythonize_crowset,
+        'dbutil.CRowset': _pythonize_iterable,
         'dbutil.CIndexedRowset': _pythonize_cindexed_rowset,
-        '_FixedSizeList': _pythonize_list,
-        'FSD_Dict': _pythonize_dict,
-        'FSD_MultiIndex': _pythonize_dict,
+        '_FixedSizeList': _pythonize_iterable,
+        'FSD_Dict': _pythonize_map,
+        'FSD_MultiIndex': _pythonize_map,
         'FSD_NamedVector': _pythonize_fsdnamedvector,
         'FSD_Object': _pythonize_fsdobj,
         'util.FilterRowset': _pythonize_filterrowset,
         'util.IndexedRowLists': _pythonize_indexed_rowlists,
         'util.IndexRowset': _pythonize_index_rowset,
         'bool': _primitive,
-        'dict': _pythonize_dict,
+        'dict': _pythonize_map,
         'float': _primitive,
         'int': _primitive,
-        'list': _pythonize_list,
+        'list': _pythonize_iterable,
         'long': _primitive,
         'NoneType': _primitive,
         'str': _primitive,
-        'tuple': _pythonize_list,
+        'tuple': _pythonize_iterable,
         'unicode': _primitive
     }
