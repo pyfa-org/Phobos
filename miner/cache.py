@@ -35,8 +35,9 @@ class CallData(object):
     """
 
     def __init__(self, rawinfo):
-        # Info has following format:
+        # Info has one of 2 following formats:
         # ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
+        # (service name, call name, call arg1, call arg2, ...)
         self.rawinfo = rawinfo
 
     @property

@@ -55,8 +55,8 @@ if __name__ == '__main__':
 
     miners = (
         MetadataMiner(path_eve),
-        CacheMiner(path_eve, path_cache, args.server),
         BulkdataMiner(path_eve, path_cache, args.server),
+        CacheMiner(path_eve, path_cache, args.server)
     )
 
     writers = (
