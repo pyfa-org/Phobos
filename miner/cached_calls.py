@@ -28,9 +28,10 @@ from .eve_normalize import EveNormalizer
 from .exception import ContainerNameError
 
 
-class CacheMiner(AbstractMiner):
+class CachedCallsMiner(AbstractMiner):
     """
-    Class, responsible for fetching data from EVE client cache.
+    Class, responsible for fetching data from EVE client's
+    remote service call cache.
     """
 
     def __init__(self, path_eve, path_cache, server):

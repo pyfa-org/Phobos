@@ -19,12 +19,12 @@
 
 
 from .bulkdata import BulkdataMiner
-from .cache import CacheMiner
+from miner.cached_calls import CachedCallsMiner
 from .metadata import MetadataMiner
 
 
 __all__ = (
     'BulkdataMiner',
-    'CacheMiner',
+    'CachedCallsMiner',
     'MetadataMiner'
 )
