@@ -43,7 +43,7 @@ class MetadataMiner(AbstractMiner):
 
     def get_table(self, table_name):
         if table_name != self._table_name:
-            msg = 'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
+            msg = u'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
             raise TableNameError(msg)
         field_names = ('field_name', 'field_value')
         lines = []
@@ -55,10 +55,10 @@ class MetadataMiner(AbstractMiner):
         except KeyboardInterrupt:
             raise
         except:
-            print('    failed to detect client version')
+            print(u'    failed to detect client version')
             eve_version = None
         lines.append({field_names[0]: 'client_build', field_names[1]: eve_version})
         # Generate UNIX-style timestamp of current UTC time
         timestamp = int(mktime(datetime.utcnow().timetuple()))
         lines.append({field_names[0]: 'dump_time', field_names[1]: timestamp})
-        return lines
+        return tuple(lines)
