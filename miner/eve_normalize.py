@@ -153,6 +153,7 @@ class EveNormalizer(object):
         'dbutil.CRowset': _pythonize_iterable,
         'dbutil.CFilterRowset': _pythonize_indexed_lists,
         'dbutil.CIndexedRowset': _pythonize_c_indexed_rowset,
+        'dbutil.RowList': _pythonize_iterable,
         '_FixedSizeList': _pythonize_iterable,
         'FSD_Dict': _pythonize_map,
         'FSD_MultiIndex': _pythonize_map,
