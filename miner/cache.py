@@ -41,9 +41,15 @@ class CacheMiner(AbstractMiner):
 
     @property
     def _call_file_map(self):
+        """
+        Access map with cache filenames, keyed against human respresentation
+        of remote calls. If not present, make one.
+        """
         # Compose map if we haven't already
         if self.__call_file_map is None:
-            self.__call_file_map = {}
+            # Intermediate map between call names and cache files
+            # Format: {human-friendly call string: set(full paths to files)}
+            call_files_map = {}
             # Cycle through CachedMethodCalls and find all .cache files
             for filepath in glob.glob(os.path.join(self.path_cachedcalls, '*.cache')):
                 # In case file cannot be loaded due to any reasons, skip it
@@ -72,7 +78,23 @@ class CacheMiner(AbstractMiner):
                 call_args_line = u', '.join(unicode(i) for i in call_args)
                 # Finally, compose full service call in human-readable format and put it into dictionary
                 full_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
-                self.__call_file_map[full_call_name] = filepath
+                filepaths = call_files_map.setdefault(full_call_name, set())
+                filepaths.add(filepath)
+            self.__call_file_map = {}
+            for full_call_name, filepaths in call_files_map.items():
+                # When we have more than one filepaths, it means that multiple files
+                # map onto single human-friendly call name (e.g. single call with argument string
+                # passed as unicode or ANSI might result in this), thus we process them differently
+                # Solve collisions by appending file name to human-friendly call name
+                if len(filepaths) > 1:
+                    for filepath in filepaths:
+                        filename = os.path.splitext(os.path.basename(filepath))[0]
+                        suffixed_call_name = u'{}_{}'.format(full_call_name, filename)
+                        self.__call_file_map[suffixed_call_name] = filepath
+                # If no collisions, just key path against regular human-friendly call name
+                else:
+                    for filepath in filepaths:
+                        self.__call_file_map[full_call_name] = filepath
         return self.__call_file_map
 
     def __read_cache_file(self, filepath):
