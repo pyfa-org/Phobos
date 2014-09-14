@@ -22,7 +22,7 @@ from reverence import blue
 
 from .abstract_miner import AbstractMiner
 from .eve_normalize import EveNormalizer
-from .exception import TableNameError
+from .exception import ContainerNameError
 
 
 class BulkdataMiner(AbstractMiner):
@@ -36,15 +36,15 @@ class BulkdataMiner(AbstractMiner):
         eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
         self.cfg = eve.getconfigmgr()
 
-    def tablename_iter(self):
-        for table_name in sorted(self.cfg.tables):
-            yield table_name
+    def contname_iter(self):
+        for container_name in sorted(self.cfg.tables):
+            yield container_name
 
-    def get_table(self, table_name):
+    def get_data(self, container_name):
         try:
-            bulk_table = getattr(self.cfg, table_name)
+            container_data = getattr(self.cfg, container_name)
         except AttributeError:
-            msg = u'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
-            raise TableNameError(msg)
-        lines = EveNormalizer().run(bulk_table)
-        return lines
+            msg = u'container "{}" is not available for miner {}'.format(container_name, type(self).__name__)
+            raise ContainerNameError(msg)
+        normalized_data = EveNormalizer().run(container_data)
+        return normalized_data

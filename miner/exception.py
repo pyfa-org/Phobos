@@ -18,9 +18,9 @@
 #===============================================================================
 
 
-class TableNameError(BaseException):
+class ContainerNameError(BaseException):
     """
-    When table with requested name is not available, this exception
-    is raised by miners.
+    When container with requested name is not available,
+    this exception is raised by miners.
     """
     pass

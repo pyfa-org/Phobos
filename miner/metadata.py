@@ -24,7 +24,7 @@ from datetime import datetime
 from time import mktime
 
 from .abstract_miner import AbstractMiner
-from .exception import TableNameError
+from .exception import ContainerNameError
 
 
 class MetadataMiner(AbstractMiner):
@@ -34,19 +34,19 @@ class MetadataMiner(AbstractMiner):
     """
 
     def __init__(self, path_eve):
-        self._table_name = 'metadata'
+        self._container_name = 'metadata'
         self.path_eve = path_eve
 
-    def tablename_iter(self):
-        for table_name in (self._table_name,):
-            yield table_name
+    def contname_iter(self):
+        for container_name in (self._container_name,):
+            yield container_name
 
-    def get_table(self, table_name):
-        if table_name != self._table_name:
-            msg = u'table "{}" is not available for miner {}'.format(table_name, type(self).__name__)
-            raise TableNameError(msg)
+    def get_data(self, container_name):
+        if container_name != self._container_name:
+            msg = u'container "{}" is not available for miner {}'.format(container_name, type(self).__name__)
+            raise ContainerNameError(msg)
         field_names = ('field_name', 'field_value')
-        lines = []
+        container_data = []
         # Read client version
         try:
             config = ConfigParser()
@@ -57,8 +57,8 @@ class MetadataMiner(AbstractMiner):
         except:
             print(u'    failed to detect client version')
             eve_version = None
-        lines.append({field_names[0]: 'client_build', field_names[1]: eve_version})
+        container_data.append({field_names[0]: 'client_build', field_names[1]: eve_version})
         # Generate UNIX-style timestamp of current UTC time
         timestamp = int(mktime(datetime.utcnow().timetuple()))
-        lines.append({field_names[0]: 'dump_time', field_names[1]: timestamp})
-        return tuple(lines)
+        container_data.append({field_names[0]: 'dump_time', field_names[1]: timestamp})
+        return tuple(container_data)

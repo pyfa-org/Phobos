@@ -65,11 +65,11 @@ if __name__ == '__main__':
 
     for miner in miners:
         print(u'Miner {}:'.format(type(miner).__name__))
-        for table_name in miner.tablename_iter():
-            print(u'  processing {}'.format(table_name))
+        for container_name in miner.contname_iter():
+            print(u'  processing {}'.format(container_name))
             # Consume errors thrown by miners, just print a message about it
             try:
-                table_data = miner.get_table(table_name)
+                container_data = miner.get_data(container_name)
             except KeyboardInterrupt:
                 raise
             except Exception as e:
@@ -77,7 +77,7 @@ if __name__ == '__main__':
             else:
                 for writer in writers:
                     try:
-                        writer.write(table_name, table_data)
+                        writer.write(container_name, container_data)
                     except KeyboardInterrupt:
                         raise
                     except Exception as e:

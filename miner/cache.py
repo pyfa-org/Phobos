@@ -18,138 +18,83 @@
 #===============================================================================
 
 
-import os
+import glob
+import os.path
 
 from reverence import blue
 
 from .abstract_miner import AbstractMiner
 from .eve_normalize import EveNormalizer
-from .exception import TableNameError
-
-
-class CallData(object):
-    """
-    Simple container class for holding service call data, also provides
-    printing functionality for error printing.
-    """
-
-    def __init__(self, rawinfo):
-        # Info has one of 2 following formats:
-        # ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
-        # (service name, call name, call arg1, call arg2, ...)
-        self.rawinfo = rawinfo
-
-    @property
-    def sdata(self):
-        return self.rawinfo[0]
-
-    @property
-    def sname(self):
-        if self.__is_composite_service_call() is False:
-            return self.sdata
-        else:
-            return self.sdata[0]
-
-    @property
-    def sargs(self):
-        if self.__is_composite_service_call() is False:
-            return ()
-        else:
-            return self.sdata[1:]
-
-    @property
-    def cdata(self):
-        return self.rawinfo[1:]
-
-    @property
-    def cname(self):
-        return self.cdata[0]
-
-    @property
-    def cargs(self):
-        return self.cdata[1:]
-
-    def __is_composite_service_call(self):
-        # If service info (1st element of info tuple) is tuple itself,
-        # then service has some arguments passed to it, because otherwise
-        # 1st element contains just service info
-        if isinstance(self.rawinfo[0], (tuple, list)):
-            return True
-        else:
-            return False
-
-    def __repr__(self):
-        sargs = u', '.join(unicode(i) for i in self.sargs)
-        cargs = u', '.join(unicode(i) for i in self.cargs)
-        return u'{}({})_{}({})'.format(self.sname, sargs, self.cname, cargs)
-
-    def __eq__(self, other):
-        """
-        Comparison operator, which returns True when either data is equal
-        or readable representation.
-        """
-        # Compare info only when other object actually has it
-        try:
-            other_rawinfo = other.rawinfo
-        except AttributeError:
-            pass
-        else:
-            if self.rawinfo == other_rawinfo is True:
-                return True
-        if unicode(self) == other:
-            return True
-        else:
-            return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+from .exception import ContainerNameError
 
 
 class CacheMiner(AbstractMiner):
     """
-    Class, responsible for fetching data out of EVE client cache.
+    Class, responsible for fetching data from EVE client cache.
     """
 
     def __init__(self, path_eve, path_cache, server):
         # Initialize reverence
         self.eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
         self.path_cachedcalls = os.path.join(self.eve.getcachemgr().machocachepath, 'CachedMethodCalls')
+        self.__call_file_map = None
 
-    def tablename_iter(self):
-        calls = []
-        # Cycle through CachedMethodCalls and find all .cache files
-        for filename in sorted(os.listdir(self.path_cachedcalls)):
-            fileext = os.path.splitext(filename)[1]
-            filepath = os.path.join(self.path_cachedcalls, filename)
-            if not os.path.isfile(filepath) or fileext != '.cache':
-                continue
-            with open(filepath, 'rb') as cachefile:
-                # When reading fails due to some unexpected reason, skip file
+    @property
+    def _call_file_map(self):
+        # Compose map if we haven't already
+        if self.__call_file_map is None:
+            self.__call_file_map = {}
+            # Cycle through CachedMethodCalls and find all .cache files
+            for filepath in glob.glob(os.path.join(self.path_cachedcalls, '*.cache')):
+                # In case file cannot be loaded due to any reasons, skip it
                 try:
-                    filedata = cachefile.read()
+                    call_info, _ = self.__read_cache_file(filepath)
                 except KeyboardInterrupt:
                     raise
                 except:
-                    print(u'  unable to read cache file {}'.format(filename))
+                    print(u'  unable to load cache file {}'.format(os.path.basename(filepath)))
                     continue
-            try:
-                info, _ = blue.marshal.Load(filedata)
-            except KeyboardInterrupt:
-                raise
-            except:
-                print(u'  unable to load cache file {}'.format(filename))
-                continue
-            calldata = CallData(rawinfo=info)
-            calls.append(calldata)
-        for calldata in sorted(calls, key=str):
-            yield calldata
+                # Info has one of 2 following formats:
+                # ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
+                # (service name, call name, call arg1, call arg2, ...)
+                # Here we parse info structure according to one of these formats
+                svc_info = call_info[0]
+                call_info = call_info[1:]
+                if isinstance(svc_info, (tuple, list)):
+                    svc_name = svc_info[0]
+                    svc_args = svc_info[1:]
+                else:
+                    svc_name = svc_info
+                    svc_args = ()
+                call_name = call_info[0]
+                call_args = call_info[1:]
+                svc_args_line = u', '.join(unicode(i) for i in svc_args)
+                call_args_line = u', '.join(unicode(i) for i in call_args)
+                # Finally, compose full service call in human-readable format and put it into dictionary
+                full_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
+                self.__call_file_map[full_call_name] = filepath
+        return self.__call_file_map
 
+    def __read_cache_file(self, filepath):
+        """
+        Read & load file located at filepath, and return it as
+        tuple with call info and actual cached method result.
+        """
+        with open(filepath, 'rb') as cachefile:
+            filedata = cachefile.read()
+        call_info, call_data = blue.marshal.Load(filedata)
+        return call_info, call_data['lret']
 
-    def get_table(self, calldata):
+    def contname_iter(self):
+        for container_name in sorted(self._call_file_map):
+            yield container_name
+
+    def get_data(self, container_name):
         try:
-            cache_table = getattr(self.eve.RemoteSvc(calldata.sdata), calldata.cname)(*calldata.cargs)
-        except AttributeError:
-            msg = u'table "{}" is not available for miner {}'.format(calldata, type(self).__name__)
-            raise TableNameError(msg)
-        lines = EveNormalizer().run(cache_table)
-        return lines
+            filepath = self._call_file_map[container_name]
+        except KeyError:
+            msg = u'container "{}" is not available for miner {}'.format(container_name, type(self).__name__)
+            raise ContainerNameError(msg)
+        _, call_data = self.__read_cache_file(filepath)
+        normalized_data = EveNormalizer().run(call_data)
+        return normalized_data

@@ -29,15 +29,15 @@ class AbstractMiner(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def tablename_iter(self):
+    def contname_iter(self):
         """
-        Provide an iterator over tables provided by miner.
+        Provide an iterator over containers provided by miner.
         """
         pass
 
     @abstractmethod
-    def get_table(self, table_name):
+    def get_data(self, container_name):
         """
-        Fetch data from specified table as list of objects.
+        Fetch data from specified container.
         """
         pass
