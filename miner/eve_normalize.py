@@ -40,7 +40,11 @@ class EveNormalizer(object):
         """
         Pick proper method for passed object and invoke it.
         """
-        obj_type = getattr(obj, '__guid__', obj.__class__.__name__)
+        try:
+            obj_type = getattr(obj, '__guid__', obj.__class__.__name__)
+        # Work around for reverence issue #23
+        except TypeError:
+            obj_type = obj.__class__.__name__
         method = self._conversion_map[obj_type]
         return method(self, obj)
 
@@ -87,6 +91,18 @@ class EveNormalizer(object):
             container[key] = self._route_object(value)
         return container
 
+    def _pythonize_indexed_rowlists(self, obj):
+        """
+        Indexed row list is dictionary, where keys are some indexes and
+        values are lists of rows. We assume we do not need keys, thus everything
+        is converted into single list.
+        """
+        container = []
+        for sublist in obj.values():
+            for row in sublist:
+                container.append(self._route_object(row))
+        return container
+
     def _pythonize_fsdobj(self, obj):
         """
         FSD object is similar to python dictionary, but its keys are
@@ -100,6 +116,19 @@ class EveNormalizer(object):
             container[key] = self._route_object(value)
         return container
 
+    def _pythonize_fsdnamedvector(self, obj):
+        """
+        Named vectors resemble tuples/lists, but contain name data for
+        their fields, thus we convert them into dicts.
+        """
+        container = {}
+        name_data = obj.schema['aliases']
+        for name, index in name_data.items():
+            value = obj.data[index]
+            # Names are assumed to be python primitives
+            container[name] = self._route_object(value)
+        return container
+
     def _primitive(self, obj):
         return obj
 
@@ -108,7 +137,9 @@ class EveNormalizer(object):
         'dbutil.CRowset': _pythonize_crowset,
         '_FixedSizeList': _pythonize_list,
         'FSD_Dict': _pythonize_dict,
+        'FSD_NamedVector': _pythonize_fsdnamedvector,
         'FSD_Object': _pythonize_fsdobj,
+        'util.IndexedRowLists': _pythonize_indexed_rowlists,
         'util.IndexRowset': _pythonize_crowset,
         'bool': _primitive,
         'float': _primitive,
