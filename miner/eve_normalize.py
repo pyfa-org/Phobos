@@ -145,6 +145,14 @@ class EveNormalizer(object):
         """
         return self._pythonize_map(obj.__dict__)
 
+    def _pythonize_rowdict(self, obj):
+        """
+        RowDicts are regular dictionaries, where keys are some IDs and
+        values are DBRows. Keys are usually duplicated in rows themselves,
+        thus we remove them and compose single list.
+        """
+        return self._pythonize_iterable(obj.values())
+
     def _primitive(self, obj):
         return obj
 
@@ -153,6 +161,7 @@ class EveNormalizer(object):
         'dbutil.CRowset': _pythonize_iterable,
         'dbutil.CFilterRowset': _pythonize_indexed_lists,
         'dbutil.CIndexedRowset': _pythonize_c_indexed_rowset,
+        'dbutil.RowDict': _pythonize_rowdict,
         'dbutil.RowList': _pythonize_iterable,
         '_FixedSizeList': _pythonize_iterable,
         'FSD_Dict': _pythonize_map,
@@ -172,5 +181,6 @@ class EveNormalizer(object):
         'NoneType': _primitive,
         'str': _primitive,
         'tuple': _pythonize_iterable,
-        'unicode': _primitive
+        'unicode': _primitive,
+        'universe.SolarSystemWrapper': _pythonize_keyval
     }
