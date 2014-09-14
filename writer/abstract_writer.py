@@ -24,10 +24,10 @@ from abc import ABCMeta, abstractmethod
 class AbstractWriter(object):
     """
     Abstract class, which defines interface to objects
-    which write tables into some kind of persistent storage.
+    which write data into some kind of persistent storage.
     """
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def write(self, table_name, lines):
+    def write(self, container_name, lines):
         pass

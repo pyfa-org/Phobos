@@ -33,13 +33,13 @@ class JsonWriter(AbstractWriter):
         self.folder = folder
         self.indent = indent
 
-    def write(self, table_name, lines):
+    def write(self, container_name, lines):
         # Create folder structure to path, if not created yet
         if not os.path.exists(self.folder):
             os.makedirs(self.folder, mode=0o755)
         json.dump(
             lines,
-            open(os.path.join(self.folder, '{}.json'.format(table_name)), 'w'),
+            open(os.path.join(self.folder, '{}.json'.format(container_name)), 'w'),
             indent=self.indent,
             encoding='cp1252'
         )
