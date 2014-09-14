@@ -34,13 +34,49 @@ class CallData(object):
     printing functionality for error printing.
     """
 
-    def __init__(self, sname='', sargs=(), cname='', cargs=()):
-        # Here and further we use 's' prefix to indicate service-related attributes,
-        # and 'c' as call-related attributes
-        self.sname = sname
-        self.sargs = sargs
-        self.cname = cname
-        self.cargs = cargs
+    def __init__(self, rawinfo):
+        # Info has following format:
+        # ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
+        self.rawinfo = rawinfo
+
+    @property
+    def sdata(self):
+        return self.rawinfo[0]
+
+    @property
+    def sname(self):
+        if self.__is_composite_service_call() is False:
+            return self.sdata
+        else:
+            return self.sdata[0]
+
+    @property
+    def sargs(self):
+        if self.__is_composite_service_call() is False:
+            return ()
+        else:
+            return self.sdata[1:]
+
+    @property
+    def cdata(self):
+        return self.rawinfo[1:]
+
+    @property
+    def cname(self):
+        return self.cdata[0]
+
+    @property
+    def cargs(self):
+        return self.cdata[1:]
+
+    def __is_composite_service_call(self):
+        # If service info (1st element of info tuple) is tuple itself,
+        # then service has some arguments passed to it, because otherwise
+        # 1st element contains just service info
+        if isinstance(self.rawinfo[0], (tuple, list)):
+            return True
+        else:
+            return False
 
     def __repr__(self):
         sargs = u', '.join(unicode(i) for i in self.sargs)
@@ -82,29 +118,15 @@ class CacheMiner(AbstractMiner):
             except:
                 print(u'  unable to load cache file {}'.format(filename))
                 continue
-            # Info has following format:
-            # ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
-            sdata, cname = info[0:2]
-            cargs = info[2:]
-            if isinstance(sdata, (tuple, list)):
-                sname = sdata[0]
-                sargs = sdata[1:]
-            else:
-                sname = sdata
-                sargs = ()
-            calldata = CallData(sname=sname, sargs=sargs, cname=cname, cargs=cargs)
+            calldata = CallData(rawinfo=info)
             calls.append(calldata)
         for calldata in sorted(calls, key=str):
             yield calldata
 
 
     def get_table(self, calldata):
-        if len(calldata.sargs) > 0:
-            sdata = (calldata.sname, calldata.sargs)
-        else:
-            sdata = calldata.sname
         try:
-            cache_table = getattr(self.eve.RemoteSvc(sdata), calldata.cname)(*calldata.cargs)
+            cache_table = getattr(self.eve.RemoteSvc(calldata.sdata), calldata.cname)(*calldata.cargs)
         except AttributeError:
             msg = u'table "{}" is not available for miner {}'.format(calldata, type(self).__name__)
             raise TableNameError(msg)
