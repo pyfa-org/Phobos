@@ -84,6 +84,18 @@ class CallData(object):
         cargs = u', '.join(unicode(i) for i in self.cargs)
         return u'{}({})_{}({})'.format(self.sname, sargs, self.cname, cargs)
 
+    def __eq__(self, other):
+        """
+        Comparison operator, which returns True when either data is equal
+        or readable representation.
+        """
+        if self.rawinfo == other.rawinfo is True:
+            return True
+        if unicode(self) == other:
+            return True
+        else:
+            return False
+
 
 class CacheMiner(AbstractMiner):
     """
