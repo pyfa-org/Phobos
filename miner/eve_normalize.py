@@ -72,10 +72,7 @@ class EveNormalizer(object):
         CRowset for our needs behaves like regular list, only its
         contents are hidden under 'lines' attribute.
         """
-        container = []
-        for element in obj.lines:
-            container.append(self._route_object(element))
-        return container
+        return tuple(self._route_object(i) for i in obj.lines)
 
     def _pythonize_dbrow(self, obj):
         """
@@ -109,7 +106,7 @@ class EveNormalizer(object):
         for sublist in obj.values():
             for row in sublist:
                 container.append(self._route_object(row))
-        return container
+        return tuple(container)
 
     def _pythonize_fsdobj(self, obj):
         """
