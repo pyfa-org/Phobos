@@ -65,7 +65,7 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
-    def _pythonize_cindexed_rowset(self, obj):
+    def _pythonize_c_indexed_rowset(self, obj):
         """
         CIndexedRowset is dictionary-like container, where we
         need just values.
@@ -86,13 +86,41 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
-    def _pythonize_filterrowset(self, obj):
+    def _pythonize_filter_rowset(self, obj):
         """
         FilterRowset is very similar to indexed rowlists, but with few facilities
         on top of that (whoch we don't really need) and dictionary with data is stored
         in 'items' attribute, rather than on object itself.
         """
         return self._pythonize_indexed_rowlists(obj.items)
+
+    def _pythonize_fsd_named_vector(self, obj):
+        """
+        Named vectors resemble tuples/lists, but contain name data for
+        their fields, thus we convert them into dicts.
+        """
+        container = {}
+        name_data = obj.schema['aliases']
+        for name, index in name_data.items():
+            value = obj.data[index]
+            proc_name = self._route_object(name)
+            proc_value = self._route_object(value)
+            container[proc_name] = proc_value
+        return container
+
+    def _pythonize_fsd_object(self, obj):
+        """
+        FSD object is similar to python dictionary, but its keys are
+        accessed via 'attributes' attribute.
+        """
+        container = {}
+        for key in obj.attributes:
+            # Sometimes values are missing
+            value = getattr(obj, key, None)
+            proc_key = self._route_object(key)
+            proc_value = self._route_object(value)
+            container[proc_key] = proc_value
+        return container
 
     def _pythonize_indexed_rowlists(self, obj):
         """
@@ -110,33 +138,12 @@ class EveNormalizer(object):
         """
         return self._pythonize_iterable(obj.lines)
 
-    def _pythonize_fsdobj(self, obj):
+    def _pythonize_keyval(self, obj):
         """
-        FSD object is similar to python dictionary, but its keys are
-        accessed via 'attributes' attribute.
+        KeyVal is dictionary, where keys are object attributes and
+        values are assigned to them values.
         """
-        container = {}
-        for key in obj.attributes:
-            # Sometimes values are missing
-            value = getattr(obj, key, None)
-            proc_key = self._route_object(key)
-            proc_value = self._route_object(value)
-            container[proc_key] = proc_value
-        return container
-
-    def _pythonize_fsdnamedvector(self, obj):
-        """
-        Named vectors resemble tuples/lists, but contain name data for
-        their fields, thus we convert them into dicts.
-        """
-        container = {}
-        name_data = obj.schema['aliases']
-        for name, index in name_data.items():
-            value = obj.data[index]
-            proc_name = self._route_object(name)
-            proc_value = self._route_object(value)
-            container[proc_name] = proc_value
-        return container
+        return self._pythonize_map(obj.__dict__)
 
     def _primitive(self, obj):
         return obj
@@ -144,15 +151,16 @@ class EveNormalizer(object):
     _conversion_map = {
         'blue.DBRow': _pythonize_dbrow,
         'dbutil.CRowset': _pythonize_iterable,
-        'dbutil.CIndexedRowset': _pythonize_cindexed_rowset,
+        'dbutil.CIndexedRowset': _pythonize_c_indexed_rowset,
         '_FixedSizeList': _pythonize_iterable,
         'FSD_Dict': _pythonize_map,
         'FSD_MultiIndex': _pythonize_map,
-        'FSD_NamedVector': _pythonize_fsdnamedvector,
-        'FSD_Object': _pythonize_fsdobj,
-        'util.FilterRowset': _pythonize_filterrowset,
+        'FSD_NamedVector': _pythonize_fsd_named_vector,
+        'FSD_Object': _pythonize_fsd_object,
+        'util.FilterRowset': _pythonize_filter_rowset,
         'util.IndexedRowLists': _pythonize_indexed_rowlists,
         'util.IndexRowset': _pythonize_index_rowset,
+        'util.KeyVal': _pythonize_keyval,
         'bool': _primitive,
         'dict': _pythonize_map,
         'float': _primitive,
