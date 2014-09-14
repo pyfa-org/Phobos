@@ -27,7 +27,6 @@ from .eve_normalize import EveNormalizer
 from .exception import TableNameError
 
 
-
 class CallData(object):
     """
     Simple container class for holding service call data, also provides
@@ -89,12 +88,21 @@ class CallData(object):
         Comparison operator, which returns True when either data is equal
         or readable representation.
         """
-        if self.rawinfo == other.rawinfo is True:
-            return True
+        # Compare info only when other object actually has it
+        try:
+            other_rawinfo = other.rawinfo
+        except AttributeError:
+            pass
+        else:
+            if self.rawinfo == other_rawinfo is True:
+                return True
         if unicode(self) == other:
             return True
         else:
             return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class CacheMiner(AbstractMiner):
