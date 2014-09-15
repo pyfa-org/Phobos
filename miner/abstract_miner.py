@@ -18,6 +18,7 @@
 #===============================================================================
 
 
+import re
 from abc import ABCMeta, abstractmethod
 
 
@@ -41,3 +42,16 @@ class AbstractMiner(object):
         Fetch data from specified container.
         """
         pass
+
+    def _secure_name(self, name):
+        """
+        We rely on table/call/arguments names to not have any
+        parenthesis or commas, because these are special symbols -
+        they split up arguments from calls and arguments from each
+        other. Having these in names themselves would make it
+        impossible to parse list of names passed to phobos.
+        """
+        # We replace them with similar symbol instead of just removing
+        # Also make sure to convert to unicode, just in case argument of
+        # non-string-type is passed
+        return unicode(name).replace('(', '<').replace(')', '>').replace(',', '.')

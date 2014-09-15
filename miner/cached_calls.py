@@ -68,15 +68,15 @@ class CachedCallsMiner(AbstractMiner):
                 svc_info = call_info[0]
                 call_info = call_info[1:]
                 if isinstance(svc_info, (tuple, list)):
-                    svc_name = svc_info[0]
+                    svc_name = self._secure_name(svc_info[0])
                     svc_args = svc_info[1:]
                 else:
-                    svc_name = svc_info
+                    svc_name = self._secure_name(svc_info)
                     svc_args = ()
-                call_name = call_info[0]
+                call_name = self._secure_name(call_info[0])
                 call_args = call_info[1:]
-                svc_args_line = u', '.join(unicode(i) for i in svc_args)
-                call_args_line = u', '.join(unicode(i) for i in call_args)
+                svc_args_line = u', '.join(self._secure_name(i) for i in svc_args)
+                call_args_line = u', '.join(self._secure_name(i) for i in call_args)
                 # Finally, compose full service call in human-readable format and put it into dictionary
                 full_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
                 filepaths = call_files_map.setdefault(full_call_name, set())

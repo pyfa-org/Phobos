@@ -1,6 +1,5 @@
 #===============================================================================
-# Copyright (C) 2012 Diego Duclos
-# Copyright (C) 2013-2014 Anton Vorobyov
+# Copyright (C) 2014 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
