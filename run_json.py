@@ -73,7 +73,7 @@ if __name__ == '__main__':
             # about it (miner order makes difference here)
             contname_lowcase = container_name.lower()
             if contname_lowcase in seen_contnames:
-                print(u'    container name collision for {}, skipping duplicates'.format(container_name))
+                print(u'    container name collision for {}, skipping duplicate'.format(container_name))
                 continue
             seen_contnames.add(contname_lowcase)
             # Consume errors thrown by miners, just print a message about it
