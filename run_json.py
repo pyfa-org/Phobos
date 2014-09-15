@@ -63,10 +63,19 @@ if __name__ == '__main__':
         JsonWriter(path_json, indent=2),
     )
 
+    seen_contnames = set()
     for miner in miners:
         print(u'Miner {}:'.format(type(miner).__name__))
         for container_name in miner.contname_iter():
             print(u'  processing {}'.format(container_name))
+            # It's possible that different miners will provide containers with matching names,
+            # avoid overwriting data by skipping everything but 1st seen container and notify user
+            # about it (miner order makes difference here)
+            contname_lowcase = container_name.lower()
+            if contname_lowcase in seen_contnames:
+                print(u'    container name collision for {}, skipping duplicates'.format(container_name))
+                continue
+            seen_contnames.add(contname_lowcase)
             # Consume errors thrown by miners, just print a message about it
             try:
                 container_data = miner.get_data(container_name)
