@@ -48,15 +48,15 @@ class EveNormalizer(object):
 
     def _pythonize_iterable(self, obj):
         """
-        For objects which have access interface similar to
-        python iterables, but are actually non-builtins.
+        For objects which have access interface similar to python
+        iterables - convert contents and return them as tuple.
         """
         return tuple(self._route_object(i) for i in obj)
 
     def _pythonize_map(self, obj):
         """
-        For objects which have access interface similar to
-        python dictionaries, but are actually non-builtins.
+        For objects which have access interface similar to python
+        dictionaries - convert keys and values and return as dict.
         """
         container = {}
         for key, value in obj.iteritems():
@@ -89,8 +89,8 @@ class EveNormalizer(object):
     def _pythonize_filter_rowset(self, obj):
         """
         FilterRowset is very similar to indexed rowlists, but with few facilities
-        on top of that (whoch we don't really need) and dictionary with data is stored
-        in 'items' attribute, rather than on object itself.
+        on top of that (which we don't really need), and with data dictionary with
+        stored in 'items' attribute, rather than on object itself.
         """
         return self._pythonize_indexed_lists(obj.items)
 
@@ -110,8 +110,8 @@ class EveNormalizer(object):
 
     def _pythonize_fsd_object(self, obj):
         """
-        FSD object is similar to python dictionary, but its keys are
-        accessed via 'attributes' attribute.
+        FSD_Object is similar to regular python objects - but unlike them,
+        list of accessible attributes is stored in 'attributes' attribute.
         """
         container = {}
         for key in obj.attributes:
@@ -126,7 +126,7 @@ class EveNormalizer(object):
         """
         CFilterRowsets and IndexedRowLists are dictionary, where keys are some
         indices and values are lists of rows. We assume we do not need keys,
-        thus everything is converted into single list.
+        thus everything is converted into single tuple.
         """
         # Chain all sublists into single list and pass it
         # to regular iterable processor
@@ -134,14 +134,14 @@ class EveNormalizer(object):
 
     def _pythonize_index_rowset(self, obj):
         """
-        IndexRowset has list of data is accessed via 'lines' attribute.
+        IndexRowset has iterable with data accessed via 'lines' attribute.
         """
         return self._pythonize_iterable(obj.lines)
 
     def _pythonize_keyval(self, obj):
         """
-        KeyVal is dictionary, where keys are object attributes and
-        values are assigned to them values.
+        KeyVal is a python-like object, where attributes/values are stored
+        as object attributes.
         """
         return self._pythonize_map(obj.__dict__)
 
