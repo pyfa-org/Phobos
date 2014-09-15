@@ -35,15 +35,47 @@ class BulkdataMiner(AbstractMiner):
         # Initialize reverence
         eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
         self.cfg = eve.getconfigmgr()
+        self.__original_name_map = None
+
+    @property
+    def _original_name_map(self):
+        """
+        We have to 'secure' table names, thus conflicts are possible;
+        resolve them by appending suffix in case we have 2 or more
+        overlapping 'safe' names, and use this map to store relation
+        between final (which is exposed to miner users) name and
+        original one.
+        """
+        if self.__original_name_map is None:
+            # Intermediate map
+            # Format: {safe name: [original, names]}
+            safe_original_map = {}
+            for original_name in sorted(self.cfg.tables):
+                safe_name = self._secure_name(original_name)
+                original_names = safe_original_map.setdefault(safe_name, [])
+                original_names.append(original_name)
+            # Format: {safe name with suffix: original name}
+            self.__original_name_map = {}
+            for safe_name, original_names in safe_original_map.items():
+                if len(original_names) > 1:
+                    for i in range(len(original_names)):
+                        original_name = original_names[i]
+                        # Use number suffix to resolve conflicts
+                        suffixed_safe_name = u'{}_{}'.format(safe_name, i + 1)
+                        self.__original_name_map[suffixed_safe_name] = original_name
+                else:
+                    self.__original_name_map[safe_name] = original_names[0]
+        return self.__original_name_map
 
     def contname_iter(self):
-        for container_name in sorted(self.cfg.tables):
+        for container_name in sorted(self._original_name_map):
             yield container_name
 
     def get_data(self, container_name):
         try:
-            container_data = getattr(self.cfg, container_name)
-        except AttributeError:
+            original_name = self._original_name_map[container_name]
+            container_data = getattr(self.cfg, original_name)
+        except (KeyError, AttributeError):
             msg = u'container "{}" is not available for miner {}'.format(container_name, type(self).__name__)
             raise ContainerNameError(msg)
         normalized_data = EveNormalizer().run(container_data)

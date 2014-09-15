@@ -81,6 +81,7 @@ class CachedCallsMiner(AbstractMiner):
                 full_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
                 filepaths = call_files_map.setdefault(full_call_name, set())
                 filepaths.add(filepath)
+            # Format: {human-friendly name with suffix: original cache file path}
             self.__call_file_map = {}
             for full_call_name, filepaths in call_files_map.items():
                 # When we have more than one filepaths, it means that multiple files
