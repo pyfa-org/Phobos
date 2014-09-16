@@ -40,11 +40,11 @@ class BulkdataMiner(AbstractMiner):
     @property
     def _original_name_map(self):
         """
-        We have to 'secure' table names, thus conflicts are possible;
-        resolve them by appending suffix in case we have 2 or more
-        overlapping 'safe' names, and use this map to store relation
-        between final (which is exposed to miner users) name and
-        original one.
+        We have to 'secure' container names, thus conflicts are
+        possible; resolve them by appending suffix in case we have
+        2 or more overlapping 'safe' names, and use this map to
+        store relation between final (which is exposed to miner
+        users) name and original one.
         """
         if self.__original_name_map is None:
             # Intermediate map

@@ -45,8 +45,8 @@ class AbstractMiner(object):
 
     def _secure_name(self, name):
         """
-        We rely on table/call/arguments names to not have any
-        parenthesis or commas, because these are special symbols -
+        We rely on container/service/call/arguments names to not have
+        any parenthesis or commas, because these are special symbols -
         they split up arguments from calls and arguments from each
         other. Having these in names themselves would make it
         impossible to parse list of names passed to phobos.

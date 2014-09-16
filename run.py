@@ -37,6 +37,7 @@ if __name__ == '__main__':
     import argparse
     import os.path
 
+    from flow import FlowManager
     from miner import *
     from writer import *
 
@@ -45,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--eve', help='path to eve folder', required=True)
     parser.add_argument('-c', '--cache', help='path to eve cache folder', required=True)
     parser.add_argument('-s', '--server', default='tranquility', help='server which was specified in EVE shortcut, defaults to tranquility')
+    parser.add_argument('-o', '--objects', default='', help='comma-separated list of object names to dump')
     parser.add_argument('-j', '--json', help='output folder for the json files')
     args = parser.parse_args()
 
@@ -63,31 +65,4 @@ if __name__ == '__main__':
         JsonWriter(path_json, indent=2),
     )
 
-    seen_contnames = set()
-    for miner in miners:
-        print(u'Miner {}:'.format(type(miner).__name__))
-        for container_name in miner.contname_iter():
-            print(u'  processing {}'.format(container_name))
-            # It's possible that different miners will provide containers with matching names,
-            # avoid overwriting data by skipping everything but 1st seen container and notify user
-            # about it (miner order makes difference here)
-            contname_lowcase = container_name.lower()
-            if contname_lowcase in seen_contnames:
-                print(u'    container name collision for {}, skipping duplicate'.format(container_name))
-                continue
-            seen_contnames.add(contname_lowcase)
-            # Consume errors thrown by miners, just print a message about it
-            try:
-                container_data = miner.get_data(container_name)
-            except KeyboardInterrupt:
-                raise
-            except Exception as e:
-                print(u'    failed to fetch data - {}: {}'.format(type(e).__name__, e))
-            else:
-                for writer in writers:
-                    try:
-                        writer.write(container_name, container_data)
-                    except KeyboardInterrupt:
-                        raise
-                    except Exception as e:
-                        print(u'    failed to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
+    FlowManager(miners, writers).run(args.objects)
