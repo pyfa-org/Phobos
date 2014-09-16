@@ -57,8 +57,8 @@ class BulkdataMiner(AbstractMiner):
         We have to 'secure' container names, thus conflicts are
         possible; resolve them by appending suffix in case we have
         2 or more overlapping 'safe' names, and use this map to
-        store relation between final (which is exposed to miner
-        users) name and original one.
+        store relation between modified name (which is exposed to
+        miner users) and source one.
         """
         if self.__name_source_map is None:
             # Intermediate map
