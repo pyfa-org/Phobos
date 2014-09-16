@@ -23,7 +23,7 @@ from abc import ABCMeta, abstractmethod
 
 class AbstractWriter(object):
     """
-    Abstract class, which defines interface to objects
+    Abstract class, which defines interface to classes
     which write data into some kind of persistent storage.
     """
     __metaclass__ = ABCMeta

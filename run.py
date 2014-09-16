@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--eve', help='path to eve folder', required=True)
     parser.add_argument('-c', '--cache', help='path to eve cache folder', required=True)
     parser.add_argument('-s', '--server', default='tranquility', help='server which was specified in EVE shortcut, defaults to tranquility')
-    parser.add_argument('-o', '--objects', default='', help='comma-separated list of object names to dump')
+    parser.add_argument('-l', '--list', default='', help='comma-separated list of container names to dump')
     parser.add_argument('-j', '--json', help='output folder for the json files')
     args = parser.parse_args()
 
@@ -65,4 +65,4 @@ if __name__ == '__main__':
         JsonWriter(path_json, indent=2),
     )
 
-    FlowManager(miners, writers).run(args.objects)
+    FlowManager(miners, writers).run(args.list)

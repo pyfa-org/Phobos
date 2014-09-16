@@ -31,7 +31,7 @@ class FilterParseError(BaseException):
 
 class FlowManager(object):
     """
-    Object for handling high-level flow of script.
+    Class for handling high-level flow of script.
     """
 
     def __init__(self, miners, writers):
@@ -45,10 +45,10 @@ class FlowManager(object):
             print(u'Miner {}:'.format(type(miner).__name__))
             for modified_name in sorted(self._name_source_map[miner]):
                 print(u'  processing {}'.format(modified_name))
-                original_name = self._name_source_map[miner][modified_name]
+                source_name = self._name_source_map[miner][modified_name]
                 # Consume errors thrown by miners, just print a message about it
                 try:
-                    container_data = miner.get_data(original_name)
+                    container_data = miner.get_data(source_name)
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
@@ -82,7 +82,7 @@ class FlowManager(object):
                 # If there're collisions, append miner name to container name
                 if len(miners) > 1:
                     for miner in miners:
-                        modified_name = '{}_{}'.format(original_name, type(miner).__name__)
+                        modified_name = u'{}_{}'.format(original_name, type(miner).__name__)
                         miner_containers = self.__name_source_map.setdefault(miner, {})
                         miner_containers[modified_name] = original_name
                 # Do not modify name if there're no collisions
@@ -93,7 +93,7 @@ class FlowManager(object):
 
     def _parse_filter(self, name_filter):
         """
-        Take filter string and return list of object names.
+        Take filter string and return list of container names.
         """
         names = []
         # Flag which indicates if we're within parenthesis

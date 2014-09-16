@@ -38,19 +38,33 @@ class CachedCallsMiner(AbstractMiner):
         # Initialize reverence
         self.eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
         self.path_cachedcalls = os.path.join(self.eve.getcachemgr().machocachepath, 'CachedMethodCalls')
-        self.__call_file_map = None
+        self.__name_source_map = None
+
+    def contname_iter(self):
+        for modified_call_name in sorted(self._name_source_map):
+            yield modified_call_name
+
+    def get_data(self, modified_call_name):
+        try:
+            filepath = self._name_source_map[modified_call_name]
+        except KeyError:
+            msg = u'container "{}" is not available for miner {}'.format(modified_call_name, type(self).__name__)
+            raise ContainerNameError(msg)
+        _, call_data = self.__read_cache_file(filepath)
+        normalized_data = EveNormalizer().run(call_data)
+        return normalized_data
 
     @property
-    def _call_file_map(self):
+    def _name_source_map(self):
         """
-        Access map with cache filenames, keyed against human respresentation
-        of remote calls. If not present, make one.
+        Access map with cache filenames, keyed against modified names.
+        If not present, make one.
         """
         # Compose map if we haven't already
-        if self.__call_file_map is None:
+        if self.__name_source_map is None:
             # Intermediate map between call names and cache files
-            # Format: {human-friendly call string: set(full paths to files)}
-            call_files_map = {}
+            # Format: {safe call name: set(full paths to files)}
+            safecall_filepath_map = {}
             # Cycle through CachedMethodCalls and find all .cache files
             for filepath in glob.glob(os.path.join(self.path_cachedcalls, '*.cache')):
                 # In case file cannot be loaded due to any reasons, skip it
@@ -59,7 +73,8 @@ class CachedCallsMiner(AbstractMiner):
                 except KeyboardInterrupt:
                     raise
                 except:
-                    print(u'  unable to load cache file {}'.format(os.path.basename(filepath)))
+                    filename = os.path.basename(filepath)
+                    print(u'  unable to load cache file {}'.format(filename))
                     continue
                 # Info has one of 2 following formats:
                 # ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
@@ -67,6 +82,7 @@ class CachedCallsMiner(AbstractMiner):
                 # Here we parse info structure according to one of these formats
                 svc_info = call_info[0]
                 call_info = call_info[1:]
+                # Don't forget that we have to secure all name components
                 if isinstance(svc_info, (tuple, list)):
                     svc_name = self._secure_name(svc_info[0])
                     svc_args = svc_info[1:]
@@ -78,26 +94,26 @@ class CachedCallsMiner(AbstractMiner):
                 svc_args_line = u', '.join(self._secure_name(i) for i in svc_args)
                 call_args_line = u', '.join(self._secure_name(i) for i in call_args)
                 # Finally, compose full service call in human-readable format and put it into dictionary
-                full_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
-                filepaths = call_files_map.setdefault(full_call_name, set())
+                safe_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
+                filepaths = safecall_filepath_map.setdefault(safe_call_name, set())
                 filepaths.add(filepath)
-            # Format: {human-friendly name with suffix: original cache file path}
-            self.__call_file_map = {}
-            for full_call_name, filepaths in call_files_map.items():
+            # Format: {modified call name: path to source file}
+            self.__name_source_map = {}
+            for safe_call_name, filepaths in safecall_filepath_map.items():
                 # When we have more than one filepaths, it means that multiple files
-                # map onto single human-friendly call name (e.g. single call with argument string
-                # passed as unicode or ANSI might result in this), thus we process them differently
-                # Solve collisions by appending file name to human-friendly call name
+                # map onto single safe call name (e.g. single call with argument string
+                # passed as unicode or ANSI might result in this), thus we process them
+                # differently: solve collisions by appending file name to safe call name
                 if len(filepaths) > 1:
                     for filepath in filepaths:
                         filename = os.path.splitext(os.path.basename(filepath))[0]
-                        suffixed_call_name = u'{}_{}'.format(full_call_name, filename)
-                        self.__call_file_map[suffixed_call_name] = filepath
-                # If no collisions, just key path against regular human-friendly call name
+                        modified_call_name = u'{}_{}'.format(safe_call_name, filename)
+                        self.__name_source_map[modified_call_name] = filepath
+                # If no collisions, just key path against regular safe call name
                 else:
                     for filepath in filepaths:
-                        self.__call_file_map[full_call_name] = filepath
-        return self.__call_file_map
+                        self.__name_source_map[safe_call_name] = filepath
+        return self.__name_source_map
 
     def __read_cache_file(self, filepath):
         """
@@ -108,17 +124,3 @@ class CachedCallsMiner(AbstractMiner):
             filedata = cachefile.read()
         call_info, call_data = blue.marshal.Load(filedata)
         return call_info, call_data['lret']
-
-    def contname_iter(self):
-        for container_name in sorted(self._call_file_map):
-            yield container_name
-
-    def get_data(self, container_name):
-        try:
-            filepath = self._call_file_map[container_name]
-        except KeyError:
-            msg = u'container "{}" is not available for miner {}'.format(container_name, type(self).__name__)
-            raise ContainerNameError(msg)
-        _, call_data = self.__read_cache_file(filepath)
-        normalized_data = EveNormalizer().run(call_data)
-        return normalized_data
