@@ -50,7 +50,7 @@ class AbstractMiner(object):
         other. Having these in names themselves would make it
         impossible to parse list of names passed to phobos.
 
-        arg keyword argument defines if we're parsing argument or not,
+        arg keyword argument defines if we're securing argument or not,
         arguments and non-arguments have slightly different handling.
         """
         # We replace them with similar symbol instead of just removing
