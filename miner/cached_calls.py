@@ -63,7 +63,7 @@ class CachedCallsMiner(AbstractMiner):
         # Compose map if we haven't already
         if self.__name_source_map is None:
             # Intermediate map between call names and cache files
-            # Format: {safe call name: set(full paths to files)}
+            # Format: {safe call name: list[full, paths, to, files]}
             safecall_filepath_map = {}
             # Cycle through CachedMethodCalls and find all .cache files
             for filepath in glob.glob(os.path.join(self.path_cachedcalls, '*.cache')):
@@ -91,12 +91,12 @@ class CachedCallsMiner(AbstractMiner):
                     svc_args = ()
                 call_name = self._secure_name(call_info[0])
                 call_args = call_info[1:]
-                svc_args_line = u', '.join(self._secure_name(i) for i in svc_args)
-                call_args_line = u', '.join(self._secure_name(i) for i in call_args)
+                svc_args_line = u', '.join(self._secure_name(i, arg=True) for i in svc_args)
+                call_args_line = u', '.join(self._secure_name(i, arg=True) for i in call_args)
                 # Finally, compose full service call in human-readable format and put it into dictionary
                 safe_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
-                filepaths = safecall_filepath_map.setdefault(safe_call_name, set())
-                filepaths.add(filepath)
+                filepaths = safecall_filepath_map.setdefault(safe_call_name, [])
+                filepaths.append(filepath)
             # Format: {modified call name: path to source file}
             self.__name_source_map = {}
             for safe_call_name, filepaths in safecall_filepath_map.items():
@@ -111,8 +111,7 @@ class CachedCallsMiner(AbstractMiner):
                         self.__name_source_map[modified_call_name] = filepath
                 # If no collisions, just key path against regular safe call name
                 else:
-                    for filepath in filepaths:
-                        self.__name_source_map[safe_call_name] = filepath
+                    self.__name_source_map[safe_call_name] = filepaths[0]
         return self.__name_source_map
 
     def __read_cache_file(self, filepath):

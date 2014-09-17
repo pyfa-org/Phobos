@@ -42,15 +42,22 @@ class AbstractMiner(object):
         """
         pass
 
-    def _secure_name(self, name):
+    def _secure_name(self, name, arg=False):
         """
         We rely on container/service/call/arguments names to not have
         any parenthesis or commas, because these are special symbols -
         they split up arguments from calls and arguments from each
         other. Having these in names themselves would make it
         impossible to parse list of names passed to phobos.
+
+        arg keyword argument defines if we're parsing argument or not,
+        arguments and non-arguments have slightly different handling.
         """
         # We replace them with similar symbol instead of just removing
         # Also make sure to convert to unicode, just in case argument of
         # non-string-type is passed
-        return unicode(name).replace('(', '<').replace(')', '>').replace(',', '.')
+        name = unicode(name).replace('(', '<').replace(')', '>').replace(',', '.')
+        # Table/service/call names should not have any whitespace characters
+        if arg is False:
+            name = name.strip()
+        return name

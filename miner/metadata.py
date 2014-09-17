@@ -34,7 +34,7 @@ class MetadataMiner(AbstractMiner):
     """
 
     def __init__(self, path_eve):
-        self._container_name = 'metadata'
+        self._container_name = self._secure_name('metadata')
         self.path_eve = path_eve
 
     def contname_iter(self):

@@ -21,27 +21,6 @@
 import re
 
 
-class NameSet(set):
-    """
-    Set derivative, which automatically strips added
-    elements and actually adds them to internal storage
-    only if they still contain something meaningful.
-    """
-
-    def add(self, name):
-        name = name.strip()
-        if name:
-            set.add(self, name)
-
-
-class FilterParseError(BaseException):
-    """
-    When received filter string cannot be parsed,
-    this exception is raised.
-    """
-    pass
-
-
 class FlowManager(object):
     """
     Class for handling high-level flow of script.
@@ -98,7 +77,8 @@ class FlowManager(object):
     def _name_source_map(self):
         """
         Resolve name collisions on cross-miner level by appending
-        miner name to container name when necessary.
+        miner name to container name when necessary, and compose map
+        between modified names and source miner/container name.
         """
         if self.__name_source_map is None:
             # Intermediate map
@@ -125,11 +105,11 @@ class FlowManager(object):
 
     def _parse_filter(self, name_filter):
         """
-        Take filter string and return list of container names.
+        Take filter string and return set of container names.
         """
         name_set = NameSet()
         # Flag which indicates if we're within parenthesis
-        # (parsing argument substring)
+        # (are parsing argument substring)
         inarg = False
         pos_current = 0
         # Cycle through all parenthesis and commas, split string using
@@ -139,11 +119,10 @@ class FlowManager(object):
             pos_end = match.end()
             symbol = match.group()
             if symbol == ',' and inarg is False:
-                # Also strip name from whitespace characters
                 name_set.add(name_filter[pos_current:pos_start])
                 pos_current = pos_end
             elif symbol == ',' and inarg is True:
-                pass
+                continue
             elif symbol == '(' and inarg is False:
                 inarg = True
             elif symbol == ')' and inarg is True:
@@ -157,3 +136,24 @@ class FlowManager(object):
         # Add last segment of string after last seen comma
         name_set.add(name_filter[pos_current:])
         return name_set
+
+
+class NameSet(set):
+    """
+    Set derivative, which automatically strips added
+    elements and actually adds them to internal storage
+    only if they still contain something meaningful.
+    """
+
+    def add(self, name):
+        name = name.strip()
+        if name:
+            set.add(self, name)
+
+
+class FilterParseError(BaseException):
+    """
+    When received filter string cannot be parsed,
+    this exception is raised.
+    """
+    pass
