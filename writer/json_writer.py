@@ -54,7 +54,7 @@ class JsonWriter(AbstractWriter):
         # Prefer safe way - replace any characters besides
         # alphanumeric and few special characters with
         # underscore
-        writer_safe_name = re.sub('[^\w\-\., ]', '_', flow_name, flags=re.UNICODE)
+        writer_safe_name = re.sub('[^\w\-\.,\(\) ]', '_', flow_name, flags=re.UNICODE)
         return writer_safe_name
 
     def resolve_name_collisions(self, flow_writersafe_map):

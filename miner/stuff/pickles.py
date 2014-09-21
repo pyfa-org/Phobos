@@ -31,6 +31,7 @@ class PickleMiner(AbstractMiner):
     """
 
     def __init__(self, path_eve, path_cache, server):
+        self._pickle_ext = '.pickle'
         self._unstuffer = Unstuffer(path_eve, path_cache, server)
 
     def contname_iter(self):
@@ -38,13 +39,15 @@ class PickleMiner(AbstractMiner):
         Iterate over pickle resource file paths.
         """
         for resfilepath in self._unstuffer.get_filelist():
-            if resfilepath.endswith('.pickle'):
-                yield resfilepath
+            if resfilepath.endswith(self._pickle_ext):
+                resfilepath_noext = resfilepath[:-len(self._pickle_ext)]
+                yield resfilepath_noext
 
-    def get_data(self, resfilepath):
+    def get_data(self, resfilepath_noext):
         """
         Fetch pickle file contents, load it and return result.
         """
+        resfilepath = '{}{}'.format(resfilepath_noext, self._pickle_ext)
         resfiledata = self._unstuffer.get_file(resfilepath)
         data = pickle.loads(resfiledata)
         return data
