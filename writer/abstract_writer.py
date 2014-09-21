@@ -29,5 +29,24 @@ class AbstractWriter(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def write(self, container_name, lines):
+    def write(self, writer_resolved_name, container_data):
+        pass
+
+    @abstractmethod
+    def secure_name(self, flow_name):
+        """
+        Writers might need to modify container names proposed by
+        flow (because names can have symbols not allowed to use
+        on filesystems, in database table names, etc). This method
+        should make name which is safe to use with particular writer.
+        """
+        pass
+
+    @abstractmethod
+    def resolve_name_collisions(self, flow_writersafe_map):
+        """
+        Take map between flow names and writer safe names, resolve
+        collisions between safe names and return map between flow
+        names and writer resolved names.
+        """
         pass

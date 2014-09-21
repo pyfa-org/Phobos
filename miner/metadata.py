@@ -35,22 +35,22 @@ class MetadataMiner(AbstractMiner):
 
     def __init__(self, path_eve):
         self._container_name = self._secure_name('metadata')
-        self.path_eve = path_eve
+        self._path_eve = path_eve
 
     def contname_iter(self):
-        for container_name in (self._container_name,):
-            yield container_name
+        for resolved_name in (self._container_name,):
+            yield resolved_name
 
-    def get_data(self, container_name):
-        if container_name != self._container_name:
-            msg = u'container "{}" is not available for miner {}'.format(container_name, type(self).__name__)
+    def get_data(self, resolved_name):
+        if resolved_name != self._container_name:
+            msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
             raise ContainerNameError(msg)
         field_names = ('field_name', 'field_value')
         container_data = []
         # Read client version
         try:
             config = ConfigParser()
-            config.read(os.path.join(self.path_eve, 'start.ini'))
+            config.read(os.path.join(self._path_eve, 'start.ini'))
             eve_version = config.getint('main', 'build')
         except KeyboardInterrupt:
             raise

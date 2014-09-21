@@ -18,15 +18,33 @@
 #===============================================================================
 
 
-from .bulkdata import BulkdataMiner
-from .cached_calls import CachedCallsMiner
-from .metadata import MetadataMiner
-from .stuff import PickleMiner
+import pickle
+
+from miner.abstract_miner import AbstractMiner
+from .unstuff import Unstuffer
 
 
-__all__ = (
-    'BulkdataMiner',
-    'CachedCallsMiner',
-    'MetadataMiner',
-    'PickleMiner'
-)
+class PickleMiner(AbstractMiner):
+    """
+    Class, which attempts to get data from stuffed
+    pickles (this is not guaranteed to succeed).
+    """
+
+    def __init__(self, path_eve, path_cache, server):
+        self._unstuffer = Unstuffer(path_eve, path_cache, server)
+
+    def contname_iter(self):
+        """
+        Iterate over pickle resource file paths.
+        """
+        for resfilepath in self._unstuffer.get_filelist():
+            if resfilepath.endswith('.pickle'):
+                yield resfilepath
+
+    def get_data(self, resfilepath):
+        """
+        Fetch pickle file contents, load it and return result.
+        """
+        resfiledata = self._unstuffer.get_file(resfilepath)
+        data = pickle.loads(resfiledata)
+        return data

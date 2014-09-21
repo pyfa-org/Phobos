@@ -18,15 +18,32 @@
 #===============================================================================
 
 
-from .bulkdata import BulkdataMiner
-from .cached_calls import CachedCallsMiner
-from .metadata import MetadataMiner
-from .stuff import PickleMiner
+from itertools import chain
+
+from reverence import blue
 
 
-__all__ = (
-    'BulkdataMiner',
-    'CachedCallsMiner',
-    'MetadataMiner',
-    'PickleMiner'
-)
+class Unstuffer(object):
+    """
+    Class, responsible for browsing virtual filesystem of
+    .stuff files and read data from there.
+    """
+
+    def __init__(self, path_eve, path_cache, server):
+        eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
+        self._efs = eve.rot.efs
+
+    def get_filelist(self):
+        """
+        Aggregate filepaths from all .stuff files and return
+        them in the form of single list.
+        """
+        resfilepaths = chain(*(stuff.files for stuff in self._efs.stuff))
+        return sorted(resfilepaths)
+
+    def get_file(self, resfilepath):
+        """
+        Return file contents for requested resource located
+        on .stuff filesystem.
+        """
+        return self._efs.open(resfilepath).read()

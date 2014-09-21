@@ -29,79 +29,119 @@ class FlowManager(object):
     def __init__(self, miners, writers):
         self._miners = miners
         self._writers = writers
-        self.__name_source_map = None
+        self.__flow_src_map = None
+        self.__flow_dest_map = None
 
     def run(self, filter_string):
-        processed_set = set()
+        # Compose set with flow container names which will be
+        # processed (all processed if empty)
         filter_set = set()
         filter_set.update(self._parse_filter(filter_string))
-        # Cycle through miners in the order they were provided
-        for miner in sorted(self._name_source_map, key=self._miners.index):
-            miner_names_map = self._name_source_map[miner]
-            # Compose set of container names to process and filter it if necessary
-            miner_containers = set(miner_names_map)
-            if filter_set:
-                miner_containers.intersection_update(filter_set)
-            # If set is empty after filtering, skip miner altogether
-            if not miner_containers:
+        spec = self._make_spec()
+        # Set with flow names we will be actually dealing with
+        flow_names = set(spec)
+        # Filter something out only if filter was actually specified
+        if filter_set:
+            flow_names.intersection_update(filter_set)
+        for miner in self._miners:
+            # Take flow names belonging to this miner
+            miner_flow_names = filter(lambda fn: spec[fn][0][0] is miner, flow_names)
+            # Skip miner altogether if we do not plan to fetch anything
+            # from it
+            if not miner_flow_names:
                 continue
             print(u'Miner {}:'.format(type(miner).__name__))
-            for modified_name in sorted(miner_containers):
-                print(u'  processing {}'.format(modified_name))
-                processed_set.add(modified_name)
-                source_name = miner_names_map[modified_name]
+            for flow_name in sorted(miner_flow_names):
+                print(u'  processing {}'.format(flow_name))
+                src, dest = spec[flow_name]
+                miner, miner_resolved_name = src
                 # Consume errors thrown by miners, just print a message about it
                 try:
-                    container_data = miner.get_data(source_name)
+                    container_data = miner.get_data(miner_resolved_name)
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
                     print(u'    failed to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
                     for writer in self._writers:
+                        writer_resolved_name = dest[writer]
                         try:
-                            writer.write(modified_name, container_data)
+                            writer.write(writer_resolved_name, container_data)
                         except KeyboardInterrupt:
                             raise
                         except Exception as e:
                             print(u'    failed to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
         # Print info messages about requested, but unavailable containers
         if filter_set:
-            missing_set = filter_set.difference(processed_set)
+            missing_set = filter_set.difference(spec)
             if missing_set:
                 print('Containers which were requested, but are not available:')
-                for modified_name in sorted(missing_set):
-                    print(u'  {}'.format(modified_name))
+                for flow_name in sorted(missing_set):
+                    print(u'  {}'.format(flow_name))
+
+    def _make_spec(self):
+        """
+        Make specification on what we're processing: where
+        to fetch data from, where exactly to write it to.
+        """
+        # Format: {flow name: ((miner, resolved miner name), {writer: resolved writer name})}
+        spec = {}
+        for flow_name, src in self._flow_src_map.items():
+            dest = self._flow_dest_map[flow_name]
+            spec[flow_name] = (src, dest)
+        return spec
 
     @property
-    def _name_source_map(self):
+    def _flow_src_map(self):
         """
         Resolve name collisions on cross-miner level by appending
-        miner name to container name when necessary, and compose map
-        between modified names and source miner/container name.
+        miner name to container name when necessary, as result -\
+        compose map between flow names and miners/miner source names.
+        Format: {flow name: (miner: resolved miner name)}
         """
-        if self.__name_source_map is None:
+        if self.__flow_src_map is None:
             # Intermediate map
-            # Format: {container name: [miners]}
-            name_miner_map = {}
+            # Format: {resolved miner name: [miners]}
+            minerresolved_miner_map = {}
             for miner in self._miners:
-                for source_name in miner.contname_iter():
-                    miners = name_miner_map.setdefault(source_name, [])
+                for miner_resolved_name in miner.contname_iter():
+                    miners = minerresolved_miner_map.setdefault(miner_resolved_name, [])
                     miners.append(miner)
-            # Format: {miner: {modified name: source name}}
-            self.__name_source_map = {}
-            for source_name, miners in name_miner_map.items():
-                # If there're collisions, append miner name to container name
+            flow_src_map = {}
+            for miner_resolved_name, miners in minerresolved_miner_map.items():
+                # If there're collisions, compose flow name by taking
+                # resolved miner name and appending miner name to it
                 if len(miners) > 1:
                     for miner in miners:
-                        modified_name = u'{}_{}'.format(source_name, type(miner).__name__)
-                        miner_containers = self.__name_source_map.setdefault(miner, {})
-                        miner_containers[modified_name] = source_name
+                        flow_name = u'{}_{}'.format(miner_resolved_name, type(miner).__name__)
+                        flow_src_map[flow_name] = (miner, miner_resolved_name)
                 # Do not modify name if there're no collisions
                 else:
-                    miner_containers = self.__name_source_map.setdefault(miners[0], {})
-                    miner_containers[source_name] = source_name
-        return self.__name_source_map
+                    flow_src_map[miner_resolved_name] = (miners[0], miner_resolved_name)
+            self.__flow_src_map = flow_src_map
+        return self.__flow_src_map
+
+    @property
+    def _flow_dest_map(self):
+        """
+        Resolve possible issues on writer-specific level, and return
+        mapping of flow names to writers/writer destination names.
+        Format: {flow name: {writer: resolved writer name}}
+        """
+        if self.__flow_dest_map is None:
+            flow_dest_map = {}
+            for writer in self._writers:
+                # Format: {flow name: safe writer name}
+                flow_writersafe_map = {}
+                # Transform proposed names into safe and resolve collisions
+                for flow_name in self._flow_src_map:
+                    flow_writersafe_map[flow_name] = writer.secure_name(flow_name)
+                flow_writerresolved_map = writer.resolve_name_collisions(flow_writersafe_map)
+                for flow_name, writer_resolved_name in flow_writerresolved_map.items():
+                    dest = flow_dest_map.setdefault(flow_name, {})
+                    dest[writer] = writer_resolved_name
+            self.__flow_dest_map = flow_dest_map
+        return self.__flow_dest_map
 
     def _parse_filter(self, name_filter):
         """

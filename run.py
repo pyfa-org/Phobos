@@ -59,6 +59,7 @@ if __name__ == '__main__':
         MetadataMiner(path_eve),
         BulkdataMiner(path_eve, path_cache, args.server),
         CachedCallsMiner(path_eve, path_cache, args.server),
+        PickleMiner(path_eve, path_cache, args.server)
     )
 
     writers = (

@@ -36,13 +36,13 @@ class AbstractMiner(object):
         pass
 
     @abstractmethod
-    def get_data(self, container_name):
+    def get_data(self, resolved_name):
         """
         Fetch data from specified container.
         """
         pass
 
-    def _secure_name(self, name, arg=False):
+    def _secure_name(self, source_name, arg=False):
         """
         We rely on container/service/call/arguments names to not have
         any parenthesis or commas, because these are special symbols -
@@ -53,11 +53,14 @@ class AbstractMiner(object):
         arg keyword argument defines if we're securing argument or not,
         arguments and non-arguments have slightly different handling.
         """
-        # We replace them with similar symbol instead of just removing
-        # Also make sure to convert to unicode, just in case argument of
+        # Make sure to convert to unicode, just in case argument of
         # non-string-type is passed
-        name = unicode(name).replace('(', '<').replace(')', '>').replace(',', '.')
+        safe_name = unicode(source_name)
+        # We replace them with similar symbol instead of just removing
+        safe_name = safe_name.replace('(', '<')
+        safe_name = safe_name.replace(')', '>')
+        safe_name = safe_name.replace(',', '.')
         # Table/service/call names should not have any whitespace characters
-        if arg is False:
-            name = name.strip()
-        return name
+        if not arg:
+            safe_name = safe_name.strip()
+        return safe_name

@@ -35,38 +35,40 @@ class CachedCallsMiner(AbstractMiner):
     """
 
     def __init__(self, path_eve, path_cache, server):
-        # Initialize reverence
-        self.eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
-        self.path_cachedcalls = os.path.join(self.eve.getcachemgr().machocachepath, 'CachedMethodCalls')
-        self.__name_source_map = None
+        # Get path to folder with cached method calls
+        eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
+        cache = eve.getcachemgr()
+        self._path_cachedcalls = os.path.join(cache.machocachepath, 'CachedMethodCalls')
+        self.__resolved_filepath_map = None
 
     def contname_iter(self):
-        for modified_call_name in sorted(self._name_source_map):
-            yield modified_call_name
+        for resolved_name in sorted(self._resolved_filepath_map):
+            yield resolved_name
 
-    def get_data(self, modified_call_name):
+    def get_data(self, resolved_name):
         try:
-            filepath = self._name_source_map[modified_call_name]
+            filepath = self._resolved_filepath_map[resolved_name]
         except KeyError:
-            msg = u'container "{}" is not available for miner {}'.format(modified_call_name, type(self).__name__)
+            msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
             raise ContainerNameError(msg)
         _, call_data = self.__read_cache_file(filepath)
         normalized_data = EveNormalizer().run(call_data)
         return normalized_data
 
     @property
-    def _name_source_map(self):
+    def _resolved_filepath_map(self):
         """
-        Access map with cache filenames, keyed against modified names.
-        If not present, make one.
+        Access map with cache filenames, keyed against resolved
+        call names. If not present, make one.
+        Format: {resolved call name: path to source file}
         """
         # Compose map if we haven't already
-        if self.__name_source_map is None:
+        if self.__resolved_filepath_map is None:
             # Intermediate map between call names and cache files
-            # Format: {safe call name: list[full, paths, to, files]}
-            safecall_filepath_map = {}
+            # Format: {safe name: [paths to files]}
+            safe_filepath_map = {}
             # Cycle through CachedMethodCalls and find all .cache files
-            for filepath in glob.glob(os.path.join(self.path_cachedcalls, '*.cache')):
+            for filepath in glob.glob(os.path.join(self._path_cachedcalls, '*.cache')):
                 # In case file cannot be loaded due to any reasons, skip it
                 try:
                     call_info, _ = self.__read_cache_file(filepath)
@@ -94,12 +96,12 @@ class CachedCallsMiner(AbstractMiner):
                 svc_args_line = u', '.join(self._secure_name(i, arg=True) for i in svc_args)
                 call_args_line = u', '.join(self._secure_name(i, arg=True) for i in call_args)
                 # Finally, compose full service call in human-readable format and put it into dictionary
-                safe_call_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
-                filepaths = safecall_filepath_map.setdefault(safe_call_name, [])
+                safe_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
+                filepaths = safe_filepath_map.setdefault(safe_name, [])
                 filepaths.append(filepath)
-            # Format: {modified call name: path to source file}
-            self.__name_source_map = {}
-            for safe_call_name, filepaths in safecall_filepath_map.items():
+            # Final map which will be exposed
+            resolved_filepath_map = {}
+            for safe_name, filepaths in safe_filepath_map.items():
                 # When we have more than one filepaths, it means that multiple files
                 # map onto single safe call name (e.g. single call with argument string
                 # passed as unicode or ANSI might result in this), thus we process them
@@ -107,12 +109,13 @@ class CachedCallsMiner(AbstractMiner):
                 if len(filepaths) > 1:
                     for filepath in filepaths:
                         filename = os.path.splitext(os.path.basename(filepath))[0]
-                        modified_call_name = u'{}_{}'.format(safe_call_name, filename)
-                        self.__name_source_map[modified_call_name] = filepath
+                        resolved_name = u'{}_{}'.format(safe_name, filename)
+                        resolved_filepath_map[resolved_name] = filepath
                 # If no collisions, just key path against regular safe call name
                 else:
-                    self.__name_source_map[safe_call_name] = filepaths[0]
-        return self.__name_source_map
+                    resolved_filepath_map[safe_name] = filepaths[0]
+            self.__resolved_filepath_map = resolved_filepath_map
+        return self.__resolved_filepath_map
 
     def __read_cache_file(self, filepath):
         """
