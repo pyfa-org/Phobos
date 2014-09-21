@@ -34,10 +34,9 @@ class CachedCallsMiner(AbstractMiner):
     remote service call cache.
     """
 
-    def __init__(self, path_eve, path_cache, server):
+    def __init__(self, rvr):
         # Get path to folder with cached method calls
-        eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
-        cache = eve.getcachemgr()
+        cache = rvr.getcachemgr()
         self._path_cachedcalls = os.path.join(cache.machocachepath, 'CachedMethodCalls')
         self.__resolved_filepath_map = None
 

@@ -20,8 +20,6 @@
 
 from itertools import chain
 
-from reverence import blue
-
 
 class Unstuffer(object):
     """
@@ -29,9 +27,8 @@ class Unstuffer(object):
     .stuff files and read data from there.
     """
 
-    def __init__(self, path_eve, path_cache, server):
-        eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
-        self._efs = eve.rot.efs
+    def __init__(self, rvr):
+        self._efs = rvr.rot.efs
 
     def get_filelist(self):
         """

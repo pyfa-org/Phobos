@@ -20,19 +20,22 @@
 
 import re
 
+from translator import Translator
+
 
 class FlowManager(object):
     """
     Class for handling high-level flow of script.
     """
 
-    def __init__(self, miners, writers):
+    def __init__(self, rvr, miners, writers):
         self._miners = miners
         self._writers = writers
+        self._translator = Translator(rvr)
         self.__flow_src_map = None
         self.__flow_dest_map = None
 
-    def run(self, filter_string):
+    def run(self, filter_string, translate=False):
         # Compose set with flow container names which will be
         # processed (all processed if empty)
         filter_set = set()
@@ -55,7 +58,7 @@ class FlowManager(object):
                 print(u'  processing {}'.format(flow_name))
                 src, dest = spec[flow_name]
                 miner, miner_resolved_name = src
-                # Consume errors thrown by miners, just print a message about it
+                # Fetch data from client
                 try:
                     container_data = miner.get_data(miner_resolved_name)
                 except KeyboardInterrupt:
@@ -63,6 +66,10 @@ class FlowManager(object):
                 except Exception as e:
                     print(u'    failed to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
+                    # Translate data
+                    if translate is True:
+                        self._translator.translate(container_data)
+                    # Write data using passed writers
                     for writer in self._writers:
                         writer_resolved_name = dest[writer]
                         try:
@@ -78,6 +85,43 @@ class FlowManager(object):
                 print('Containers which were requested, but are not available:')
                 for flow_name in sorted(missing_set):
                     print(u'  {}'.format(flow_name))
+
+    def _parse_filter(self, name_filter):
+        """
+        Take filter string and return set of container names.
+        """
+        name_set = NameSet()
+        # Flag which indicates if we're within parenthesis
+        # (are parsing argument substring)
+        inarg = False
+        pos_current = 0
+        # Cycle through all parenthesis and commas, split string using
+        # out-of-parenthesis commas
+        for match in re.finditer('[(),]', name_filter):
+            pos_start = match.start()
+            pos_end = match.end()
+            symbol = match.group()
+            if symbol == ',' and inarg is False:
+                name_set.add(name_filter[pos_current:pos_start])
+                pos_current = pos_end
+            elif symbol == ',' and inarg is True:
+                continue
+            elif symbol == '(' and inarg is False:
+                inarg = True
+            elif symbol == ')' and inarg is True:
+                inarg = False
+            else:
+                msg = 'unexpected character "{}" at position {}'.format(symbol, pos_start)
+                raise FilterParseError(msg)
+        if inarg is True:
+            msg = 'parenthesis is not closed'
+            raise FilterParseError(msg)
+        # Add last segment of string after last seen comma
+        name_set.add(name_filter[pos_current:])
+        return name_set
+
+    def _translate(self):
+        pass
 
     def _make_spec(self):
         """
@@ -142,40 +186,6 @@ class FlowManager(object):
                     dest[writer] = writer_resolved_name
             self.__flow_dest_map = flow_dest_map
         return self.__flow_dest_map
-
-    def _parse_filter(self, name_filter):
-        """
-        Take filter string and return set of container names.
-        """
-        name_set = NameSet()
-        # Flag which indicates if we're within parenthesis
-        # (are parsing argument substring)
-        inarg = False
-        pos_current = 0
-        # Cycle through all parenthesis and commas, split string using
-        # out-of-parenthesis commas
-        for match in re.finditer('[(),]', name_filter):
-            pos_start = match.start()
-            pos_end = match.end()
-            symbol = match.group()
-            if symbol == ',' and inarg is False:
-                name_set.add(name_filter[pos_current:pos_start])
-                pos_current = pos_end
-            elif symbol == ',' and inarg is True:
-                continue
-            elif symbol == '(' and inarg is False:
-                inarg = True
-            elif symbol == ')' and inarg is True:
-                inarg = False
-            else:
-                msg = 'unexpected character "{}" at position {}'.format(symbol, pos_start)
-                raise FilterParseError(msg)
-        if inarg is True:
-            msg = 'parenthesis is not closed'
-            raise FilterParseError(msg)
-        # Add last segment of string after last seen comma
-        name_set.add(name_filter[pos_current:])
-        return name_set
 
 
 class NameSet(set):

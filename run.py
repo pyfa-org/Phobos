@@ -37,6 +37,8 @@ if __name__ == '__main__':
     import argparse
     import os.path
 
+    from reverence import blue
+
     from flow import FlowManager
     from miner import *
     from writer import *
@@ -46,8 +48,10 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--eve', help='path to eve folder', required=True)
     parser.add_argument('-c', '--cache', help='path to eve cache folder', required=True)
     parser.add_argument('-s', '--server', default='tranquility', help='server which was specified in EVE shortcut, defaults to tranquility')
-    parser.add_argument('-l', '--list', default='', help='comma-separated list of container names to dump')
+    languages = ('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh')
+    parser.add_argument('-t', '--translate', choices=languages, help='attempt to translate strings into specified language')
     parser.add_argument('-j', '--json', help='output folder for the json files')
+    parser.add_argument('-l', '--list', default='', help='comma-separated list of container names to dump')
     args = parser.parse_args()
 
     # Expand home directory
@@ -55,15 +59,21 @@ if __name__ == '__main__':
     path_cache = os.path.expanduser(args.cache)
     path_json = os.path.expanduser(args.json)
 
+    # Initialize reverence, everything which needs it will be using
+    # this instance. Reverence cannot cope with None passed as language ID,
+    # thus fall back to English
+    rvr_language = args.translate or 'en-us'
+    rvr = blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
+
     miners = (
         MetadataMiner(path_eve),
-        BulkdataMiner(path_eve, path_cache, args.server),
-        CachedCallsMiner(path_eve, path_cache, args.server),
-        PickleMiner(path_eve, path_cache, args.server)
+        BulkdataMiner(rvr),
+        CachedCallsMiner(rvr),
+        PickleMiner(rvr)
     )
 
     writers = (
         JsonWriter(path_json, indent=2),
     )
 
-    FlowManager(miners, writers).run(args.list)
+    FlowManager(rvr, miners, writers).run(args.list, translate=bool(args.translate))

@@ -18,8 +18,6 @@
 #===============================================================================
 
 
-from reverence import blue
-
 from .abstract_miner import AbstractMiner
 from .eve_normalize import EveNormalizer
 from .exception import ContainerNameError
@@ -31,10 +29,8 @@ class BulkdataMiner(AbstractMiner):
     with EVE client.
     """
 
-    def __init__(self, path_eve, path_cache, server):
-        # Initialize reverence
-        eve = blue.EVE(path_eve, cachepath=path_cache, server=server)
-        self._cfg = eve.getconfigmgr()
+    def __init__(self, rvr):
+        self._cfg = rvr.getconfigmgr()
         self.__resolved_source_map = None
 
     def contname_iter(self):

@@ -30,9 +30,9 @@ class PickleMiner(AbstractMiner):
     pickles (this is not guaranteed to succeed).
     """
 
-    def __init__(self, path_eve, path_cache, server):
+    def __init__(self, rvr):
         self._pickle_ext = '.pickle'
-        self._unstuffer = Unstuffer(path_eve, path_cache, server)
+        self._unstuffer = Unstuffer(rvr)
 
     def contname_iter(self):
         """
