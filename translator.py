@@ -60,6 +60,7 @@ class Translator(object):
         for key, value in obj.items():
             self._route_object(key)
             self._route_object(value)
+        strtypes = (str, unicode)
         # Now, try to actually translate stuff
         # We assume that key we're dealing with is field name
         # whose value will reference translation, and after
@@ -67,7 +68,7 @@ class Translator(object):
         # claim
         for msgid_fname in obj:
             # It must be string in '<field name>ID' format
-            if isinstance(msgid_fname, (str, unicode)) is False:
+            if isinstance(msgid_fname, strtypes) is False:
                 continue
             suffix = 'ID'
             tail = msgid_fname[-len(suffix):]
@@ -77,6 +78,14 @@ class Translator(object):
             # use this translation
             text_fname = msgid_fname[:-len(suffix)]
             if text_fname not in obj:
+                continue
+            # Field which needs translation has to contain None
+            # or some string, to avoid replacing some other data,
+            # which is possible in case we have false positive on
+            # fieldName-fieldNameID detection (might happen they do
+            # not contain text to translate and reference to messageID)
+            original = obj[text_fname]
+            if original is not None and isinstance(original, strtypes) is False:
                 continue
             # Past this, consider process as an attempt to translate
             self.__increment_stats(text_fname, 0)
