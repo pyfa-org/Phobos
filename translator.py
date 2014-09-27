@@ -106,6 +106,12 @@ class Translator(object):
             # them instead of whatever could be in original text field
             if re.match('<NO TEXT, messageID=[0-9]+, param={.*}>', translation):
                 continue
+            original = obj[text_fname]
+            # If we already had translated string in there, do not report
+            # it as successful translation (reverence does some translation
+            # for us out of the box)
+            if original == translation:
+                continue
             # Finally, do translation
             obj[text_fname] = translation
             self.__increment_stats(text_fname, 1)
