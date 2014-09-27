@@ -102,9 +102,10 @@ class Translator(object):
             except:
                 self.__increment_stats(text_fname, 2)
                 continue
-            # Translations might be just plain stubs, it's dumb to use
-            # them instead of whatever could be in original text field
-            if re.match('<NO TEXT, messageID=[0-9]+, param={.*}>', translation):
+            # Translations might be just plain empty string or reverence stubs,
+            # it's dumb to use them instead of whatever could be in original
+            # text field
+            if not translation or re.match('<NO TEXT, messageID=[0-9]+, param={.*}>', translation):
                 continue
             original = obj[text_fname]
             # If we already had translated string in there, do not report
