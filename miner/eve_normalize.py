@@ -18,7 +18,16 @@
 #===============================================================================
 
 
+import types
+from collections import OrderedDict
 from itertools import chain
+
+from reverence.blue import DBRow
+from reverence.carbon.common.script.sys.row import Row
+from reverence.carbon.common.lib.utillib import KeyVal
+from reverence.eve.common.script.sys.rowset import FilterRowset, IndexedRowLists, Rowset
+from reverence.eve.common.script.universe.locationWrapper import SolarSystemWrapper
+from reverence.fsd import FSD_Dict, _FixedSizeList as FSD_FixedSizeList, FSD_Index, FSD_NamedVector, FSD_Object
 
 
 class EveNormalizer(object):
@@ -41,8 +50,23 @@ class EveNormalizer(object):
         """
         Pick proper method for passed object and invoke it.
         """
-        obj_type = getattr(obj, '__guid__', type(obj).__name__)
-        method = self._conversion_map[obj_type]
+        # Primitive objects do not need any conversion
+        if type(obj) in self._primitives:
+            return obj
+        method = None
+        # Try to find parent class for passed object, and if we
+        # have any in our records - choose handler for it
+        for candidate_class in self._conversion_classes:
+            if isinstance(obj, candidate_class):
+                method = self._conversion_classes[candidate_class]
+                break
+        if method is None:
+            msg = 'unable to route {}'.format(type(obj))
+            guid = getattr(obj, '__guid__', None)
+            if guid is not None:
+                msg = '{} (guid {})'.format(msg, guid)
+            print(obj, self._pythonize_keyval(obj))
+            raise UnknownContainerTypeError(msg)
         return method(self, obj)
 
     def _pythonize_iterable(self, obj):
@@ -64,34 +88,32 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
-    def _pythonize_c_indexed_rowset(self, obj):
-        """
-        CIndexedRowset is dictionary-like container, where we
-        need just values.
-        """
-        return self._pythonize_iterable(obj.values())
-
     def _pythonize_dbrow(self, obj):
         """
-        DBRow is similar to python dictionary, but its keys are
-        accessed via hidden '__header__' attribute.
+        DBRow can be converted into dictionary - its keys are
+        accessed via hidden '__keys__' attribute (implementation
+        detail, ideally we should fetch it from container's
+        .header attribute).
         """
         container = {}
-        for key in obj.__header__.Keys():
+        for key in obj.__keys__:
             value = obj[key]
             proc_key = self._route_object(key)
             proc_value = self._route_object(value)
-            # Keys are assumed to be python primitives
             container[proc_key] = proc_value
         return container
 
     def _pythonize_filter_rowset(self, obj):
         """
-        FilterRowset is very similar to indexed rowlists, but with few facilities
-        on top of that (which we don't really need), and with data dictionary with
-        stored in 'items' attribute, rather than on object itself.
+        Filter rowsets are map-like objects, where keys are are some
+        indices and values are lists of rows or indexed lists of rows,
+        depending on parameters passed to it during initialization. We
+        assume we do not need keys, thus everything is converted into
+        single tuple.
         """
-        return self._pythonize_indexed_lists(obj.items)
+        # Process all sublists (they might be not usual, but e.g. rowsets),
+        # then chain them together into single tuple
+        return tuple(chain(*(self._route_object(l) for l in obj)))
 
     def _pythonize_fsd_named_vector(self, obj):
         """
@@ -123,19 +145,11 @@ class EveNormalizer(object):
 
     def _pythonize_indexed_lists(self, obj):
         """
-        CFilterRowsets and IndexedRowLists are dictionary, where keys are some
-        indices and values are lists of rows. We assume we do not need keys,
-        thus everything is converted into single tuple.
+        Indexed lists are represented as dictionary, where keys are some
+        indices and values are lists of rows. This is very similar to filter
+        rowsets, thus we're reusing its conversion method.
         """
-        # Chain all sublists into single list and pass it
-        # to regular iterable processor
-        return self._pythonize_iterable(chain(*obj.values()))
-
-    def _pythonize_index_rowset(self, obj):
-        """
-        IndexRowset has iterable with data accessed via 'lines' attribute.
-        """
-        return self._pythonize_iterable(obj.lines)
+        return self._pythonize_filter_rowset(obj.values())
 
     def _pythonize_keyval(self, obj):
         """
@@ -144,42 +158,60 @@ class EveNormalizer(object):
         """
         return self._pythonize_map(obj.__dict__)
 
-    def _pythonize_rowdict(self, obj):
+    def _pythonize_row(self, obj):
         """
-        RowDicts are regular dictionaries, where keys are some IDs and
-        values are DBRows. Keys are usually duplicated in rows themselves,
-        thus we remove them and compose single list.
+        Row objects are tricky part for phobos - they expose convenient
+        interface to user, which is 'improved' by reverence to provide things
+        like out-of-the-box string localization, or object references (e.g.
+        group row provides reference to actual category row, not just
+        categoryID). Reverence is known to break on some of these 'improvements'
+        (e.g. RamDetail class). This can be worked around in quite a dirty
+        way, but as we do not really need any of these improvements - we
+        take 'raw' row (DBRow) from Row (and its subclasses) and use it,
+        ignoring everything built on top of it.
         """
-        return self._pythonize_iterable(obj.values())
+        return self._pythonize_dbrow(obj.line)
 
-    def _primitive(self, obj):
-        return obj
+    _conversion_classes = OrderedDict([
+        (FSD_Dict, _pythonize_map),
+        (FSD_FixedSizeList, _pythonize_iterable),
+        # FSD_MultiIndex is also FSD_Index subclass and have
+        # iteritems() method
+        (FSD_Index, _pythonize_map),
+        (FSD_NamedVector, _pythonize_fsd_named_vector),
+        (FSD_Object, _pythonize_fsd_object),
+        (Row, _pythonize_row),
+        (DBRow, _pythonize_dbrow),
+        (FilterRowset, _pythonize_filter_rowset),
+        # Rowset and IndexRowset (which is subclass of Rowset) support
+        # regular iterable interface
+        (Rowset, _pythonize_iterable),
+        (IndexedRowLists, _pythonize_indexed_lists),
+        # Built-in classes have lesser priority, as some custom
+        # classes inherit from them
+        (KeyVal, _pythonize_keyval),
+        # SolarSystemWrapper is subclass of int, despite this
+        # it's used to store some attributes, same way as KeyVal
+        (SolarSystemWrapper, _pythonize_keyval),
+        (dict, _pythonize_map),
+        (list, _pythonize_iterable),
+        (tuple, _pythonize_iterable)
+    ])
 
-    _conversion_map = {
-        'blue.DBRow': _pythonize_dbrow,
-        'dbutil.CRowset': _pythonize_iterable,
-        'dbutil.CFilterRowset': _pythonize_indexed_lists,
-        'dbutil.CIndexedRowset': _pythonize_c_indexed_rowset,
-        'dbutil.RowDict': _pythonize_rowdict,
-        'dbutil.RowList': _pythonize_iterable,
-        '_FixedSizeList': _pythonize_iterable,
-        'FSD_Dict': _pythonize_map,
-        'FSD_MultiIndex': _pythonize_map,
-        'FSD_NamedVector': _pythonize_fsd_named_vector,
-        'FSD_Object': _pythonize_fsd_object,
-        'util.FilterRowset': _pythonize_filter_rowset,
-        'util.IndexedRowLists': _pythonize_indexed_lists,
-        'util.IndexRowset': _pythonize_index_rowset,
-        'util.KeyVal': _pythonize_keyval,
-        'bool': _primitive,
-        'dict': _pythonize_map,
-        'float': _primitive,
-        'int': _primitive,
-        'list': _pythonize_iterable,
-        'long': _primitive,
-        'NoneType': _primitive,
-        'str': _primitive,
-        'tuple': _pythonize_iterable,
-        'unicode': _primitive,
-        'universe.SolarSystemWrapper': _pythonize_keyval
-    }
+    _primitives = (
+        types.NoneType,
+        types.BooleanType,
+        types.FloatType,
+        types.IntType,
+        types.LongType,
+        types.StringType,
+        types.UnicodeType
+    )
+
+
+class UnknownContainerTypeError(Exception):
+    """
+    Raised when normalizer doesn't know what to do
+    with passed object.
+    """
+    pass

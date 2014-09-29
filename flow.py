@@ -201,7 +201,7 @@ class NameSet(set):
             set.add(self, name)
 
 
-class FilterParseError(BaseException):
+class FilterParseError(Exception):
     """
     When received filter string cannot be parsed,
     this exception is raised.

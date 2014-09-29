@@ -37,7 +37,7 @@ if __name__ == '__main__':
     import argparse
     import os.path
 
-    from reverence import blue
+    import reverence
 
     from flow import FlowManager
     from miner import *
@@ -61,9 +61,11 @@ if __name__ == '__main__':
 
     # Initialize reverence, everything which needs it will be using
     # this instance. Reverence cannot cope with None passed as language ID,
-    # thus fall back to English
+    # thus fall back to English. As far as i know it's needed only for
+    # localization stuff, and we won't be using reverence's localization
+    # implementation - we have our own
     rvr_language = args.translate or 'en-us'
-    rvr = blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
+    rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
 
     miners = (
         MetadataMiner(path_eve),
