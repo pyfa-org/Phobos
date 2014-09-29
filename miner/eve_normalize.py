@@ -22,12 +22,7 @@ import types
 from collections import OrderedDict
 from itertools import chain
 
-from reverence.blue import DBRow
 from reverence.carbon.common.script.sys.row import Row
-from reverence.carbon.common.lib.utillib import KeyVal
-from reverence.eve.common.script.sys.rowset import FilterRowset, IndexedRowLists, Rowset
-from reverence.eve.common.script.universe.locationWrapper import SolarSystemWrapper
-from reverence.fsd import FSD_Dict, _FixedSizeList as FSD_FixedSizeList, FSD_Index, FSD_NamedVector, FSD_Object
 
 
 class EveNormalizer(object):
@@ -53,21 +48,34 @@ class EveNormalizer(object):
         # Primitive objects do not need any conversion
         if type(obj) in self._primitives:
             return obj
-        method = None
         # Try to find parent class for passed object, and if we
-        # have any in our records - choose handler for it
-        for candidate_class in self._conversion_classes:
-            if isinstance(obj, candidate_class):
-                method = self._conversion_classes[candidate_class]
-                break
-        if method is None:
-            msg = 'unable to route {}'.format(type(obj))
-            guid = getattr(obj, '__guid__', None)
-            if guid is not None:
-                msg = '{} (guid {})'.format(msg, guid)
-            print(obj, self._pythonize_keyval(obj))
-            raise UnknownContainerTypeError(msg)
-        return method(self, obj)
+        # have any in our records - run handler for it
+        for candidate_cls in self._subclass_match:
+            if isinstance(obj, candidate_cls):
+                method = self._subclass_match[candidate_cls]
+                return method(self, obj)
+        cls = type(obj)
+        try:
+            method = self._class_match[cls]
+        except KeyError:
+            pass
+        else:
+            return method(self, obj)
+        # __guid__ is available for many objects exposed by reverence,
+        # use class name as fallback only when it's not available
+        cls_name = getattr(obj, '__guid__', type(obj).__name__)
+        try:
+            method = self._name_match[cls_name]
+        except KeyError:
+            pass
+        else:
+            return method(self, obj)
+        # If we got here, routing failed
+        msg = 'unable to route {}'.format(type(obj))
+        guid = getattr(obj, '__guid__', None)
+        if guid is not None:
+            msg = '{} (guid {})'.format(msg, guid)
+        raise UnknownContainerTypeError(msg)
 
     def _pythonize_iterable(self, obj):
         """
@@ -103,16 +111,12 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
-    def _pythonize_filter_rowset(self, obj):
+    def _pythonize_list_of_iterables(self, obj):
         """
-        Filter rowsets are map-like objects, where keys are are some
-        indices and values are lists of rows or indexed lists of rows,
-        depending on parameters passed to it during initialization. We
-        assume we do not need keys, thus everything is converted into
-        single tuple.
+        Here we suppose that passed object is list of iterables of
+        any type; we process all of these iterables, and then
+        concatenate them to form a single tuple.
         """
-        # Process all sublists (they might be not usual, but e.g. rowsets),
-        # then chain them together into single tuple
         return tuple(chain(*(self._route_object(l) for l in obj)))
 
     def _pythonize_fsd_named_vector(self, obj):
@@ -146,12 +150,19 @@ class EveNormalizer(object):
     def _pythonize_indexed_lists(self, obj):
         """
         Indexed lists are represented as dictionary, where keys are some
-        indices and values are lists of rows. This is very similar to filter
-        rowsets, thus we're reusing its conversion method.
+        indices and values are lists of rows. This is very similar to list
+        of iterables, thus we're reusing its conversion method.
         """
-        return self._pythonize_filter_rowset(obj.values())
+        return self._pythonize_list_of_iterables(obj.values())
 
-    def _pythonize_keyval(self, obj):
+    def _pythonize_indexed_rows(self, obj):
+        """
+        Regular map, where values are data rows, and keys are some
+        values taken from the rows they correspond to.
+        """
+        return self._pythonize_iterable(obj.values())
+
+    def _pythonize_pyobj(self, obj):
         """
         KeyVal is a python-like object, where attributes/values are stored
         as object attributes.
@@ -172,31 +183,39 @@ class EveNormalizer(object):
         """
         return self._pythonize_dbrow(obj.line)
 
-    _conversion_classes = OrderedDict([
-        (FSD_Dict, _pythonize_map),
-        (FSD_FixedSizeList, _pythonize_iterable),
-        # FSD_MultiIndex is also FSD_Index subclass and have
-        # iteritems() method
-        (FSD_Index, _pythonize_map),
-        (FSD_NamedVector, _pythonize_fsd_named_vector),
-        (FSD_Object, _pythonize_fsd_object),
+    _name_match = {
+        # Usually seen in cache
+        'dbutil.CFilterRowset': _pythonize_indexed_lists,
+        'dbutil.CIndexedRowset': _pythonize_indexed_rows,
+        'dbutil.CRowset': _pythonize_iterable,
+        'dbutil.RowDict': _pythonize_indexed_rows,
+        'dbutil.RowList': _pythonize_iterable,
+        # Conventional bulkdata classes
+        'util.FilterRowset': _pythonize_list_of_iterables,
+        'util.IndexedRowLists': _pythonize_indexed_lists,
+        'util.IndexRowset': _pythonize_iterable,
+        'util.KeyVal': _pythonize_pyobj,
+        'util.Rowset': _pythonize_iterable,
+        # FSD-related classes, usually seen in bulkdata
+        'FSD_Dict': _pythonize_map,
+        'FSD_MultiIndex': _pythonize_map,
+        'FSD_NamedVector': _pythonize_fsd_named_vector,
+        'FSD_Object': _pythonize_fsd_object,
+        '_FixedSizeList': _pythonize_iterable,
+        # Misc
+        'blue.DBRow': _pythonize_dbrow,
+        'universe.SolarSystemWrapper': _pythonize_pyobj,
+    }
+
+    _subclass_match = OrderedDict([
         (Row, _pythonize_row),
-        (DBRow, _pythonize_dbrow),
-        (FilterRowset, _pythonize_filter_rowset),
-        # Rowset and IndexRowset (which is subclass of Rowset) support
-        # regular iterable interface
-        (Rowset, _pythonize_iterable),
-        (IndexedRowLists, _pythonize_indexed_lists),
-        # Built-in classes have lesser priority, as some custom
-        # classes inherit from them
-        (KeyVal, _pythonize_keyval),
-        # SolarSystemWrapper is subclass of int, despite this
-        # it's used to store some attributes, same way as KeyVal
-        (SolarSystemWrapper, _pythonize_keyval),
-        (dict, _pythonize_map),
-        (list, _pythonize_iterable),
-        (tuple, _pythonize_iterable)
     ])
+
+    _class_match = {
+        types.DictType: _pythonize_map,
+        types.ListType: _pythonize_iterable,
+        types.TupleType: _pythonize_iterable
+    }
 
     _primitives = (
         types.NoneType,
