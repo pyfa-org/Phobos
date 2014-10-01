@@ -48,8 +48,8 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--eve', help='path to eve folder', required=True)
     parser.add_argument('-c', '--cache', help='path to eve cache folder', required=True)
     parser.add_argument('-s', '--server', default='tranquility', help='server which was specified in EVE shortcut, defaults to tranquility')
-    languages = ('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh')
-    parser.add_argument('-t', '--translate', choices=languages, help='attempt to translate strings into specified language')
+    languages = ('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi')
+    parser.add_argument('-t', '--translate', default='multi', choices=languages, help='attempt to translate strings into specified language')
     parser.add_argument('-j', '--json', help='output folder for the json files')
     parser.add_argument('-l', '--list', default='', help='comma-separated list of container names to dump')
     args = parser.parse_args()
@@ -67,15 +67,16 @@ if __name__ == '__main__':
     rvr_language = args.translate or 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
 
+    pickle_miner = PickleMiner(rvr)
     miners = (
         MetadataMiner(path_eve),
         BulkdataMiner(rvr),
         CachedCallsMiner(rvr),
-        PickleMiner(rvr)
+        pickle_miner
     )
 
     writers = (
         JsonWriter(path_json, indent=2),
     )
 
-    FlowManager(rvr, miners, writers).run(args.list, translate=bool(args.translate))
+    FlowManager(miners, writers, pickle_miner).run(args.list, args.translate)

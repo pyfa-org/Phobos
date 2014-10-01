@@ -28,14 +28,14 @@ class FlowManager(object):
     Class for handling high-level flow of script.
     """
 
-    def __init__(self, rvr, miners, writers):
+    def __init__(self, miners, writers, pickle_miner):
         self._miners = miners
         self._writers = writers
-        self._translator = Translator(rvr)
+        self._translator = Translator(pickle_miner)
         self.__flow_src_map = None
         self.__flow_dest_map = None
 
-    def run(self, filter_string, translate=False):
+    def run(self, filter_string, language):
         # Compose set with flow container names which will be
         # processed (all processed if empty)
         filter_set = set()
@@ -67,8 +67,7 @@ class FlowManager(object):
                     print(u'    failed to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
                     # Translate data
-                    if translate is True:
-                        self._translator.translate(container_data)
+                    self._translator.translate(container_data, language)
                     # Write data using passed writers
                     for writer in self._writers:
                         writer_resolved_name = dest[writer]

@@ -21,6 +21,7 @@
 import pickle
 
 from miner.abstract_miner import AbstractMiner
+from miner.exception import ContainerNameError
 from .unstuff import Unstuffer
 
 
@@ -48,6 +49,12 @@ class PickleMiner(AbstractMiner):
         Fetch pickle file contents, load it and return result.
         """
         resfilepath = '{}{}'.format(resfilepath_noext, self._pickle_ext)
-        resfiledata = self._unstuffer.get_file(resfilepath)
+        try:
+            resfiledata = self._unstuffer.get_file(resfilepath)
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            msg = u'container "{}" is not available for miner {}'.format(resfilepath_noext, type(self).__name__)
+            raise ContainerNameError(msg)
         data = pickle.loads(resfiledata)
         return data

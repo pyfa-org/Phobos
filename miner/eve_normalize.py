@@ -208,6 +208,9 @@ class EveNormalizer(object):
     }
 
     _subclass_match = OrderedDict([
+        # Row is handled through isinstance check because reverence
+        # actually provides its subclasses, but it doesn't make sense
+        # to specify them all
         (Row, _pythonize_row),
     ])
 
