@@ -21,8 +21,66 @@
 import json
 import os.path
 import re
+import types
 
 from .abstract_writer import AbstractWriter
+
+
+class CustomEncoder(json.JSONEncoder):
+    """
+    If we're not happy with default encoder - all modifications
+    are implemented in this class.
+    """
+
+    def encode(self, obj, *args, **kwargs):
+        if isinstance(obj, dict):
+            self._map_keys_to_str(obj)
+        return json.JSONEncoder.encode(self, obj, *args, **kwargs)
+
+    def iterencode(self, obj, *args, **kwargs):
+        # Traverse passed object, and do some modifications
+        self._route_object(obj)
+        # Pass it to usual encoder
+        return json.JSONEncoder.iterencode(self, obj, *args, **kwargs)
+
+    def _route_object(self, obj):
+        obj_type = type(obj)
+        method = self._traversal_map.get(obj_type)
+        if method is not None:
+            method(self, obj)
+
+    def _traverse_map(self, obj):
+        """
+        Traverse through dict items first, then convert
+        keys to strings.
+        """
+        for k, v in obj.items():
+            self._route_object(k)
+            self._route_object(v)
+        self._map_keys_to_str(obj)
+
+    def _traverse_iterable(self, obj):
+        for item in obj:
+            self._route_object(item)
+
+    _traversal_map = {
+        types.DictType: _traverse_map,
+        types.TupleType: _traverse_iterable,
+        types.ListType: _traverse_iterable
+    }
+
+    def _map_keys_to_str(self, obj):
+        """
+        Unconditionally convert dictionary keys to
+        strings. Default encoder doesn't do this for
+        cases when keys are python objects like tuple,
+        and encoding fails.
+        """
+        new_dict = {}
+        for k, v in obj.items():
+            new_dict[unicode(k)] = v
+        obj.clear()
+        obj.update(new_dict)
 
 
 class JsonWriter(AbstractWriter):
@@ -42,6 +100,7 @@ class JsonWriter(AbstractWriter):
         json.dump(
             container_data,
             open(os.path.join(self.folder, '{}.json'.format(writer_resolved_name)), 'w'),
+            cls=CustomEncoder,
             indent=self.indent,
             encoding='cp1252'
         )
