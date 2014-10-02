@@ -60,7 +60,7 @@ class BulkdataMiner(AbstractMiner):
         # Intermediate map
         # Format: {safe name: [source names]}
         safe_source_map = {}
-        for source_name in sorted(self._cfg.tables):
+        for source_name in self._cfg.tables:
             safe_name = self._secure_name(source_name)
             source_names = safe_source_map.setdefault(safe_name, [])
             source_names.append(source_name)
@@ -70,7 +70,7 @@ class BulkdataMiner(AbstractMiner):
             # Use number suffix with 'miner' marker to resolve conflicts
             if len(source_names) > 1:
                 i = 1
-                for source_name in source_names:
+                for source_name in sorted(source_names):
                     resolved_name = u'{}_m{}'.format(safe_name, i)
                     resolved_source_map[resolved_name] = source_name
                     i += 1
