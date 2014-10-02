@@ -19,3 +19,4 @@
 
 
 from .stuffed_pickle import StuffedPickleMiner
+from .stuffed_yaml import StuffedYamlMiner

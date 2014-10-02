@@ -73,7 +73,8 @@ if __name__ == '__main__':
         BulkdataMiner(rvr),
         SqliteMiner(path_eve),
         CachedCallsMiner(rvr),
-        spickle_miner
+        spickle_miner,
+        #StuffedYamlMiner(rvr)
     )
 
     writers = (
