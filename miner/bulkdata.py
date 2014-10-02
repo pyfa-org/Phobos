@@ -21,7 +21,6 @@
 from util import CachedProperty
 from .abstract_miner import AbstractMiner
 from .eve_normalize import EveNormalizer
-from .exception import ContainerNameError
 
 
 class BulkdataMiner(AbstractMiner):
@@ -42,10 +41,10 @@ class BulkdataMiner(AbstractMiner):
             source_name = self._resolved_source_map[resolved_name]
             container_data = getattr(self._cfg, source_name)
         except (KeyError, AttributeError):
-            msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
-            raise ContainerNameError(msg)
-        normalized_data = EveNormalizer().run(container_data)
-        return normalized_data
+            self._container_not_found(resolved_name)
+        else:
+            normalized_data = EveNormalizer().run(container_data)
+            return normalized_data
 
     @CachedProperty
     def _resolved_source_map(self):

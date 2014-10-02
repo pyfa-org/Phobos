@@ -23,7 +23,6 @@ import sqlite3
 
 from util import CachedProperty
 from .abstract_miner import AbstractMiner
-from .exception import ContainerNameError
 
 
 class SqliteMiner(AbstractMiner):
@@ -45,17 +44,17 @@ class SqliteMiner(AbstractMiner):
         try:
             dbname, table_name = self._resolved_source_map[resolved_name]
         except KeyError:
-            msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
-            raise ContainerNameError(msg)
-        dbconn = self._databases[dbname]
-        c = dbconn.cursor()
-        rows = []
-        c.execute(u'select * from {}'.format(table_name))
-        headers = list(map(lambda x: x[0], c.description))
-        for sqlite_row in c:
-            row = dict(zip(headers, sqlite_row))
-            rows.append(row)
-        return rows
+            self._container_not_found(resolved_name)
+        else:
+            dbconn = self._databases[dbname]
+            c = dbconn.cursor()
+            rows = []
+            c.execute(u'select * from {}'.format(table_name))
+            headers = list(map(lambda x: x[0], c.description))
+            for sqlite_row in c:
+                row = dict(zip(headers, sqlite_row))
+                rows.append(row)
+            return rows
 
     @CachedProperty
     def _resolved_source_map(self):

@@ -24,7 +24,6 @@ from datetime import datetime
 from time import mktime
 
 from .abstract_miner import AbstractMiner
-from .exception import ContainerNameError
 
 
 class MetadataMiner(AbstractMiner):
@@ -43,22 +42,22 @@ class MetadataMiner(AbstractMiner):
 
     def get_data(self, resolved_name):
         if resolved_name != self._container_name:
-            msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
-            raise ContainerNameError(msg)
-        field_names = ('field_name', 'field_value')
-        container_data = []
-        # Read client version
-        try:
-            config = ConfigParser()
-            config.read(os.path.join(self._path_eve, 'start.ini'))
-            eve_version = config.getint('main', 'build')
-        except KeyboardInterrupt:
-            raise
-        except:
-            print(u'    failed to detect client version')
-            eve_version = None
-        container_data.append({field_names[0]: 'client_build', field_names[1]: eve_version})
-        # Generate UNIX-style timestamp of current UTC time
-        timestamp = int(mktime(datetime.utcnow().timetuple()))
-        container_data.append({field_names[0]: 'dump_time', field_names[1]: timestamp})
-        return tuple(container_data)
+            self._container_not_found(resolved_name)
+        else:
+            field_names = ('field_name', 'field_value')
+            container_data = []
+            # Read client version
+            try:
+                config = ConfigParser()
+                config.read(os.path.join(self._path_eve, 'start.ini'))
+                eve_version = config.getint('main', 'build')
+            except KeyboardInterrupt:
+                raise
+            except:
+                print(u'    failed to detect client version')
+                eve_version = None
+            container_data.append({field_names[0]: 'client_build', field_names[1]: eve_version})
+            # Generate UNIX-style timestamp of current UTC time
+            timestamp = int(mktime(datetime.utcnow().timetuple()))
+            container_data.append({field_names[0]: 'dump_time', field_names[1]: timestamp})
+            return tuple(container_data)

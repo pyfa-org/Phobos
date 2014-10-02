@@ -21,7 +21,6 @@
 import pickle
 
 from miner.abstract_miner import AbstractMiner
-from miner.exception import ContainerNameError
 from util import CachedProperty
 from .unstuff import Unstuffer
 
@@ -43,11 +42,11 @@ class PickleMiner(AbstractMiner):
         try:
             resfilepath = self._resolved_source_map[resolved_name]
         except KeyError:
-            msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
-            raise ContainerNameError(msg)
-        resfiledata = self._unstuffer.get_file(resfilepath)
-        data = pickle.loads(resfiledata)
-        return data
+            self._container_not_found(resolved_name)
+        else:
+            resfiledata = self._unstuffer.get_file(resfilepath)
+            data = pickle.loads(resfiledata)
+            return data
 
     @CachedProperty
     def _resolved_source_map(self):

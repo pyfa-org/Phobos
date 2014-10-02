@@ -64,3 +64,15 @@ class AbstractMiner(object):
         if not arg:
             safe_name = safe_name.strip()
         return safe_name
+
+    def _container_not_found(self, cont_name):
+        msg = u'container "{}" is not available for miner {}'.format(cont_name, type(self).__name__)
+        raise ContainerNameError(msg)
+
+
+class ContainerNameError(Exception):
+    """
+    When container with requested name is not available,
+    this exception is raised by miners.
+    """
+    pass

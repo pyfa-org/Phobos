@@ -26,7 +26,6 @@ from reverence import blue
 from util import CachedProperty
 from .abstract_miner import AbstractMiner
 from .eve_normalize import EveNormalizer
-from .exception import ContainerNameError
 
 
 class CachedCallsMiner(AbstractMiner):
@@ -48,11 +47,11 @@ class CachedCallsMiner(AbstractMiner):
         try:
             filepath = self._resolved_filepath_map[resolved_name]
         except KeyError:
-            msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
-            raise ContainerNameError(msg)
-        _, call_data = self.__read_cache_file(filepath)
-        normalized_data = EveNormalizer().run(call_data)
-        return normalized_data
+            self._container_not_found(resolved_name)
+        else:
+            _, call_data = self.__read_cache_file(filepath)
+            normalized_data = EveNormalizer().run(call_data)
+            return normalized_data
 
     @CachedProperty
     def _resolved_filepath_map(self):
