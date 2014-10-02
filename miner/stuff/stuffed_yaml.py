@@ -17,8 +17,10 @@
 # along with Phobos. If not, see <http://www.gnu.org/licenses/>.
 #===============================================================================
 
-
-import yaml
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 from miner.abstract_miner import AbstractMiner
 from util import CachedProperty

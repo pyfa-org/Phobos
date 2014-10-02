@@ -13,6 +13,5 @@ Few words about command line arguments script can take:
 --list - you can provide list of comma-separated 'containers' to dump, it uses names script prints to stdout. For list of all available names you can launch script without specifying this option (by default it dumps everything it can find).
 
 todo list:
-- Add YAML file export (from embedFS contents)
 - Add CachedObjects export
 - Reimplement few scripts to use phobos (item diff, database conversion for pyfa (including traits)
