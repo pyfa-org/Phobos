@@ -22,6 +22,8 @@ import re
 import types
 from itertools import chain
 
+from util import CachedProperty
+
 
 class Translator(object):
     """
@@ -30,7 +32,6 @@ class Translator(object):
 
     def __init__(self, pickle_miner):
         self._pminer = pickle_miner
-        self.__available_langs = None
         # Format: {language code: {message ID: message text}}
         self._loaded_langs = {}
         # Format: {field name: [total entries, translated entries]}
@@ -255,19 +256,17 @@ class Translator(object):
             message_map = self._loaded_langs[language]
         return message_map.get(msgid) or ''
 
-    @property
+    @CachedProperty
     def _available_langs(self):
         """
         Returns list of available translation languages.
         """
-        if self.__available_langs is None:
-            languages = set()
-            main_old = self._load_pickle('res/localization/localization_main')
-            main_fsd = self._load_pickle('res/localizationfsd/localization_fsd_main')
-            languages.update(main_old['languages'].keys())
-            languages.update(main_fsd['languages'])
-            self.__available_langs = tuple(sorted(languages))
-        return self.__available_langs
+        languages = set()
+        main_old = self._load_pickle('res/localization/localization_main')
+        main_fsd = self._load_pickle('res/localizationfsd/localization_fsd_main')
+        languages.update(main_old['languages'].keys())
+        languages.update(main_fsd['languages'])
+        return tuple(sorted(languages))
 
 
 class LanguageNotAvailable(Exception):

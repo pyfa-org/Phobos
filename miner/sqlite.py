@@ -21,6 +21,7 @@
 import os.path
 import sqlite3
 
+from util import CachedProperty
 from .abstract_miner import AbstractMiner
 from .exception import ContainerNameError
 
@@ -35,7 +36,6 @@ class SqliteMiner(AbstractMiner):
         self._databases = {
             'mapbulk': sqlite3.connect(os.path.join(path_eve, 'bulkdata', 'mapbulk.db'))
         }
-        self.__resolved_source_map = None
 
     def contname_iter(self):
         for resolved_name in sorted(self._resolved_source_map):
@@ -57,35 +57,33 @@ class SqliteMiner(AbstractMiner):
             rows.append(row)
         return rows
 
-    @property
+    @CachedProperty
     def _resolved_source_map(self):
         """
         Map between secured/conflict-free names and the place where
         data source is located.
         Format: {resolved name: (db alias, table name)}
         """
-        if self.__resolved_source_map is None:
-            # Format: {safe name: [(db alias, table name), ...]}
-            safe_source_map = {}
-            for dbname, dbconn in self._databases.items():
-                c = dbconn.cursor()
-                c.execute('select name from sqlite_master where type = \'table\'')
-                for row in c:
-                    table_name = row[0]
-                    source_name = u'{}_{}'.format(dbname, table_name)
-                    safe_name = self._secure_name(source_name)
-                    sources = safe_source_map.setdefault(safe_name, [])
-                    sources.append((dbname, table_name))
-            resolved_source_map = {}
-            for safe_name, sources in safe_source_map.items():
-                # Use number suffix with 'miner' marker to resolve conflicts
-                if len(sources) > 1:
-                    i = 1
-                    for source in sorted(sources):
-                        resolved_name = u'{}_m{}'.format(safe_name, i)
-                        resolved_source_map[resolved_name] = source
-                        i += 1
-                else:
-                    resolved_source_map[safe_name] = sources[0]
-            self.__resolved_source_map = resolved_source_map
-        return self.__resolved_source_map
+        # Format: {safe name: [(db alias, table name), ...]}
+        safe_source_map = {}
+        for dbname, dbconn in self._databases.items():
+            c = dbconn.cursor()
+            c.execute('select name from sqlite_master where type = \'table\'')
+            for row in c:
+                table_name = row[0]
+                source_name = u'{}_{}'.format(dbname, table_name)
+                safe_name = self._secure_name(source_name)
+                sources = safe_source_map.setdefault(safe_name, [])
+                sources.append((dbname, table_name))
+        resolved_source_map = {}
+        for safe_name, sources in safe_source_map.items():
+            # Use number suffix with 'miner' marker to resolve conflicts
+            if len(sources) > 1:
+                i = 1
+                for source in sorted(sources):
+                    resolved_name = u'{}_m{}'.format(safe_name, i)
+                    resolved_source_map[resolved_name] = source
+                    i += 1
+            else:
+                resolved_source_map[safe_name] = sources[0]
+        return resolved_source_map

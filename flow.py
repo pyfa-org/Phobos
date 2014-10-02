@@ -21,6 +21,7 @@
 import re
 
 from translator import Translator
+from util import CachedProperty
 
 
 class FlowManager(object):
@@ -32,8 +33,6 @@ class FlowManager(object):
         self._miners = miners
         self._writers = writers
         self._translator = Translator(pickle_miner)
-        self.__flow_src_map = None
-        self.__flow_dest_map = None
 
     def run(self, filter_string, language):
         # Compose set with flow container names which will be
@@ -134,7 +133,7 @@ class FlowManager(object):
             spec[flow_name] = (src, dest)
         return spec
 
-    @property
+    @CachedProperty
     def _flow_src_map(self):
         """
         Resolve name collisions on cross-miner level by appending
@@ -142,49 +141,45 @@ class FlowManager(object):
         compose map between flow names and miners/miner source names.
         Format: {flow name: (miner: resolved miner name)}
         """
-        if self.__flow_src_map is None:
-            # Intermediate map
-            # Format: {resolved miner name: [miners]}
-            minerresolved_miner_map = {}
-            for miner in self._miners:
-                for miner_resolved_name in miner.contname_iter():
-                    miners = minerresolved_miner_map.setdefault(miner_resolved_name, [])
-                    miners.append(miner)
-            flow_src_map = {}
-            for miner_resolved_name, miners in minerresolved_miner_map.items():
-                # If there're collisions, compose flow name by taking
-                # resolved miner name and appending miner name to it
-                if len(miners) > 1:
-                    for miner in miners:
-                        flow_name = u'{}_{}'.format(miner_resolved_name, type(miner).__name__)
-                        flow_src_map[flow_name] = (miner, miner_resolved_name)
-                # Do not modify name if there're no collisions
-                else:
-                    flow_src_map[miner_resolved_name] = (miners[0], miner_resolved_name)
-            self.__flow_src_map = flow_src_map
-        return self.__flow_src_map
+        # Intermediate map
+        # Format: {resolved miner name: [miners]}
+        minerresolved_miner_map = {}
+        for miner in self._miners:
+            for miner_resolved_name in miner.contname_iter():
+                miners = minerresolved_miner_map.setdefault(miner_resolved_name, [])
+                miners.append(miner)
+        flow_src_map = {}
+        for miner_resolved_name, miners in minerresolved_miner_map.items():
+            # If there're collisions, compose flow name by taking
+            # resolved miner name and appending miner name to it
+            if len(miners) > 1:
+                for miner in miners:
+                    flow_name = u'{}_{}'.format(miner_resolved_name, type(miner).__name__)
+                    flow_src_map[flow_name] = (miner, miner_resolved_name)
+            # Do not modify name if there're no collisions
+            else:
+                flow_src_map[miner_resolved_name] = (miners[0], miner_resolved_name)
+        return flow_src_map
 
-    @property
+    @CachedProperty
     def _flow_dest_map(self):
         """
         Resolve possible issues on writer-specific level, and return
         mapping of flow names to writers/writer destination names.
         Format: {flow name: {writer: resolved writer name}}
         """
-        if self.__flow_dest_map is None:
-            flow_dest_map = {}
-            for writer in self._writers:
-                # Format: {flow name: safe writer name}
-                flow_writersafe_map = {}
-                # Transform proposed names into safe and resolve collisions
-                for flow_name in self._flow_src_map:
-                    flow_writersafe_map[flow_name] = writer.secure_name(flow_name)
-                flow_writerresolved_map = writer.resolve_name_collisions(flow_writersafe_map)
-                for flow_name, writer_resolved_name in flow_writerresolved_map.items():
-                    dest = flow_dest_map.setdefault(flow_name, {})
-                    dest[writer] = writer_resolved_name
-            self.__flow_dest_map = flow_dest_map
-        return self.__flow_dest_map
+        flow_dest_map = {}
+        for writer in self._writers:
+            # Format: {flow name: safe writer name}
+            flow_writersafe_map = {}
+            # Transform proposed names into safe and resolve collisions
+            for flow_name in self._flow_src_map:
+                flow_writersafe_map[flow_name] = writer.secure_name(flow_name)
+            flow_writerresolved_map = writer.resolve_name_collisions(flow_writersafe_map)
+            for flow_name, writer_resolved_name in flow_writerresolved_map.items():
+                dest = flow_dest_map.setdefault(flow_name, {})
+                dest[writer] = writer_resolved_name
+        return flow_dest_map
 
 
 class NameSet(set):

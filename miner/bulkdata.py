@@ -18,6 +18,7 @@
 #===============================================================================
 
 
+from util import CachedProperty
 from .abstract_miner import AbstractMiner
 from .eve_normalize import EveNormalizer
 from .exception import ContainerNameError
@@ -31,7 +32,6 @@ class BulkdataMiner(AbstractMiner):
 
     def __init__(self, rvr):
         self._cfg = rvr.getconfigmgr()
-        self.__resolved_source_map = None
 
     def contname_iter(self):
         for resolved_name in sorted(self._resolved_source_map):
@@ -47,7 +47,7 @@ class BulkdataMiner(AbstractMiner):
         normalized_data = EveNormalizer().run(container_data)
         return normalized_data
 
-    @property
+    @CachedProperty
     def _resolved_source_map(self):
         """
         We have to 'secure' container names, thus conflicts are
@@ -57,26 +57,24 @@ class BulkdataMiner(AbstractMiner):
         miner users) and source one.
         Format: {resolved name: source name}
         """
-        if self.__resolved_source_map is None:
-            # Intermediate map
-            # Format: {safe name: [source names]}
-            safe_source_map = {}
-            for source_name in sorted(self._cfg.tables):
-                safe_name = self._secure_name(source_name)
-                source_names = safe_source_map.setdefault(safe_name, [])
-                source_names.append(source_name)
-            # Final map which will be exposed as value of this property
-            resolved_source_map = {}
-            for safe_name, source_names in safe_source_map.items():
-                # Use number suffix with 'miner' marker to resolve conflicts
-                if len(source_names) > 1:
-                    i = 1
-                    for source_name in source_names:
-                        resolved_name = u'{}_m{}'.format(safe_name, i)
-                        resolved_source_map[resolved_name] = source_name
-                        i += 1
-                # Else, conflict resolution is not needed - just use safe name
-                else:
-                    resolved_source_map[safe_name] = source_names[0]
-            self.__resolved_source_map = resolved_source_map
-        return self.__resolved_source_map
+        # Intermediate map
+        # Format: {safe name: [source names]}
+        safe_source_map = {}
+        for source_name in sorted(self._cfg.tables):
+            safe_name = self._secure_name(source_name)
+            source_names = safe_source_map.setdefault(safe_name, [])
+            source_names.append(source_name)
+        # Final map which will be exposed as value of this property
+        resolved_source_map = {}
+        for safe_name, source_names in safe_source_map.items():
+            # Use number suffix with 'miner' marker to resolve conflicts
+            if len(source_names) > 1:
+                i = 1
+                for source_name in source_names:
+                    resolved_name = u'{}_m{}'.format(safe_name, i)
+                    resolved_source_map[resolved_name] = source_name
+                    i += 1
+            # Else, conflict resolution is not needed - just use safe name
+            else:
+                resolved_source_map[safe_name] = source_names[0]
+        return resolved_source_map
