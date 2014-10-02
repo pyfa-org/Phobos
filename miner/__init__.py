@@ -22,13 +22,13 @@ from .bulkdata import BulkdataMiner
 from .cached_calls import CachedCallsMiner
 from .metadata import MetadataMiner
 from .sqlite import SqliteMiner
-from .stuff import PickleMiner
+from .stuff import StuffedPickleMiner
 
 
 __all__ = (
     'BulkdataMiner',
     'CachedCallsMiner',
     'MetadataMiner',
-    'PickleMiner',
-    'SqliteMiner'
+    'SqliteMiner',
+    'StuffedPickleMiner'
 )

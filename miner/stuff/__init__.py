@@ -18,4 +18,4 @@
 #===============================================================================
 
 
-from .pickles import PickleMiner
+from .stuffed_pickle import StuffedPickleMiner

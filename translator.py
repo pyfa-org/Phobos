@@ -30,8 +30,8 @@ class Translator(object):
     Class responsible for text localization.
     """
 
-    def __init__(self, pickle_miner):
-        self._pminer = pickle_miner
+    def __init__(self, spickle_miner):
+        self._spminer = spickle_miner
         # Format: {language code: {message ID: message text}}
         self._loaded_langs = {}
         # Format: {field name: [total entries, translated entries]}
@@ -225,7 +225,7 @@ class Translator(object):
     # Related to loading language data
 
     def _load_pickle(self, name):
-        return self._pminer.get_data(name)
+        return self._spminer.get_data(name)
 
     def _load_lang(self, language):
         """

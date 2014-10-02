@@ -25,7 +25,7 @@ from util import CachedProperty
 from .unstuff import Unstuffer
 
 
-class PickleMiner(AbstractMiner):
+class StuffedPickleMiner(AbstractMiner):
     """
     Class, which attempts to get data from stuffed
     pickles (this is not guaranteed to succeed).

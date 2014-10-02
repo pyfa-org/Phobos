@@ -67,17 +67,17 @@ if __name__ == '__main__':
     rvr_language = args.translate or 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
 
-    pickle_miner = PickleMiner(rvr)
+    spickle_miner = StuffedPickleMiner(rvr)
     miners = (
         MetadataMiner(path_eve),
         BulkdataMiner(rvr),
         SqliteMiner(path_eve),
         CachedCallsMiner(rvr),
-        pickle_miner
+        spickle_miner
     )
 
     writers = (
         JsonWriter(path_json, indent=2),
     )
 
-    FlowManager(miners, writers, pickle_miner).run(args.list, args.translate)
+    FlowManager(miners, writers, spickle_miner).run(args.list, args.translate)

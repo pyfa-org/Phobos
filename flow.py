@@ -29,10 +29,10 @@ class FlowManager(object):
     Class for handling high-level flow of script.
     """
 
-    def __init__(self, miners, writers, pickle_miner):
+    def __init__(self, miners, writers, spickle_miner):
         self._miners = miners
         self._writers = writers
-        self._translator = Translator(pickle_miner)
+        self._translator = Translator(spickle_miner)
 
     def run(self, filter_string, language):
         # Compose set with flow container names which will be
