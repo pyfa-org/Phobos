@@ -71,6 +71,7 @@ if __name__ == '__main__':
     miners = (
         MetadataMiner(path_eve),
         BulkdataMiner(rvr),
+        SqliteMiner(path_eve),
         CachedCallsMiner(rvr),
         pickle_miner
     )

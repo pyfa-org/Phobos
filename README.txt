@@ -14,6 +14,5 @@ Few words about command line arguments script can take:
 
 todo list:
 - Add YAML file export (from embedFS contents)
-- Add SQLite export (file in bulkdata)
 - Add CachedObjects export
 - Reimplement few scripts to use phobos (item diff, database conversion for pyfa (including traits)

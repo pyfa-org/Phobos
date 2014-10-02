@@ -18,19 +18,23 @@
 #===============================================================================
 
 
+import os.path
+import sqlite3
+
 from .abstract_miner import AbstractMiner
-from .eve_normalize import EveNormalizer
 from .exception import ContainerNameError
 
 
-class BulkdataMiner(AbstractMiner):
+class SqliteMiner(AbstractMiner):
     """
-    Class, responsible for fetching data out of bulkdata, which is included
-    with EVE client.
+    Extract data from SQLite databases bundled with client.
     """
 
-    def __init__(self, rvr):
-        self._cfg = rvr.getconfigmgr()
+    def __init__(self, path_eve):
+        # Format: {db alias: db connection}
+        self._databases = {
+            'mapbulk': sqlite3.connect(os.path.join(path_eve, 'bulkdata', 'mapbulk.db'))
+        }
         self.__resolved_source_map = None
 
     def contname_iter(self):
@@ -39,44 +43,49 @@ class BulkdataMiner(AbstractMiner):
 
     def get_data(self, resolved_name):
         try:
-            source_name = self._resolved_source_map[resolved_name]
-            container_data = getattr(self._cfg, source_name)
-        except (KeyError, AttributeError):
+            dbname, table_name = self._resolved_source_map[resolved_name]
+        except KeyError:
             msg = u'container "{}" is not available for miner {}'.format(resolved_name, type(self).__name__)
             raise ContainerNameError(msg)
-        normalized_data = EveNormalizer().run(container_data)
-        return normalized_data
+        dbconn = self._databases[dbname]
+        c = dbconn.cursor()
+        rows = []
+        c.execute(u'select * from {}'.format(table_name))
+        headers = list(map(lambda x: x[0], c.description))
+        for sqlite_row in c:
+            row = dict(zip(headers, sqlite_row))
+            rows.append(row)
+        return rows
 
     @property
     def _resolved_source_map(self):
         """
-        We have to 'secure' container names, thus conflicts are
-        possible; resolve them by appending suffix in case we have
-        2 or more overlapping 'safe' names, and use this map to
-        store relation between resolved name (which is exposed to
-        miner users) and source one.
-        Format: {resolved name: source name}
+        Map between secured/conflict-free names and the place where
+        data source is located.
+        Format: {resolved name: (db alias, table name)}
         """
         if self.__resolved_source_map is None:
-            # Intermediate map
-            # Format: {safe name: [source names]}
+            # Format: {safe name: [(db alias, table name), ...]}
             safe_source_map = {}
-            for source_name in sorted(self._cfg.tables):
-                safe_name = self._secure_name(source_name)
-                source_names = safe_source_map.setdefault(safe_name, [])
-                source_names.append(source_name)
-            # Final map which will be exposed as value of this property
+            for dbname, dbconn in self._databases.items():
+                c = dbconn.cursor()
+                c.execute('select name from sqlite_master where type = \'table\'')
+                for row in c:
+                    table_name = row[0]
+                    source_name = u'{}_{}'.format(dbname, table_name)
+                    safe_name = self._secure_name(source_name)
+                    sources = safe_source_map.setdefault(safe_name, [])
+                    sources.append((dbname, table_name))
             resolved_source_map = {}
-            for safe_name, source_names in safe_source_map.items():
+            for safe_name, sources in safe_source_map.items():
                 # Use number suffix with 'miner' marker to resolve conflicts
-                if len(source_names) > 1:
+                if len(sources) > 1:
                     i = 1
-                    for source_name in source_names:
+                    for source in sorted(sources):
                         resolved_name = u'{}_m{}'.format(safe_name, i)
-                        resolved_source_map[resolved_name] = source_name
+                        resolved_source_map[resolved_name] = source
                         i += 1
-                # Else, conflict resolution is not needed - just use safe name
                 else:
-                    resolved_source_map[safe_name] = source_names[0]
+                    resolved_source_map[safe_name] = sources[0]
             self.__resolved_source_map = resolved_source_map
         return self.__resolved_source_map
