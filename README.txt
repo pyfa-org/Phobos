@@ -4,7 +4,7 @@ How to use:
 python run.py --eve=<path to EVE client> --cache=<path to EVE client cache>  [--translate=<language>] --json=<output folder> [--list=<comma-separated list of containers to dump>]
 
 Example (how I usually launch it on Linux):
-$ python run.py --eve="~/.wine_eve/drive_c/Program Files/CCP/EVE/" --cache="~/.wine_eve/drive_c/users/"$USER"/Local Settings/Application Data/CCP/EVE/c_program_files_ccp_eve_tranquility/" --translate=en-us --json=~/Desktop/phobos_dump_exp --list="invtypes, marketProxy()_GetMarketGroups(), metadata"
+$ python run.py --eve="~/.wine_eve/drive_c/Program Files/CCP/EVE/" --cache="~/.wine_eve/drive_c/users/"$USER"/Local Settings/Application Data/CCP/EVE/c_program_files_ccp_eve_tranquility/" --translate=en-us --json=~/Desktop/phobos_dump_tq --list="invtypes, marketProxy()_GetMarketGroups(), metadata"
 
 Few words about command line arguments script can take:
 --eve and --cache - just paths to eve client and to folder which contains client cache and settings.
@@ -13,5 +13,4 @@ Few words about command line arguments script can take:
 --list - you can provide list of comma-separated 'containers' to dump, it uses names script prints to stdout. For list of all available names you can launch script without specifying this option (by default it dumps everything it can find).
 
 todo list:
-- Add CachedObjects export
 - Reimplement few scripts to use phobos (item diff, database conversion for pyfa (including traits)

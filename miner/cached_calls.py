@@ -119,5 +119,5 @@ class CachedCallsMiner(AbstractMiner):
         """
         with open(filepath, 'rb') as cachefile:
             filedata = cachefile.read()
-        call_info, call_data = blue.marshal.Load(filedata)
-        return call_info, call_data['lret']
+        cached_call_info, cached_call_data = blue.marshal.Load(filedata)
+        return cached_call_info, cached_call_data['lret']
