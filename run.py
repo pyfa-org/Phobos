@@ -59,12 +59,7 @@ if __name__ == '__main__':
     path_cache = os.path.expanduser(args.cache)
     path_json = os.path.expanduser(args.json)
 
-    # Initialize reverence, everything which needs it will be using
-    # this instance. Reverence cannot cope with None passed as language ID,
-    # thus fall back to English. As far as i know it's needed only for
-    # localization stuff, and we won't be using reverence's localization
-    # implementation - we have our own
-    rvr_language = args.translate or 'en-us'
+    rvr_language = args.translate if args.translate != 'multi' else 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
 
     spickle_miner = StuffedPickleMiner(rvr)
