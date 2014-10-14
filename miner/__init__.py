@@ -23,6 +23,7 @@ from .cached_calls import CachedCallsMiner
 from .metadata import MetadataMiner
 from .sqlite import SqliteMiner
 from .stuff import StuffedPickleMiner
+from .traits import TraitMiner
 
 
 __all__ = (
@@ -30,5 +31,6 @@ __all__ = (
     'CachedCallsMiner',
     'MetadataMiner',
     'SqliteMiner',
-    'StuffedPickleMiner'
+    'StuffedPickleMiner',
+    'TraitMiner'
 )

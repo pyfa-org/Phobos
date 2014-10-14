@@ -22,8 +22,6 @@ import re
 import types
 from itertools import chain
 
-from util import CachedProperty
-
 
 class Translator(object):
     """
@@ -36,11 +34,14 @@ class Translator(object):
         self._loaded_langs = {}
         # Format: {field name: [total entries, translated entries]}
         self._stats = {}
+        # Container for data we fetch from shared language data
+        self.__available_langs = None
+        self.__label_map = None
         # Variable which will indicate to which language we're
         # translating during current run
         self._requested_lang = None
 
-    def translate(self, container_data, language):
+    def translate_container(self, container_data, language, stats=False):
         """
         Translate text fields in passed container
         to specified language.
@@ -48,14 +49,15 @@ class Translator(object):
         if not language:
             return
         # Language code check against what we have in client
-        supported_langs = tuple(chain(self._available_langs, ('multi',)))
+        supported_langs = tuple(chain(self.available_langs, ('multi',)))
         if language not in supported_langs:
             msg = u'language "{}" does not match any of available options: {}'.format(language, ', '.join(supported_langs))
             raise LanguageNotAvailable(msg)
         self._requested_lang = language
         self._stats.clear()
         self._route_object(container_data)
-        self._print_stats()
+        if stats:
+            self._print_current_stats()
 
     # Related to recursive translation
 
@@ -130,12 +132,11 @@ class Translator(object):
         additional fields (in the <field name>_<language> format). Leave
         original field untouched.
         """
-        for language in self._available_langs:
+        for language in self.available_langs:
             new_text_fname = u'{}_{}'.format(text_fname, language)
             if msgid is not None:
                 trans_text = (
-                    self._get_message(language, msgid) or
-                    self._get_message('en-us', msgid) or
+                    self.get_by_message(msgid, language) or
                     orig_text or
                     ''
                 )
@@ -157,8 +158,7 @@ class Translator(object):
         if msgid is None:
             return
         trans_text = (
-            self._get_message(self._requested_lang, msgid) or
-            self._get_message('en-us', msgid) or
+            self.get_by_message(msgid, self._requested_lang) or
             orig_text or
             ''
         )
@@ -210,7 +210,7 @@ class Translator(object):
             self._stats[field_name] = statlist
         statlist[place] += 1
 
-    def _print_stats(self):
+    def _print_current_stats(self):
         """
         Print stats for container which has just been translated.
         """
@@ -227,51 +227,140 @@ class Translator(object):
     def _load_pickle(self, name):
         return self._spminer.get_data(name)
 
-    def _load_lang(self, language):
+    def _load_lang_data(self, language):
         """
         Compose map between message IDs and message texts
         and put it into loaded languages map.
         """
-        message_map = {}
+        msg_map_phb = {}
         lang_data_old = self._load_pickle('res/localization/localization_{}'.format(language))
         lang_data_fsd = self._load_pickle('res/localizationfsd/localization_fsd_{}'.format(language))
-        # Translations from FSD container have priority, unless they are
-        # absent and specified in conventional container
-        for lang_data in (lang_data_old, lang_data_fsd):
-            for msgid, msg_data in lang_data[1].items():
-                msg_text = msg_data[0]
-                message_map[msgid] = msg_text or message_map.get(msgid) or ''
-        self._loaded_langs[language] = message_map
+        # Translations from FSD container have priority
+        for msg_map_eve in (lang_data_old[1], lang_data_fsd[1]):
+            msg_map_phb.update(msg_map_eve)
+        self._loaded_langs[language] = msg_map_phb
 
-    def _get_message(self, language, msgid):
+    def _get_language_data(self, lang):
         """
-        Fetch message text for specified language and message ID,
-        if language hasn't been loaded yet - load it. If no text
+        Get language data and return it; if it's not
+        loaded yet - load.
+        """
+        try:
+            lang_data = self._loaded_langs[lang]
+        except KeyError:
+            self._load_lang_data(lang)
+            lang_data = self._loaded_langs[lang]
+        return lang_data
+
+    _msg_data_stub = ('', None, {})
+
+    def get_by_message(self, msgid, lang, fallback_lang='en-us', **kwargs):
+        """
+        Fetch message text for specified language and message ID.
+        If text is empty, attempt to use fallback language. If
+        it is not found too, return empty string.
+        """
+        lang_data = self._get_language_data(lang)
+        msg_data = lang_data.get(msgid, self._msg_data_stub)
+        # Use fallback language  only when fetching text for primary
+        # language failed, and when fallback language doesn't match
+        # primary language
+        if not msg_data[0] and fallback_lang is not None and lang != fallback_lang:
+            lang_data_fb = self._get_language_data(fallback_lang)
+            msg_data = lang_data_fb.get(msgid, self._msg_data_stub)
+        text = self._format_message(msg_data, kwargs)
+        return text
+
+    def get_by_label(self, label, *args, **kwargs):
+        """
+        Fetch message text for specified language and label.
+        If label cannot be found, raise exception. If no text
         found, return empty string.
         """
         try:
-            message_map = self._loaded_langs[language]
+            msgid = self._label_map[label]
         except KeyError:
-            self._load_lang(language)
-            message_map = self._loaded_langs[language]
-        return message_map.get(msgid) or ''
+            msg = u'label {} does not exist'.format(label)
+            raise LabelError(msg)
+        return self.get_by_message(msgid, *args, **kwargs)
 
-    @CachedProperty
-    def _available_langs(self):
+    def _format_message(self, msg_data, kwargs):
+        """
+        Take message data and substitute passed arguments
+        into it, then return final message text.
+        """
+        text, _, tokens = msg_data
+        # Tokens may be None
+        if not tokens:
+            return text
+        for tok_name, tok_data in tokens.items():
+            arg_name = tok_data['variableName']
+            try:
+                substitution = kwargs[arg_name]
+            except KeyError:
+                continue
+            text = text.replace(tok_name, unicode(substitution))
+        return text
+
+    @property
+    def available_langs(self):
         """
         Returns list of available translation languages.
         """
+        if self.__available_langs is None:
+            self._load_shared_data()
+        return self.__available_langs
+
+    @property
+    def _label_map(self):
+        """
+        Map between labels and message IDs.
+        Format: {full/path/to/label: message ID}
+        """
+        if self.__label_map is None:
+            self._load_shared_data()
+        return self.__label_map
+
+    def _load_shared_data(self):
+        """
+        To avoid loading same pickles twice, fetch necessary data
+        from them here and assign to proper attributes. This method
+        is intended to be called when any of shared data is requested.
+        """
         languages = set()
+        lbl_map_phb = {}
         main_old = self._load_pickle('res/localization/localization_main')
         main_fsd = self._load_pickle('res/localizationfsd/localization_fsd_main')
+        # Load list of languages
         languages.update(main_old['languages'].keys())
         languages.update(main_fsd['languages'])
-        return tuple(sorted(languages))
+        self.__available_langs = tuple(sorted(languages))
+        # Load label map
+        for lbl_map_eve in (main_old['labels'], main_fsd['labels']):
+            for msgid in sorted(lbl_map_eve):
+                lbl_data = lbl_map_eve[msgid]
+                lbl_base = lbl_data.get('FullPath')
+                lbl_name = lbl_data.get('label')
+                lbl_components = []
+                if lbl_base:
+                    lbl_components.append(lbl_base)
+                if lbl_name:
+                    lbl_components.append(lbl_name)
+                lbl_path = u'/'.join(lbl_components)
+                lbl_map_phb[lbl_path] = msgid
+        self.__label_map = lbl_map_phb
 
 
 class LanguageNotAvailable(Exception):
     """
     Raised when translator is asked to translate to language
     which it does not support.
+    """
+    pass
+
+
+class LabelError(Exception):
+    """
+    Raised when requested label cannot be found.
     """
     pass

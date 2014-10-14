@@ -20,7 +20,6 @@
 
 import re
 
-from translator import Translator
 from util import CachedProperty
 
 
@@ -29,10 +28,10 @@ class FlowManager(object):
     Class for handling high-level flow of script.
     """
 
-    def __init__(self, miners, writers, spickle_miner):
+    def __init__(self, miners, writers, translator):
         self._miners = miners
         self._writers = writers
-        self._translator = Translator(spickle_miner)
+        self._translator = translator
 
     def run(self, filter_string, language):
         # Compose set with flow container names which will be
@@ -66,7 +65,7 @@ class FlowManager(object):
                     print(u'    failed to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
                     # Translate data
-                    self._translator.translate(container_data, language)
+                    self._translator.translate_container(container_data, language, stats=True)
                     # Write data using passed writers
                     for writer in self._writers:
                         writer_resolved_name = dest[writer]

@@ -41,6 +41,7 @@ if __name__ == '__main__':
 
     from flow import FlowManager
     from miner import *
+    from translator import Translator
     from writer import *
 
 
@@ -62,10 +63,13 @@ if __name__ == '__main__':
     rvr_language = args.translate if args.translate != 'multi' else 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
 
+    bulkdata_miner = BulkdataMiner(rvr)
     spickle_miner = StuffedPickleMiner(rvr)
+    trans = Translator(spickle_miner)
     miners = (
         MetadataMiner(path_eve),
-        BulkdataMiner(rvr),
+        bulkdata_miner,
+        TraitMiner(bulkdata_miner, trans),
         SqliteMiner(path_eve),
         CachedCallsMiner(rvr),
         spickle_miner
@@ -75,4 +79,4 @@ if __name__ == '__main__':
         JsonWriter(path_json, indent=2),
     )
 
-    FlowManager(miners, writers, spickle_miner).run(args.list, args.translate)
+    FlowManager(miners, writers, trans).run(args.list, args.translate)
