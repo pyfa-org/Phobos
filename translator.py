@@ -22,6 +22,8 @@ import re
 import types
 from itertools import chain
 
+from miner import ContainerNameError
+
 
 class Translator(object):
     """
@@ -48,13 +50,8 @@ class Translator(object):
         """
         if not language:
             return
-        # Language code check against what we have in client
-        supported_langs = tuple(chain(self.available_langs, ('multi',)))
-        if language not in supported_langs:
-            msg = u'language "{}" does not match any of available options: {}'.format(language, ', '.join(supported_langs))
-            raise LanguageNotAvailable(msg)
-        self._requested_lang = language
         self._stats.clear()
+        self._requested_lang = language
         self._route_object(container_data)
         if stats:
             self._print_current_stats()
@@ -233,8 +230,12 @@ class Translator(object):
         and put it into loaded languages map.
         """
         msg_map_phb = {}
-        lang_data_old = self._load_pickle('res/localization/localization_{}'.format(language))
-        lang_data_fsd = self._load_pickle('res/localizationfsd/localization_fsd_{}'.format(language))
+        try:
+            lang_data_old = self._load_pickle('res/localization/localization_{}'.format(language))
+            lang_data_fsd = self._load_pickle('res/localizationfsd/localization_fsd_{}'.format(language))
+        except ContainerNameError:
+            msg = u'data for language "{}" cannot be loaded'.format(language)
+            raise LanguageNotAvailable(msg)
         # Translations from FSD container have priority
         for msg_map_eve in (lang_data_old[1], lang_data_fsd[1]):
             msg_map_phb.update(msg_map_eve)

@@ -21,7 +21,7 @@ One of custom data containers Phobos generates is phbtraits, it contains traits 
   Bonus: {'number': string, 'text': string}
     number field is optional
 
-For example, in JSON format:
+For example, Cambion traits in JSON format:
 
   [
     {

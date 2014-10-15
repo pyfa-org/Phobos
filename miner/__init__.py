@@ -24,6 +24,7 @@ from .metadata import MetadataMiner
 from .sqlite import SqliteMiner
 from .stuff import StuffedPickleMiner
 from .traits import TraitMiner
+from .abstract_miner import ContainerNameError
 
 
 __all__ = (
