@@ -38,7 +38,7 @@ class StuffedPickleMiner(AbstractMiner):
         for resolved_name in sorted(self._resolved_source_map):
             yield resolved_name
 
-    def get_data(self, resolved_name):
+    def get_data(self, resolved_name, **kwargs):
         try:
             resfilepath = self._resolved_source_map[resolved_name]
         except KeyError:

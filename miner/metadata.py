@@ -40,7 +40,7 @@ class MetadataMiner(AbstractMiner):
         for resolved_name in (self._container_name,):
             yield resolved_name
 
-    def get_data(self, resolved_name):
+    def get_data(self, resolved_name, **kwargs):
         if resolved_name != self._container_name:
             self._container_not_found(resolved_name)
         else:

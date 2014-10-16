@@ -58,7 +58,7 @@ class FlowManager(object):
                 miner, miner_resolved_name = src
                 # Fetch data from client
                 try:
-                    container_data = miner.get_data(miner_resolved_name)
+                    container_data = miner.get_data(miner_resolved_name, language=language)
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:

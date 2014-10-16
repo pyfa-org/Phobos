@@ -36,7 +36,7 @@ class AbstractMiner(object):
         pass
 
     @abstractmethod
-    def get_data(self, resolved_name):
+    def get_data(self, resolved_name, **kwargs):
         """
         Fetch data from specified container.
         """

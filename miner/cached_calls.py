@@ -43,7 +43,7 @@ class CachedCallsMiner(AbstractMiner):
         for resolved_name in sorted(self._resolved_filepath_map):
             yield resolved_name
 
-    def get_data(self, resolved_name):
+    def get_data(self, resolved_name, **kwargs):
         try:
             filepath = self._resolved_filepath_map[resolved_name]
         except KeyError:
