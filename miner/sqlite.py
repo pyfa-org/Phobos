@@ -30,17 +30,18 @@ class SqliteMiner(AbstractMiner):
     Extract data from SQLite databases bundled with client.
     """
 
-    def __init__(self, path_eve):
+    def __init__(self, path_eve, translator):
         # Format: {db alias: db connection}
         self._databases = {
             'mapbulk': sqlite3.connect(os.path.join(path_eve, 'bulkdata', 'mapbulk.db'))
         }
+        self._translator = translator
 
     def contname_iter(self):
         for resolved_name in sorted(self._resolved_source_map):
             yield resolved_name
 
-    def get_data(self, resolved_name, **kwargs):
+    def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
         try:
             dbname, table_name = self._resolved_source_map[resolved_name]
         except KeyError:
@@ -54,6 +55,7 @@ class SqliteMiner(AbstractMiner):
             for sqlite_row in c:
                 row = dict(zip(headers, sqlite_row))
                 rows.append(row)
+            self._translator.translate_container(rows, language, stats=verbose)
             return rows
 
     @CachedProperty

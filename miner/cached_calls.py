@@ -34,16 +34,17 @@ class CachedCallsMiner(AbstractMiner):
     remote service call cache.
     """
 
-    def __init__(self, rvr):
+    def __init__(self, rvr, translator):
         # Get path to folder with cached method calls
         cache = rvr.getcachemgr()
         self._path_cachedcalls = os.path.join(cache.machocachepath, 'CachedMethodCalls')
+        self._translator = translator
 
     def contname_iter(self):
         for resolved_name in sorted(self._resolved_filepath_map):
             yield resolved_name
 
-    def get_data(self, resolved_name, **kwargs):
+    def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
         try:
             filepath = self._resolved_filepath_map[resolved_name]
         except KeyError:
@@ -51,6 +52,7 @@ class CachedCallsMiner(AbstractMiner):
         else:
             _, call_data = self.__read_cache_file(filepath)
             normalized_data = EveNormalizer().run(call_data)
+            self._translator.translate_container(normalized_data, language, stats=verbose)
             return normalized_data
 
     @CachedProperty

@@ -20,7 +20,6 @@
 
 import re
 import types
-from itertools import chain
 
 from miner import ContainerNameError
 

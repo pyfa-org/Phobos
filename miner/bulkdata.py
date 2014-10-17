@@ -29,14 +29,15 @@ class BulkdataMiner(AbstractMiner):
     with EVE client.
     """
 
-    def __init__(self, rvr):
+    def __init__(self, rvr, translator):
         self._cfg = rvr.getconfigmgr()
+        self._translator = translator
 
     def contname_iter(self):
         for resolved_name in sorted(self._resolved_source_map):
             yield resolved_name
 
-    def get_data(self, resolved_name, **kwargs):
+    def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
         try:
             source_name = self._resolved_source_map[resolved_name]
         except KeyError:
@@ -44,6 +45,7 @@ class BulkdataMiner(AbstractMiner):
         else:
             container_data = getattr(self._cfg, source_name)
             normalized_data = EveNormalizer().run(container_data)
+            self._translator.translate_container(normalized_data, language, stats=verbose)
             return normalized_data
 
     @CachedProperty

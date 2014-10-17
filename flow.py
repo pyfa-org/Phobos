@@ -28,10 +28,9 @@ class FlowManager(object):
     Class for handling high-level flow of script.
     """
 
-    def __init__(self, miners, writers, translator):
+    def __init__(self, miners, writers):
         self._miners = miners
         self._writers = writers
-        self._translator = translator
 
     def run(self, filter_string, language):
         # Compose set with flow container names which will be
@@ -58,14 +57,12 @@ class FlowManager(object):
                 miner, miner_resolved_name = src
                 # Fetch data from client
                 try:
-                    container_data = miner.get_data(miner_resolved_name, language=language)
+                    container_data = miner.get_data(miner_resolved_name, language=language, verbose=True)
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
                     print(u'    failed to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
-                    # Translate data
-                    self._translator.translate_container(container_data, language, stats=True)
                     # Write data using passed writers
                     for writer in self._writers:
                         writer_resolved_name = dest[writer]

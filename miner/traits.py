@@ -55,7 +55,7 @@ class TraitMiner(AbstractMiner):
         for resolved_name in (self._container_name,):
             yield resolved_name
 
-    def get_data(self, resolved_name, language):
+    def get_data(self, resolved_name, language='en-us', **kwargs):
         if resolved_name != self._container_name:
             self._container_not_found(resolved_name)
         else:
@@ -164,8 +164,7 @@ class TraitMiner(AbstractMiner):
         Format: {type ID: type name}
         """
         type_name_map = {}
-        invtypes = self._bulkminer.get_data('invtypes')
-        self._translator.translate_container(invtypes, 'en-us')
+        invtypes = self._bulkminer.get_data('invtypes', language='en-us')
         for row in invtypes:
             type_name_map[row['typeID']] = row.get('typeName')
         return type_name_map
@@ -176,8 +175,7 @@ class TraitMiner(AbstractMiner):
         Format: {unit ID: unit display name}
         """
         unit_display_map = {}
-        dgmunits = self._bulkminer.get_data('dgmunits')
-        self._translator.translate_container(dgmunits, 'en-us')
+        dgmunits = self._bulkminer.get_data('dgmunits', language='en-us')
         for row in dgmunits:
             unit_display_map[row['unitID']] = row.get('displayName')
         return unit_display_map
