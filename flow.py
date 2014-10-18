@@ -70,8 +70,8 @@ class FlowManager(object):
                             writer.write(writer_resolved_name, container_data)
                         except KeyboardInterrupt:
                             raise
-                        #except Exception as e:
-                        #    print(u'    failed to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
+                        except Exception as e:
+                            print(u'    failed to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
         # Print info messages about requested, but unavailable containers
         if filter_set:
             missing_set = filter_set.difference(spec)
