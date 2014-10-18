@@ -96,6 +96,15 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
+    def _pythonize_string(self, obj):
+        """
+        Sometimes EVE has non-ASCII symbols in non-unicode strings,
+        default encoding for these is cp1252, here we ensure they are
+        converted to unicode so we don't have to run any additional
+        processing on them elsewhere.
+        """
+        return obj.decode('cp1252')
+
     def _pythonize_dbrow(self, obj):
         """
         DBRow can be converted into dictionary - its keys are
@@ -215,6 +224,7 @@ class EveNormalizer(object):
     ])
 
     _class_match = {
+        types.StringType: _pythonize_string,
         types.DictType: _pythonize_map,
         types.ListType: _pythonize_iterable,
         types.TupleType: _pythonize_iterable
@@ -226,7 +236,6 @@ class EveNormalizer(object):
         types.FloatType,
         types.IntType,
         types.LongType,
-        types.StringType,
         types.UnicodeType
     )
 

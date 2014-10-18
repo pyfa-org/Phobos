@@ -97,13 +97,16 @@ class JsonWriter(AbstractWriter):
         # Create folder structure to path, if not created yet
         if not os.path.exists(self.folder):
             os.makedirs(self.folder, mode=0o755)
-        json.dump(
+        data_str = json.dumps(
             container_data,
-            open(os.path.join(self.folder, '{}.json'.format(writer_resolved_name)), 'w'),
+            ensure_ascii=False,
             cls=CustomEncoder,
-            indent=self.indent,
-            encoding='cp1252'
+            indent=self.indent
         )
+        data_bytes = data_str.encode('utf8')
+        filepath = os.path.join(self.folder, '{}.json'.format(writer_resolved_name))
+        with open(filepath, 'wb') as f:
+            f.write(data_bytes)
 
     def secure_name(self, flow_name):
         """
