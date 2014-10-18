@@ -186,10 +186,17 @@ class Translator(object):
             text_fname = msgid_fname[:-len(suffix)]
             if text_fname not in row:
                 continue
-            # Now, verify text field contents - it should be either
-            # string type or None
+            # Now, verify text and message ID field contents - text can be string
+            # or None, message ID can be int or None
             text = row[text_fname]
             if text is not None and isinstance(text, types.StringTypes) is False:
+                continue
+            msgid = row[msgid_fname]
+            if msgid is not None and isinstance(msgid, (types.IntType, types.LongType)) is False:
+                continue
+            # If both text and message ID are None, skip them too to avoid
+            # false translations
+            if text is None and msgid is None:
                 continue
             yield (text_fname, msgid_fname)
 
