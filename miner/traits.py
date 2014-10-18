@@ -20,7 +20,6 @@
 
 import re
 
-from util import CachedProperty
 from .abstract_miner import AbstractMiner
 
 
@@ -50,6 +49,10 @@ class TraitMiner(AbstractMiner):
         self._container_name = self._secure_name('phbtraits')
         self._bulkminer = bulkminer
         self._translator = translator
+        # Format: {language: {type ID: type name}}
+        self._type_name_map_all = {}
+        # Format: {language: {unit ID: unit display name}}
+        self._unit_display_map_all = {}
 
     def contname_iter(self):
         for resolved_name in (self._container_name,):
@@ -59,29 +62,42 @@ class TraitMiner(AbstractMiner):
         if resolved_name != self._container_name:
             self._container_not_found(resolved_name)
         else:
-            return self._all_traits()
+            return self._all_traits(language)
 
-    def _all_traits(self):
+    def _all_traits(self, language):
         """
         Compose list of traits. Format:
-        Returned value: ({'typeID': int, 'traits' traits}, ...)
+        Returned value:
+        For single language: ({'typeID': int, 'traits': traits}, ...)
+        For multi-language: ({'typeID': int, 'traits_en-us': traits, 'traits_ru': traits, ...}, ...)
         Traits: {'skills': (skill section, ...), 'role': role section, 'misc': misc section}
-        --skills, role and misc fields are optional
+          skills, role and misc fields are optional
         Section: {'header': string, 'bonuses': (bonus, ...)}
         Bonus: {'number': string, 'text': string}
-        --number field is optional
+          number field is optional
         """
         trait_rows = []
         for type_id, type_data in self._bulkminer.get_data('fsdTypeOverrides').items():
             trait_data = type_data.get('infoBubbleTypeBonuses')
             if trait_data is None:
                 continue
-            traits = self._type_traits(trait_data)
-            trait_row = {'typeID': type_id, 'traits': traits}
+            trait_row = {'typeID': type_id}
+            # For multi-language, each trait row will contain traits for
+            # all languages in fields named like traits_en-us
+            if language == 'multi':
+                for language in self._translator.available_langs:
+                    traits_header = u'traits_{}'.format(language)
+                    traits = self._type_traits(trait_data, language)
+                    trait_row[traits_header] = traits
+            # For single language, we will have just single field named
+            # traits
+            else:
+                traits = self._type_traits(trait_data, language)
+                trait_row['traits'] = traits
             trait_rows.append(trait_row)
         return tuple(trait_rows)
 
-    def _type_traits(self, trait_data):
+    def _type_traits(self, trait_data, language):
         """
         Return traits for single item.
         """
@@ -91,10 +107,10 @@ class TraitMiner(AbstractMiner):
         if skill_ids:
             skill_rows = []
             for skill_typeid in skill_ids:
-                skill_name = self._type_name_map[skill_typeid]
-                section_header = self._translator.get_by_label('UI/ShipTree/SkillNameCaption', 'en-us', skillName=skill_name)
+                skill_name = self._get_type_name(skill_typeid, language)
+                section_header = self._translator.get_by_label('UI/ShipTree/SkillNameCaption', language, skillName=skill_name)
                 section_data = trait_data[skill_typeid]
-                bonuses = self._section_bonuses(section_data)
+                bonuses = self._section_bonuses(section_data, language)
                 skill_row = {'header': section_header, 'bonuses': bonuses}
                 skill_rows.append(skill_row)
             # Sort skill sections by headers
@@ -106,14 +122,14 @@ class TraitMiner(AbstractMiner):
         ):
             if special_typeid not in trait_data:
                 continue
-            section_header = self._translator.get_by_label(special_label, 'en-us')
+            section_header = self._translator.get_by_label(special_label, language)
             section_data = trait_data[special_typeid]
-            bonuses = self._section_bonuses(section_data)
+            bonuses = self._section_bonuses(section_data, language)
             special_row = {'header': section_header, 'bonuses': bonuses}
             traits[cont_alias] = special_row
         return traits
 
-    def _section_bonuses(self, section_data):
+    def _section_bonuses(self, section_data, language):
         """
         Receive section data, in the format it is stored
         in client, and convert it to phobos-specific format
@@ -127,7 +143,7 @@ class TraitMiner(AbstractMiner):
         for bonus_index in sorted(section_data):
             bonus_data = section_data[bonus_index]
             bonus_msgid = bonus_data['nameID']
-            bonus_text = self._translator.get_by_message(bonus_msgid, 'en-us')
+            bonus_text = self._translator.get_by_message(bonus_msgid, language)
             bonus_amt = bonus_data.get('bonus')
             # Bonuses can be with numerical value and without it, they have different
             # processing. Also, they are flooded with various HTML tags, we strip them
@@ -135,10 +151,10 @@ class TraitMiner(AbstractMiner):
             if bonus_amt is not None:
                 if int(bonus_amt) == bonus_amt:
                     bonus_amt = int(bonus_amt)
-                unit = self._unit_display_map[bonus_data['unitID']]
+                unit = self._get_unit_displayname(bonus_data['unitID'], language)
                 bonus = self._translator.get_by_label(
                     'UI/InfoWindow/TraitWithNumber',
-                    'en-us',
+                    language,
                     color='',
                     value=bonus_amt,
                     unit=unit,
@@ -149,7 +165,7 @@ class TraitMiner(AbstractMiner):
             else:
                 bonus = self._translator.get_by_label(
                     'UI/InfoWindow/TraitWithoutNumber',
-                    'en-us',
+                    language,
                     color='',
                     bonusText=bonus_text
                 )
@@ -158,24 +174,30 @@ class TraitMiner(AbstractMiner):
             bonuses.append(bonus_row)
         return tuple(bonuses)
 
-    @CachedProperty
-    def _type_name_map(self):
+    def _get_type_name(self, typeid, language):
         """
-        Format: {type ID: type name}
+        Get translated name for specified type and language.
         """
-        type_name_map = {}
-        invtypes = self._bulkminer.get_data('invtypes', language='en-us')
-        for row in invtypes:
-            type_name_map[row['typeID']] = row.get('typeName')
-        return type_name_map
+        try:
+            type_name_map = self._type_name_map_all[language]
+        except KeyError:
+            invtypes = self._bulkminer.get_data('invtypes', language=language)
+            type_name_map = {}
+            for row in invtypes:
+                type_name_map[row['typeID']] = row.get('typeName')
+            self._type_name_map_all[language] = type_name_map
+        return type_name_map[typeid]
 
-    @CachedProperty
-    def _unit_display_map(self):
+    def _get_unit_displayname(self, unitid, language):
         """
-        Format: {unit ID: unit display name}
+        Get unit display name for specified type and language.
         """
-        unit_display_map = {}
-        dgmunits = self._bulkminer.get_data('dgmunits', language='en-us')
-        for row in dgmunits:
-            unit_display_map[row['unitID']] = row.get('displayName')
-        return unit_display_map
+        try:
+            unit_display_map = self._unit_display_map_all[language]
+        except KeyError:
+            dgmunits = self._bulkminer.get_data('dgmunits', language=language)
+            unit_display_map = {}
+            for row in dgmunits:
+                unit_display_map[row['unitID']] = row.get('displayName')
+            self._unit_display_map_all[language] = unit_display_map
+        return unit_display_map[unitid]

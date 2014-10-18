@@ -12,9 +12,11 @@ Few words about command line arguments script can take:
 --json - output folder for JSON file.
 --list - you can provide list of comma-separated 'containers' to dump, it uses names script prints to stdout. For list of all available names you can launch script without specifying this option (by default it dumps everything it can find).
 
-One of custom data containers Phobos generates is phbtraits, it contains traits for various ships. The rest of data containers have all the data to compose it, but it uses some complex logic, which makes it easier to generate it using phobos. Data has following format:
+One of custom data containers Phobos generates is phbtraits, it contains traits for various ships. Data has following format:
 
-  Returned value: ({'typeID': int, 'traits' traits}, ...)
+  Returned value:
+  For single language: ({'typeID': int, 'traits': traits}, ...)
+  For multi-language: ({'typeID': int, 'traits_en-us': traits, 'traits_ru': traits, ...}, ...)
   Traits: {'skills': (skill section, ...), 'role': role section, 'misc': misc section}
     skills, role and misc fields are optional
   Section: {'header': string, 'bonuses': (bonus, ...)}
@@ -66,5 +68,4 @@ For example, Cambion traits in JSON format:
 
 todo list:
 - Reimplement few scripts to use phobos (item diff, database conversion for pyfa (including traits)
-- Add multi-language support to phbtraits data container
 - For translation engine, gather and print stats about amount of missing arguments (when message string needs it, but it wasn't passed)
