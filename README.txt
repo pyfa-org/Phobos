@@ -68,4 +68,3 @@ For example, Cambion traits in JSON format:
 
 todo list:
 - Reimplement few scripts to use phobos (item diff, database conversion for pyfa (including traits)
-- For translation engine, gather and print stats about amount of missing arguments (when message string needs it, but it wasn't passed)

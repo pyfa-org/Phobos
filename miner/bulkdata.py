@@ -45,7 +45,7 @@ class BulkdataMiner(AbstractMiner):
         else:
             container_data = getattr(self._cfg, source_name)
             normalized_data = EveNormalizer().run(container_data)
-            self._translator.translate_container(normalized_data, language, stats=verbose)
+            self._translator.translate_container(normalized_data, language, verbose=verbose)
             return normalized_data
 
     @CachedProperty

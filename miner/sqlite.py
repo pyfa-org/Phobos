@@ -55,7 +55,7 @@ class SqliteMiner(AbstractMiner):
             for sqlite_row in c:
                 row = dict(zip(headers, sqlite_row))
                 rows.append(row)
-            self._translator.translate_container(rows, language, stats=verbose)
+            self._translator.translate_container(rows, language, verbose=verbose)
             return rows
 
     @CachedProperty

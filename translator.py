@@ -33,31 +33,25 @@ class Translator(object):
         self._spminer = spickle_miner
         # Format: {language code: {message ID: message text}}
         self._loaded_langs = {}
-        # Format: {field name: [total entries, translated entries]}
-        self._stats = {}
         # Container for data we fetch from shared language data
         self.__available_langs = None
         self.__label_map = None
-        # Variable which will indicate to which language we're
-        # translating during current run
-        self._requested_lang = None
 
-    def translate_container(self, container_data, language, stats=False):
+    def translate_container(self, container_data, language, verbose=False):
         """
         Translate text fields in passed container
         to specified language.
         """
         if not language:
             return
-        self._stats.clear()
-        self._requested_lang = language
-        self._route_object(container_data)
-        if stats:
-            self._print_current_stats()
+        stats = {}
+        self._route_object(container_data, language, stats)
+        if verbose:
+            self._print_current_stats(stats)
 
     # Related to recursive translation
 
-    def _route_object(self, obj):
+    def _route_object(self, obj, language, stats):
         """
         Pick proper method for passed object and invoke it.
         """
@@ -68,9 +62,9 @@ class Translator(object):
         # do not need any processing
         method = self._translation_map.get(obj_type)
         if method is not None:
-            method(self, obj)
+            method(self, obj, language, stats)
 
-    def _translate_map(self, obj):
+    def _translate_map(self, obj, language, stats):
         """
         We can translate only data which is in map form,
         thus all the translation magic is in this method.
@@ -78,15 +72,11 @@ class Translator(object):
         # First, attempt to do a pass over map key/values
         # (they are not always text)
         for key, value in obj.items():
-            self._route_object(key)
-            self._route_object(value)
+            self._route_object(key, language, stats)
+            self._route_object(value, language, stats)
         # Now, try to actually translate stuff
-        # We assume that key we're dealing with is field name
-        # whose value contains message ID, and after that
-        # we do few verification steps to confirm/deny this
-        # claim
         for text_fname, msgid_fname in self.__translatable_fields_iter(obj):
-            self.__increment_stats(text_fname, 0)
+            self.__increment_stats(stats, text_fname, 0)
             orig_text = obj[text_fname]
             msgid = obj[msgid_fname]
             # I didn't find a way to disable reverence localization engine
@@ -103,18 +93,18 @@ class Translator(object):
             # 4) Empty string
             # If 1st is not available (gets evaluated as False), we go to next
             # point and check its availability, and so on
-            if self._requested_lang == 'multi':
-                self.__translation_multimode(obj, text_fname, msgid, orig_text)
+            if language == 'multi':
+                self.__translation_multimode(obj, text_fname, msgid, orig_text, stats)
             else:
-                self.__translation_singlemode(obj, text_fname, msgid, orig_text)
+                self.__translation_singlemode(obj, text_fname, msgid, language, orig_text, stats)
 
-    def _translate_iterable(self, obj):
+    def _translate_iterable(self, obj, language, stats):
         """
         For iterables, request to make a pass over each
         child element.
         """
         for item in obj:
-            self._route_object(item)
+            self._route_object(item, language, stats)
 
     _translation_map = {
         types.DictType: _translate_map,
@@ -122,7 +112,7 @@ class Translator(object):
         types.ListType: _translate_iterable
     }
 
-    def __translation_multimode(self, row, text_fname, msgid, orig_text):
+    def __translation_multimode(self, row, text_fname, msgid, orig_text, stats):
         """
         Translate one field into multiple languages, and write them as
         additional fields (in the <field name>_<language> format). Leave
@@ -144,9 +134,9 @@ class Translator(object):
             row[new_text_fname] = trans_text
             # Increment counter only when translation is different
             if trans_text != orig_text:
-                self.__increment_stats(text_fname, 1)
+                self.__increment_stats(stats, text_fname, 1)
 
-    def __translation_singlemode(self, row, text_fname, msgid, orig_text):
+    def __translation_singlemode(self, row, text_fname, msgid, language, orig_text, stats):
         """
         Translate one text field into single language. Translation
         is inplace.
@@ -154,13 +144,13 @@ class Translator(object):
         if msgid is None:
             return
         trans_text = (
-            self.get_by_message(msgid, self._requested_lang) or
+            self.get_by_message(msgid, language) or
             orig_text or
             ''
         )
         row[text_fname] = trans_text
         if trans_text != orig_text:
-            self.__increment_stats(text_fname, 1)
+            self.__increment_stats(stats, text_fname, 1)
 
     def __translatable_fields_iter(self, row):
         """
@@ -200,25 +190,27 @@ class Translator(object):
                 continue
             yield (text_fname, msgid_fname)
 
-    def __increment_stats(self, field_name, place):
+    def __increment_stats(self, stats, field_name, place, amount=1):
         """
         Increment some stat for given field:
         0 - total entries processed
         1 - successful translations
         """
+        if stats is None:
+            return
         try:
-            statlist = self._stats[field_name]
+            statlist = stats[field_name]
         except KeyError:
             statlist = [0, 0]
-            self._stats[field_name] = statlist
-        statlist[place] += 1
+            stats[field_name] = statlist
+        statlist[place] += amount
 
-    def _print_current_stats(self):
+    def _print_current_stats(self, stats):
         """
         Print stats for container which has just been translated.
         """
-        for field_name in sorted(self._stats):
-            total, trans = self._stats[field_name]
+        for field_name in sorted(stats):
+            total, trans = stats[field_name]
             # When we didn't touch translations for some field,
             # do not print stats about it
             if not trans:

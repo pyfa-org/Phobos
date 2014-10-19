@@ -52,7 +52,7 @@ class CachedCallsMiner(AbstractMiner):
         else:
             _, call_data = self.__read_cache_file(filepath)
             normalized_data = EveNormalizer().run(call_data)
-            self._translator.translate_container(normalized_data, language, stats=verbose)
+            self._translator.translate_container(normalized_data, language, verbose=verbose)
             return normalized_data
 
     @CachedProperty
