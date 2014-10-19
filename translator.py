@@ -196,8 +196,6 @@ class Translator(object):
         0 - total entries processed
         1 - successful translations
         """
-        if stats is None:
-            return
         try:
             statlist = stats[field_name]
         except KeyError:
