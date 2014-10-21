@@ -19,7 +19,6 @@
 
 
 import os.path
-import re
 import sqlite3
 
 from util import CachedProperty
