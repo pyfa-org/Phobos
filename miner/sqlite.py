@@ -56,8 +56,7 @@ class SqliteMiner(AbstractMiner):
                 row = dict(zip(headers, sqlite_row))
                 rows.append(row)
             # Define translation specification
-            dbalias, tname = self._resolved_source_map[resolved_name]
-            if dbalias == 'mapbulk' and tname == 'marketGroups':
+            if dbname == 'mapbulk' and table_name == 'marketGroups':
                 spec = ('marketGroupName', 'description')
             else:
                 spec = None
