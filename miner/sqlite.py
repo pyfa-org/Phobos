@@ -56,10 +56,10 @@ class SqliteMiner(AbstractMiner):
                 row = dict(zip(headers, sqlite_row))
                 rows.append(row)
             # Define translation specification
-            if dbname == 'mapbulk' and table_name == 'marketGroups':
-                spec = ('marketGroupName', 'description')
-            else:
-                spec = None
+            trans_specs = {
+                ('mapbulk', 'marketGroups'): ('marketGroupName', 'description')
+            }
+            spec = trans_specs.get((dbname, table_name))
             self._translator.translate_container(rows, language, spec=spec, verbose=verbose)
             return rows
 
