@@ -37,21 +37,31 @@ class Translator(object):
         self.__available_langs = None
         self.__label_map = None
 
-    def translate_container(self, container_data, language, verbose=False):
+    def translate_container(self, container_data, language, spec=None, verbose=False):
         """
         Translate text fields in passed container
         to specified language.
+
+        By default it attempts to do automatic translation
+        (finds all pairs of fields in fieldName-fieldNameID
+        format, uses ID to find translation and substitutes
+        into fieldName[_language] field.
+
+        If spec argument is passed (list of fieldNames which
+        should be inserted into row, if fieldNameID is present),
+        then it is used to detect translatable fields instead
+        of automatic detection.
         """
         if not language:
             return
         stats = {}
-        self._route_object(container_data, language, stats)
+        self._route_object(container_data, language, spec, stats)
         if verbose:
             self._print_current_stats(stats)
 
     # Related to recursive translation
 
-    def _route_object(self, obj, language, stats):
+    def _route_object(self, obj, language, spec, stats):
         """
         Pick proper method for passed object and invoke it.
         """
@@ -62,9 +72,9 @@ class Translator(object):
         # do not need any processing
         method = self._translation_map.get(obj_type)
         if method is not None:
-            method(self, obj, language, stats)
+            method(self, obj, language, spec, stats)
 
-    def _translate_map(self, obj, language, stats):
+    def _translate_map(self, obj, language, spec, stats):
         """
         We can translate only data which is in map form,
         thus all the translation magic is in this method.
@@ -72,10 +82,10 @@ class Translator(object):
         # First, attempt to do a pass over map key/values
         # (they are not always text)
         for key, value in obj.items():
-            self._route_object(key, language, stats)
-            self._route_object(value, language, stats)
+            self._route_object(key, language, spec, stats)
+            self._route_object(value, language, spec, stats)
         # Now, try to actually translate stuff
-        for text_fname, msgid_fname in self.__translatable_fields_iter(obj):
+        for text_fname, msgid_fname in self.__translatable_fields_iter(obj, spec):
             self.__increment_stats(stats, text_fname, 0)
             orig_text = obj[text_fname]
             msgid = obj[msgid_fname]
@@ -98,13 +108,13 @@ class Translator(object):
             else:
                 self.__translation_singlemode(obj, text_fname, msgid, language, orig_text, stats)
 
-    def _translate_iterable(self, obj, language, stats):
+    def _translate_iterable(self, obj, language, spec, stats):
         """
         For iterables, request to make a pass over each
         child element.
         """
         for item in obj:
-            self._route_object(item, language, stats)
+            self._route_object(item, language, spec, stats)
 
     _translation_map = {
         types.DictType: _translate_map,
@@ -152,43 +162,52 @@ class Translator(object):
         if trans_text != orig_text:
             self.__increment_stats(stats, text_fname, 1)
 
-    def __translatable_fields_iter(self, row):
+    def __translatable_fields_iter(self, row, spec):
         """
         Receive dictionary, find there pairs of field
         names for translation, and yield them one by one.
         """
         suffix = 'ID'
-        # We assume that key we're dealing with is field name
-        # whose value contains message ID, and after that
-        # we do few verification steps to confirm/deny this
-        # claim
-        for msgid_fname in row.keys():
-            # It must be string in '<field name>ID' format, skip current
-            # field name if it's not the case
-            if isinstance(msgid_fname, types.StringTypes) is False:
-                continue
-            tail = msgid_fname[-len(suffix):]
-            if tail != suffix:
-                continue
-            # There should be corresponding field which will
-            # use this message ID (CCP's convention is fieldName /
-            # fieldNameID pair)
-            text_fname = msgid_fname[:-len(suffix)]
-            if text_fname not in row:
-                continue
-            # Now, verify text and message ID field contents - text can be string
-            # or None, message ID can be int or None
-            text = row[text_fname]
-            if text is not None and isinstance(text, types.StringTypes) is False:
-                continue
-            msgid = row[msgid_fname]
-            if msgid is not None and isinstance(msgid, (types.IntType, types.LongType)) is False:
-                continue
-            # If both text and message ID are None, skip them too to avoid
-            # false translations
-            if text is None and msgid is None:
-                continue
-            yield (text_fname, msgid_fname)
+        if spec is None:
+            # We assume that key we're dealing with is field name
+            # whose value contains message ID, and after that
+            # we do few verification steps to confirm/deny this
+            # claim
+            for msgid_fname in row.keys():
+                # It must be string in '<field name>ID' format, skip current
+                # field name if it's not the case
+                if isinstance(msgid_fname, types.StringTypes) is False:
+                    continue
+                tail = msgid_fname[-len(suffix):]
+                if tail != suffix:
+                    continue
+                # There should be corresponding field which will
+                # use this message ID (CCP's convention is fieldName /
+                # fieldNameID pair)
+                text_fname = msgid_fname[:-len(suffix)]
+                if text_fname not in row:
+                    continue
+                # Now, verify text and message ID field contents - text can be string
+                # or None, message ID can be int or None
+                text = row[text_fname]
+                if text is not None and isinstance(text, types.StringTypes) is False:
+                    continue
+                msgid = row[msgid_fname]
+                if msgid is not None and isinstance(msgid, (types.IntType, types.LongType)) is False:
+                    continue
+                # If both text and message ID are None, skip them too to avoid
+                # false translations
+                if text is None and msgid is None:
+                    continue
+                yield (text_fname, msgid_fname)
+        else:
+            for text_fname in spec:
+                msgid_fname = u'{}{}'.format(text_fname, suffix)
+                # Skip all message ID fields which are not present in row
+                if msgid_fname not in row:
+                    continue
+                yield (text_fname, msgid_fname)
+
 
     def __increment_stats(self, stats, field_name, place, amount=1):
         """
