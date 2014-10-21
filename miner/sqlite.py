@@ -19,6 +19,7 @@
 
 
 import os.path
+import re
 import sqlite3
 
 from util import CachedProperty
@@ -55,7 +56,13 @@ class SqliteMiner(AbstractMiner):
             for sqlite_row in c:
                 row = dict(zip(headers, sqlite_row))
                 rows.append(row)
-            self._translator.translate_container(rows, language, verbose=verbose)
+            # Define translation specification
+            dbalias, tname = self._resolved_source_map[resolved_name]
+            if dbalias == 'mapbulk' and tname == 'marketGroups':
+                spec = ('marketGroupName', 'description')
+            else:
+                spec = None
+            self._translator.translate_container(rows, language, spec=spec, verbose=verbose)
             return rows
 
     @CachedProperty
