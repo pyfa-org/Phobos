@@ -87,7 +87,7 @@ class Translator(object):
         # Now, try to actually translate stuff
         for text_fname, msgid_fname in self.__translatable_fields_iter(obj, spec):
             self.__increment_stats(stats, text_fname, 0)
-            orig_text = obj[text_fname]
+            orig_text = obj.get(text_fname, '')
             msgid = obj[msgid_fname]
             # I didn't find a way to disable reverence localization engine
             # altogether, thus 'original' text isn't always 'raw' value
