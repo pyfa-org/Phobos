@@ -85,9 +85,9 @@ class TraitMiner(AbstractMiner):
             # For multi-language, each trait row will contain traits for
             # all languages in fields named like traits_en-us
             if language == 'multi':
-                for language in self._translator.available_langs:
-                    traits_header = u'traits_{}'.format(language)
-                    traits = self._type_traits(trait_data, language)
+                for mlanguage in self._translator.available_langs:
+                    traits_header = u'traits_{}'.format(mlanguage)
+                    traits = self._type_traits(trait_data, mlanguage)
                     trait_row[traits_header] = traits
             # For single language, we will have just single field named
             # traits
