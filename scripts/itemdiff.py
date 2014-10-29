@@ -77,14 +77,7 @@ class DataLoader:
         self.market_path_new = {}
         self.load_market_paths()
 
-    def get_file(self, base_path, fname):
-        """
-        Loads contents of JSON file with specified name.
-        """
-        fpath = os.path.join(base_path, '{}.json'.format(fname))
-        with open(fpath) as f:
-            data = json.load(f)
-        return data
+    # Item-related methods
 
     def load_item_data(self):
         for base_path, items in (
@@ -122,38 +115,6 @@ class DataLoader:
                     continue
                 item.effects.append(row['effectID'])
 
-    def load_group_categories(self):
-        for base_path, group_cat in (
-            (self.path_old, self.group_cat_old),
-            (self.path_new, self.group_cat_new)
-        ):
-            for row in self.get_file(base_path, 'invgroups'):
-                group_cat[row['groupID']] = row['categoryID']
-
-    def load_market_paths(self):
-        for base_path, market_path in (
-            (self.path_old, self.market_path_old),
-            (self.path_new, self.market_path_new)
-        ):
-
-            parent_map = {}
-
-            market_data = self.get_file(base_path, 'mapbulk_marketGroups')
-            for row in market_data:
-                parent_map[row['marketGroupID']] = row['parentGroupID']
-
-            def compose_chain(market_group_id):
-                chain = [market_group_id]
-                parent = parent_map[market_group_id]
-                while parent is not None:
-                    chain.append(parent)
-                    parent = parent_map[parent]
-                return chain
-
-            for row in market_data:
-                market_group_id = row['marketGroupID']
-                market_path[market_group_id] = compose_chain(market_group_id)
-
     def get_removed_items(self, published_only):
         typeids_old = self._get_old_typeids(published_only)
         typeids_new = self._get_new_typeids(published_only)
@@ -187,13 +148,15 @@ class DataLoader:
         else:
             return set(self.items_new)
 
-    def category_iter(self):
-        for category_id in sorted(set(self.names_old['categories']).union(self.names_new['categories'])):
-            yield category_id
+    # Methods related to mapping groups onto categories
 
-    def group_iter(self):
-        for group_id in sorted(set(self.names_old['groups']).union(self.names_new['groups'])):
-            yield group_id
+    def load_group_categories(self):
+        for base_path, group_cat in (
+            (self.path_old, self.group_cat_old),
+            (self.path_new, self.group_cat_new)
+        ):
+            for row in self.get_file(base_path, 'invgroups'):
+                group_cat[row['groupID']] = row['categoryID']
 
     def get_group_category(self, group_id):
         try:
@@ -201,32 +164,33 @@ class DataLoader:
         except KeyError:
             return self.group_cat_old[group_id]
 
-    def get_changes_summary(self, published_only):
-        """
-        Format: {category ID: {group ID: (removed, changed, added)}}
-        Removed and added: {type ID: type}
-        Changed: {type ID: (old type, new type)}
-        """
-        change_map = {}
-        removed_items = self.get_removed_items(published_only)
-        changed_items = self.get_changed_items(published_only)
-        added_items = self.get_added_items(published_only)
-        for grp_id in self.group_iter():
-            # Check which items were changed for this particular group
-            filfunc = lambda i: removed_items[i].group_id == grp_id
-            removed_items_grp = dict((i, removed_items[i]) for i in filter(filfunc, removed_items))
-            filfunc = lambda i: added_items[i].group_id == grp_id
-            added_items_grp = dict((i, added_items[i]) for i in filter(filfunc, added_items))
-            filfunc = lambda i: changed_items[i].old.group_id == grp_id or changed_items[i].new.group_id == grp_id
-            changed_items_grp = dict((tid, changed_items[tid]) for tid in filter(filfunc, changed_items))
-            # Do not fill anything if nothing changed
-            if not removed_items_grp and not changed_items_grp and not added_items_grp:
-                continue
-            # Fill container with data we gathered
-            cat_id = self.get_group_category(grp_id)
-            cat_changes = change_map.setdefault(cat_id, {})
-            cat_changes[grp_id] = Changes(removed=removed_items_grp, changed=changed_items_grp, added=added_items_grp)
-        return change_map
+    # Market-related methods
+
+    def load_market_paths(self):
+        for base_path, market_path in (
+            (self.path_old, self.market_path_old),
+            (self.path_new, self.market_path_new)
+        ):
+
+            parent_map = {}
+
+            market_data = self.get_file(base_path, 'mapbulk_marketGroups')
+            for row in market_data:
+                parent_map[row['marketGroupID']] = row['parentGroupID']
+
+            def compose_chain(market_group_id):
+                chain = [market_group_id]
+                parent = parent_map[market_group_id]
+                while parent is not None:
+                    chain.append(parent)
+                    parent = parent_map[parent]
+                return chain
+
+            for row in market_data:
+                market_group_id = row['marketGroupID']
+                market_path[market_group_id] = compose_chain(market_group_id)
+
+    # Name-related methods
 
     def load_name_data(self):
         for base_path, names in (
@@ -281,6 +245,52 @@ class DataLoader:
             return self.names_new[alias][entity_id]
         except KeyError:
             return self.names_old[alias][entity_id]
+
+    # Auxiliary methods
+
+    def get_file(self, base_path, fname):
+        """
+        Loads contents of JSON file with specified name.
+        """
+        fpath = os.path.join(base_path, '{}.json'.format(fname))
+        with open(fpath) as f:
+            data = json.load(f)
+        return data
+
+    def category_iter(self):
+        for category_id in sorted(set(self.names_old['categories']).union(self.names_new['categories'])):
+            yield category_id
+
+    def group_iter(self):
+        for group_id in sorted(set(self.names_old['groups']).union(self.names_new['groups'])):
+            yield group_id
+
+    def get_changes_summary(self, published_only):
+        """
+        Format: {category ID: {group ID: (removed, changed, added)}}
+        Removed and added: {type ID: type}
+        Changed: {type ID: (old type, new type)}
+        """
+        change_map = {}
+        removed_items = self.get_removed_items(published_only)
+        changed_items = self.get_changed_items(published_only)
+        added_items = self.get_added_items(published_only)
+        for grp_id in self.group_iter():
+            # Check which items were changed for this particular group
+            filfunc = lambda i: removed_items[i].group_id == grp_id
+            removed_items_grp = dict((i, removed_items[i]) for i in filter(filfunc, removed_items))
+            filfunc = lambda i: added_items[i].group_id == grp_id
+            added_items_grp = dict((i, added_items[i]) for i in filter(filfunc, added_items))
+            filfunc = lambda i: changed_items[i].old.group_id == grp_id or changed_items[i].new.group_id == grp_id
+            changed_items_grp = dict((tid, changed_items[tid]) for tid in filter(filfunc, changed_items))
+            # Do not fill anything if nothing changed
+            if not removed_items_grp and not changed_items_grp and not added_items_grp:
+                continue
+            # Fill container with data we gathered
+            cat_id = self.get_group_category(grp_id)
+            cat_changes = change_map.setdefault(cat_id, {})
+            cat_changes[grp_id] = Changes(removed=removed_items_grp, changed=changed_items_grp, added=added_items_grp)
+        return change_map
 
 
 if __name__ == '__main__':
