@@ -265,53 +265,20 @@ class DataLoader:
         for group_id in sorted(set(self.names_old['groups']).union(self.names_new['groups'])):
             yield group_id
 
-    def get_changes_summary(self, published_only):
-        """
-        Format: {category ID: {group ID: (removed, changed, added)}}
-        Removed and added: {type ID: type}
-        Changed: {type ID: (old type, new type)}
-        """
-        change_map = {}
-        removed_items = self.get_removed_items(published_only)
-        changed_items = self.get_changed_items(published_only)
-        added_items = self.get_added_items(published_only)
-        for grp_id in self.group_iter():
-            # Check which items were changed for this particular group
-            filfunc = lambda i: removed_items[i].group_id == grp_id
-            removed_items_grp = dict((i, removed_items[i]) for i in filter(filfunc, removed_items))
-            filfunc = lambda i: added_items[i].group_id == grp_id
-            added_items_grp = dict((i, added_items[i]) for i in filter(filfunc, added_items))
-            filfunc = lambda i: changed_items[i].old.group_id == grp_id or changed_items[i].new.group_id == grp_id
-            changed_items_grp = dict((tid, changed_items[tid]) for tid in filter(filfunc, changed_items))
-            # Do not fill anything if nothing changed
-            if not removed_items_grp and not changed_items_grp and not added_items_grp:
-                continue
-            # Fill container with data we gathered
-            cat_id = self.get_group_category(grp_id)
-            cat_changes = change_map.setdefault(cat_id, {})
-            cat_changes[grp_id] = Changes(removed=removed_items_grp, changed=changed_items_grp, added=added_items_grp)
-        return change_map
 
+class PrinterSkeleton:
 
-if __name__ == '__main__':
+    def __init__(self, data_loader):
+        self.dl = data_loader
 
-    parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
-    parser.add_argument('-o', '--old', help='path to phobos JSON dump with old data', required=True)
-    parser.add_argument('-n', '--new', help='path to phobos JSON dump with new data', required=True)
-    args = parser.parse_args()
-
-    path_old = os.path.expanduser(args.old)
-    path_new = os.path.expanduser(args.new)
-
-    def output_text(published_only=False):
-        dl = DataLoader(path_old, path_new)
-        changes = dl.get_changes_summary(published_only=published_only)
-        for cat_id in sorted(changes, key=dl.get_category_name):
+    def fake_run(self, published_only=False):
+        changes = self.get_changes_summary(published_only=published_only)
+        for cat_id in sorted(changes, key=self.dl.get_category_name):
             cat_changes = changes[cat_id]
-            cat_name = dl.get_category_name(cat_id)
+            cat_name = self.dl.get_category_name(cat_id)
             print('Category: {}'.format(cat_name), end='\n\n')
-            for grp_id in sorted(cat_changes, key=dl.get_group_name):
-                grp_name = dl.get_group_name(grp_id)
+            for grp_id in sorted(cat_changes, key=self.dl.get_group_name):
+                grp_name = self.dl.get_group_name(grp_id)
                 print('  Group: {}'.format(grp_name), end='\n\n')
                 itm_rmvd, itm_chg, itm_add = cat_changes[grp_id]
 
@@ -328,13 +295,13 @@ if __name__ == '__main__':
                         # to both; here we print only small notice in group from which it
                         # was moved, and full data in target group
                         if old.group_id == grp_id:
-                            new_grp = dl.get_group_name(new.group_id)
-                            new_cat = dl.get_category_name(dl.get_group_category((new.group_id)))
+                            new_grp = self.dl.get_group_name(new.group_id)
+                            new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
                             print('    [*] {} (moved to {} > {})'.format(itm_chg[tid].new.name, new_cat, new_grp), end='\n\n')
                             continue
                         else:
-                            old_grp = dl.get_group_name(old.group_id)
-                            old_cat = dl.get_category_name(dl.get_group_category((old.group_id)))
+                            old_grp = self.dl.get_group_name(old.group_id)
+                            old_cat = self.dl.get_category_name(self.dl.get_group_category((old.group_id)))
                             suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
                     else:
                         suffix = ''
@@ -344,8 +311,8 @@ if __name__ == '__main__':
                         attrid_rmvd = set(old.attributes).difference(new.attributes)
                         attrid_changed = set(filter(lambda i: old.attributes[i] != new.attributes[i], set(new.attributes).intersection(old.attributes)))
                         attrid_add = set(new.attributes).difference(old.attributes)
-                        for attr_id in sorted(attrid_rmvd.union(attrid_changed).union(attrid_add), key=dl.get_attr_name):
-                            attr_name = dl.get_attr_name(attr_id)
+                        for attr_id in sorted(attrid_rmvd.union(attrid_changed).union(attrid_add), key=self.dl.get_attr_name):
+                            attr_name = self.dl.get_attr_name(attr_id)
                             if attr_id in attrid_rmvd:
                                 attr_val = old.attributes[attr_id]
                                 print('        [-] {}: {}'.format(attr_name, attr_val))
@@ -360,8 +327,8 @@ if __name__ == '__main__':
                         print('      Effects:')
                         eff_rmvd = set(old.effects).difference(new.effects)
                         eff_add = set(new.effects).difference(old.effects)
-                        for eff_id in sorted(eff_rmvd.union(eff_add), key=dl.get_effect_name):
-                            eff_name = dl.get_effect_name(eff_id)
+                        for eff_id in sorted(eff_rmvd.union(eff_add), key=self.dl.get_effect_name):
+                            eff_name = self.dl.get_effect_name(eff_id)
                             if eff_id in eff_rmvd:
                                 print('        [-] {}'.format(eff_name))
                             if eff_id in eff_add:
@@ -371,11 +338,11 @@ if __name__ == '__main__':
                         if old.market_group_id is None:
                             old_mktgrp = None
                         else:
-                            old_mktgrp = ' > '.join(dl.get_mktgrp_name(i) for i in reversed(dl.market_path_old[old.market_group_id]))
+                            old_mktgrp = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.market_path_old[old.market_group_id]))
                         if new.market_group_id is None:
                             new_mktgrp = None
                         else:
-                            new_mktgrp = ' > '.join(dl.get_mktgrp_name(i) for i in reversed(dl.market_path_new[new.market_group_id]))
+                            new_mktgrp = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.market_path_new[new.market_group_id]))
                         print('        From: {}'.format(old_mktgrp))
                         print('        To: {}'.format(new_mktgrp))
                     if old.published != new.published:
@@ -389,24 +356,69 @@ if __name__ == '__main__':
                     print('    [+] {}'.format(item.name))
                     if item.attributes:
                         print('      Attributes:')
-                        for attr_id in sorted(item.attributes, key=dl.get_attr_name):
-                            attr_name = dl.get_attr_name(attr_id)
+                        for attr_id in sorted(item.attributes, key=self.dl.get_attr_name):
+                            attr_name = self.dl.get_attr_name(attr_id)
                             attr_val = item.attributes[attr_id]
                             print('        {}: {}'.format(attr_name, attr_val))
                     if item.effects:
                         print('      Effects:')
-                        for eff_id in sorted(item.effects, key=dl.get_effect_name):
-                            eff_name = dl.get_effect_name(eff_id)
+                        for eff_id in sorted(item.effects, key=self.dl.get_effect_name):
+                            eff_name = self.dl.get_effect_name(eff_id)
                             print('        {}'.format(eff_name))
                     if item.market_group_id:
                         print('      Market group:')
-                        mktgrp = ' > '.join(dl.get_mktgrp_name(i) for i in reversed(dl.market_path_new[item.market_group_id]))
+                        mktgrp = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.market_path_new[item.market_group_id]))
                         print('        {}'.format(mktgrp))
                     print('      Published flag:\n        {}'.format(bool(item.published)))
                     print()
 
-    output_text(published_only=False)
+    def get_changes_summary(self, published_only):
+        """
+        Convert data exposed by loader into format specific for printing
+        logic we're using - top-level sections are categories, then groups
+        are sub-sections, and items are listed in these sub-sections.
+        Format: {category ID: {group ID: (removed, changed, added)}}
+        Removed and added: {type ID: type}
+        Changed: {type ID: (old type, new type)}
+        """
+        changes = {}
+        removed_items = self.dl.get_removed_items(published_only)
+        changed_items = self.dl.get_changed_items(published_only)
+        added_items = self.dl.get_added_items(published_only)
+        for grp_id in self.dl.group_iter():
+            # Check which items were changed for this particular group
+            filfunc = lambda i: removed_items[i].group_id == grp_id
+            removed_items_grp = dict((i, removed_items[i]) for i in filter(filfunc, removed_items))
+            filfunc = lambda i: added_items[i].group_id == grp_id
+            added_items_grp = dict((i, added_items[i]) for i in filter(filfunc, added_items))
+            filfunc = lambda i: changed_items[i].old.group_id == grp_id or changed_items[i].new.group_id == grp_id
+            changed_items_grp = dict((tid, changed_items[tid]) for tid in filter(filfunc, changed_items))
+            # Do not fill anything if nothing changed
+            if not removed_items_grp and not changed_items_grp and not added_items_grp:
+                continue
+            # Fill container with data we gathered
+            cat_id = self.dl.get_group_category(grp_id)
+            cat_changes = changes.setdefault(cat_id, {})
+            cat_changes[grp_id] = Changes(removed=removed_items_grp, changed=changed_items_grp, added=added_items_grp)
+        return changes
 
+
+class TextPrinter(PrinterSkeleton):
+    pass
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
+    parser.add_argument('-o', '--old', help='path to phobos JSON dump with old data', required=True)
+    parser.add_argument('-n', '--new', help='path to phobos JSON dump with new data', required=True)
+    args = parser.parse_args()
+
+    path_old = os.path.expanduser(args.old)
+    path_new = os.path.expanduser(args.new)
+
+    dl = DataLoader(path_old, path_new)
+    TextPrinter(dl).fake_run(published_only=False)
 
 
 
