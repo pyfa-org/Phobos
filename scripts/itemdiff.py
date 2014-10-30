@@ -268,28 +268,50 @@ class DataLoader:
 
 class PrinterSkeleton:
 
-    def __init__(self, data_loader):
+    def __init__(self, data_loader, published_only=False):
         self.dl = data_loader
+        self.changes = self.get_changes_summary(published_only=published_only)
 
-    def fake_run(self, published_only=False):
-        changes = self.get_changes_summary(published_only=published_only)
-        for cat_id in sorted(changes, key=self.dl.get_category_name):
-            cat_changes = changes[cat_id]
+    def category_iter(self):
+        cat_ids = set(self.dl.get_group_category(grp_id) for grp_id in self.changes)
+        for cat_id in sorted(cat_ids, key=self.dl.get_category_name):
             cat_name = self.dl.get_category_name(cat_id)
-            print('Category: {}'.format(cat_name), end='\n\n')
-            for grp_id in sorted(cat_changes, key=self.dl.get_group_name):
-                grp_name = self.dl.get_group_name(grp_id)
-                print('  Group: {}'.format(grp_name), end='\n\n')
-                itm_rmvd, itm_chg, itm_add = cat_changes[grp_id]
+            yield cat_id, cat_name
 
+    def group_iter(self, cat_id):
+        grp_ids = set(filter(lambda grp_id: self.dl.get_group_category(grp_id) == cat_id, self.changes))
+        for grp_id in sorted(grp_ids, key=self.dl.get_group_name):
+            grp_name = self.dl.get_group_name(grp_id)
+            yield grp_id, grp_name
+
+    def removed_types_iter(self, grp_id):
+        removed = self.changes[grp_id].removed
+        for type_id in sorted(removed, key=self.dl.get_type_name):
+            type_ = removed[type_id]
+            yield type_id, type_
+
+    def changed_types_iter(self, grp_id):
+        changed = self.changes[grp_id].changed
+        for type_id in sorted(changed, key=self.dl.get_type_name):
+            yield type_id, changed[type_id].old, changed[type_id].new
+
+    def added_types_iter(self, grp_id):
+        added = self.changes[grp_id].added
+        for type_id in sorted(added, key=self.dl.get_type_name):
+            type_ = added[type_id]
+            yield type_id, type_
+
+    def fake_run(self):
+        for cat_id, cat_name in self.category_iter():
+            print('Category: {}'.format(cat_name), end='\n\n')
+            for grp_id, grp_name in self.group_iter(cat_id):
+                print('  Group: {}'.format(grp_name), end='\n\n')
                 # Removed items
-                for tid in sorted(itm_rmvd, key=lambda tid: itm_rmvd[tid].name):
-                    print('    [-] {}'.format(itm_rmvd[tid].name), end='\n\n')
+                for tid, t in self.removed_types_iter(grp_id):
+                    print('    [-] {}'.format(t.name), end='\n\n')
 
                 # Changed items
-                for tid in sorted(itm_chg, key=lambda tid: itm_chg[tid].new.name):
-                    old = itm_chg[tid].old
-                    new = itm_chg[tid].new
+                for tid, old, new in self.changed_types_iter(grp_id):
                     if old.group_id != new.group_id:
                         # If some item was moved from one group to another, it was added
                         # to both; here we print only small notice in group from which it
@@ -297,7 +319,7 @@ class PrinterSkeleton:
                         if old.group_id == grp_id:
                             new_grp = self.dl.get_group_name(new.group_id)
                             new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
-                            print('    [*] {} (moved to {} > {})'.format(itm_chg[tid].new.name, new_cat, new_grp), end='\n\n')
+                            print('    [*] {} (moved to {} > {})'.format(new.name, new_cat, new_grp), end='\n\n')
                             continue
                         else:
                             old_grp = self.dl.get_group_name(old.group_id)
@@ -305,7 +327,7 @@ class PrinterSkeleton:
                             suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
                     else:
                         suffix = ''
-                    print('    [*] {}{}'.format(itm_chg[tid].new.name, suffix))
+                    print('    [*] {}{}'.format(new.name, suffix))
                     if old.attributes != new.attributes:
                         print('      Attributes:')
                         attrid_rmvd = set(old.attributes).difference(new.attributes)
@@ -351,8 +373,7 @@ class PrinterSkeleton:
                     print()
 
                 # Added items
-                for tid in sorted(itm_add, key=lambda tid: itm_add[tid].name):
-                    item = itm_add[tid]
+                for tid, item in self.added_types_iter(grp_id):
                     print('    [+] {}'.format(item.name))
                     if item.attributes:
                         print('      Attributes:')
@@ -377,29 +398,27 @@ class PrinterSkeleton:
         Convert data exposed by loader into format specific for printing
         logic we're using - top-level sections are categories, then groups
         are sub-sections, and items are listed in these sub-sections.
-        Format: {category ID: {group ID: (removed, changed, added)}}
+        Format: {group ID: (removed, changed, added)}
         Removed and added: {type ID: type}
         Changed: {type ID: (old type, new type)}
         """
         changes = {}
-        removed_items = self.dl.get_removed_items(published_only)
-        changed_items = self.dl.get_changed_items(published_only)
-        added_items = self.dl.get_added_items(published_only)
+        removed = self.dl.get_removed_items(published_only)
+        changed = self.dl.get_changed_items(published_only)
+        added = self.dl.get_added_items(published_only)
         for grp_id in self.dl.group_iter():
             # Check which items were changed for this particular group
-            filfunc = lambda i: removed_items[i].group_id == grp_id
-            removed_items_grp = dict((i, removed_items[i]) for i in filter(filfunc, removed_items))
-            filfunc = lambda i: added_items[i].group_id == grp_id
-            added_items_grp = dict((i, added_items[i]) for i in filter(filfunc, added_items))
-            filfunc = lambda i: changed_items[i].old.group_id == grp_id or changed_items[i].new.group_id == grp_id
-            changed_items_grp = dict((tid, changed_items[tid]) for tid in filter(filfunc, changed_items))
+            filfunc = lambda i: removed[i].group_id == grp_id
+            removed_grp = dict((i, removed[i]) for i in filter(filfunc, removed))
+            filfunc = lambda i: added[i].group_id == grp_id
+            added_grp = dict((i, added[i]) for i in filter(filfunc, added))
+            filfunc = lambda i: changed[i].old.group_id == grp_id or changed[i].new.group_id == grp_id
+            changed_grp = dict((tid, changed[tid]) for tid in filter(filfunc, changed))
             # Do not fill anything if nothing changed
-            if not removed_items_grp and not changed_items_grp and not added_items_grp:
+            if not removed_grp and not changed_grp and not added_grp:
                 continue
             # Fill container with data we gathered
-            cat_id = self.dl.get_group_category(grp_id)
-            cat_changes = changes.setdefault(cat_id, {})
-            cat_changes[grp_id] = Changes(removed=removed_items_grp, changed=changed_items_grp, added=added_items_grp)
+            changes[grp_id] = Changes(removed=removed_grp, changed=changed_grp, added=added_grp)
         return changes
 
 
@@ -418,7 +437,7 @@ if __name__ == '__main__':
     path_new = os.path.expanduser(args.new)
 
     dl = DataLoader(path_old, path_new)
-    TextPrinter(dl).fake_run(published_only=False)
+    TextPrinter(dl, published_only=False).fake_run()
 
 
 
