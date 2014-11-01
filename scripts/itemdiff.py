@@ -190,6 +190,12 @@ class DataLoader:
                 market_group_id = row['marketGroupID']
                 market_path[market_group_id] = compose_chain(market_group_id)
 
+    def get_market_path(self, mktgrp_id):
+        try:
+            return self.market_path_new[mktgrp_id]
+        except KeyError:
+            return self.market_path_old[mktgrp_id]
+
     # Name-related methods
 
     def load_name_data(self):
@@ -198,29 +204,29 @@ class DataLoader:
             (self.path_new, self.names_new)
         ):
 
-            attr_names = names['types'] = {}
+            type_names = names['types'] = {}
             for row in self.get_file(base_path, 'invtypes'):
-                attr_names[row['typeID']] = row['typeName_en-us']
+                type_names[row['typeID']] = row['typeName_en-us']
 
-            attr_names = names['groups'] = {}
+            grp_names = names['groups'] = {}
             for row in self.get_file(base_path, 'invgroups'):
-                attr_names[row['groupID']] = row['groupName_en-us']
+                grp_names[row['groupID']] = row['groupName_en-us']
 
-            attr_names = names['categories'] = {}
+            cat_names = names['categories'] = {}
             for row in self.get_file(base_path, 'invcategories'):
-                attr_names[row['categoryID']] = row['categoryName_en-us']
+                cat_names[row['categoryID']] = row['categoryName_en-us']
 
-            attr_names = names['market_groups'] = {}
+            mktgrp_names = names['market_groups'] = {}
             for row in self.get_file(base_path, 'mapbulk_marketGroups'):
-                attr_names[row['marketGroupID']] = row['marketGroupName_en-us']
+                mktgrp_names[row['marketGroupID']] = row['marketGroupName_en-us']
 
             attr_names = names['attribs'] = {}
             for row in self.get_file(base_path, 'dgmattribs'):
                 attr_names[row['attributeID']] = row['attributeName']
 
-            attr_names = names['effects'] = {}
+            eff_names = names['effects'] = {}
             for row in self.get_file(base_path, 'dgmeffects'):
-                attr_names[row['effectID']] = row['effectName']
+                eff_names[row['effectID']] = row['effectName']
 
     def get_type_name(self, type_id):
         return self.__get_name('types', type_id)
@@ -273,33 +279,111 @@ class PrinterSkeleton:
         self.changes = self.get_changes_summary(published_only=published_only)
 
     def category_iter(self):
+        """
+        Iterate through all category IDs of categories
+        which contain changed items.
+        """
         cat_ids = set(self.dl.get_group_category(grp_id) for grp_id in self.changes)
         for cat_id in sorted(cat_ids, key=self.dl.get_category_name):
             cat_name = self.dl.get_category_name(cat_id)
             yield cat_id, cat_name
 
     def group_iter(self, cat_id):
+        """
+        Iterate over group IDs of groups which contain
+        changed items and belong to certain category.
+        """
         grp_ids = set(filter(lambda grp_id: self.dl.get_group_category(grp_id) == cat_id, self.changes))
         for grp_id in sorted(grp_ids, key=self.dl.get_group_name):
             grp_name = self.dl.get_group_name(grp_id)
             yield grp_id, grp_name
 
     def removed_types_iter(self, grp_id):
+        """
+        Iterate through all types which have been
+        removed and belonged to given group.
+        """
         removed = self.changes[grp_id].removed
-        for type_id in sorted(removed, key=self.dl.get_type_name):
-            type_ = removed[type_id]
-            yield type_id, type_
+        for type_ in sorted(removed.values(), key=lambda t: t.name):
+            yield type_
 
     def changed_types_iter(self, grp_id):
+        """
+        Iterate through all types which have been
+        changed and belonged or now belong to given
+        group.
+        """
         changed = self.changes[grp_id].changed
         for type_id in sorted(changed, key=self.dl.get_type_name):
-            yield type_id, changed[type_id].old, changed[type_id].new
+            yield changed[type_id].old, changed[type_id].new
 
     def added_types_iter(self, grp_id):
+        """
+        Iterate through all types which have been
+        added and belong to given group.
+        """
         added = self.changes[grp_id].added
-        for type_id in sorted(added, key=self.dl.get_type_name):
-            type_ = added[type_id]
-            yield type_id, type_
+        for type_ in sorted(added.values(), key=lambda t: t.name):
+            yield type_
+
+    def attrib_iter(self, item):
+        """
+        Iterate over attribute names and values of passed item.
+        """
+        for attr_id in sorted(item.attributes, key=self.dl.get_attr_name):
+            attr_name = self.dl.get_attr_name(attr_id)
+            attr_val = item.attributes[attr_id]
+            yield attr_name, attr_val
+
+    def effect_iter(self, item):
+        """
+        Iterate over effect names of passed item.
+        """
+        for eff_id in sorted(item.effects, key=self.dl.get_effect_name):
+            eff_name = self.dl.get_effect_name(eff_id)
+            yield eff_name
+
+    def get_market_path(self, item):
+        """
+        Convert path exposed by loader into human-readable
+        Path > To > Item's > Market > Group.
+        """
+        mktgrp = item.market_group_id
+        if mktgrp is None:
+            return None
+        mkt_path = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.get_market_path(mktgrp)))
+        return mkt_path
+
+    def get_changes_summary(self, published_only):
+        """
+        Convert data exposed by loader into format specific for printing
+        logic we're using - top-level sections are categories, then groups
+        are sub-sections, and items are listed in these sub-sections.
+        Format: {group ID: (removed, changed, added)}
+        Removed and added: {type ID: type}
+        Changed: {type ID: (old type, new type)}
+        """
+        changes = {}
+        removed = self.dl.get_removed_items(published_only)
+        changed = self.dl.get_changed_items(published_only)
+        added = self.dl.get_added_items(published_only)
+        for grp_id in self.dl.group_iter():
+            # Check which items were changed for this particular group
+            filfunc = lambda i: removed[i].group_id == grp_id
+            removed_grp = dict((i, removed[i]) for i in filter(filfunc, removed))
+            filfunc = lambda i: added[i].group_id == grp_id
+            added_grp = dict((i, added[i]) for i in filter(filfunc, added))
+            filfunc = lambda i: changed[i].old.group_id == grp_id or changed[i].new.group_id == grp_id
+            changed_grp = dict((tid, changed[tid]) for tid in filter(filfunc, changed))
+            # Do not fill anything if nothing changed
+            if not removed_grp and not changed_grp and not added_grp:
+                continue
+            # Fill container with data we gathered
+            changes[grp_id] = Changes(removed=removed_grp, changed=changed_grp, added=added_grp)
+        return changes
+
+
+class TextPrinter(PrinterSkeleton):
 
     def fake_run(self):
         for cat_id, cat_name in self.category_iter():
@@ -307,11 +391,11 @@ class PrinterSkeleton:
             for grp_id, grp_name in self.group_iter(cat_id):
                 print('  Group: {}'.format(grp_name), end='\n\n')
                 # Removed items
-                for tid, t in self.removed_types_iter(grp_id):
-                    print('    [-] {}'.format(t.name), end='\n\n')
+                for item in self.removed_types_iter(grp_id):
+                    print('    [-] {}'.format(item.name), end='\n\n')
 
                 # Changed items
-                for tid, old, new in self.changed_types_iter(grp_id):
+                for old, new in self.changed_types_iter(grp_id):
                     if old.group_id != new.group_id:
                         # If some item was moved from one group to another, it was added
                         # to both; here we print only small notice in group from which it
@@ -357,73 +441,34 @@ class PrinterSkeleton:
                                 print('        [+] {}'.format(eff_name))
                     if old.market_group_id != new.market_group_id:
                         print('      Market group:')
-                        if old.market_group_id is None:
-                            old_mktgrp = None
-                        else:
-                            old_mktgrp = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.market_path_old[old.market_group_id]))
-                        if new.market_group_id is None:
-                            new_mktgrp = None
-                        else:
-                            new_mktgrp = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.market_path_new[new.market_group_id]))
-                        print('        From: {}'.format(old_mktgrp))
-                        print('        To: {}'.format(new_mktgrp))
+                        mktgrp_old = self.get_market_path(old)
+                        mktgrp_new = self.get_market_path(new)
+                        print('        From: {}'.format(mktgrp_old))
+                        print('        To: {}'.format(mktgrp_new))
                     if old.published != new.published:
                         print('      Published flag:\n        {} => {}'.format(bool(old.published), bool(new.published)))
 
                     print()
 
                 # Added items
-                for tid, item in self.added_types_iter(grp_id):
+                for item in self.added_types_iter(grp_id):
                     print('    [+] {}'.format(item.name))
-                    if item.attributes:
+                    attribs = tuple(self.attrib_iter(item))
+                    if attribs:
                         print('      Attributes:')
-                        for attr_id in sorted(item.attributes, key=self.dl.get_attr_name):
-                            attr_name = self.dl.get_attr_name(attr_id)
-                            attr_val = item.attributes[attr_id]
+                        for attr_name, attr_val in attribs:
                             print('        {}: {}'.format(attr_name, attr_val))
-                    if item.effects:
+                    effects = tuple(self.effect_iter(item))
+                    if effects:
                         print('      Effects:')
-                        for eff_id in sorted(item.effects, key=self.dl.get_effect_name):
-                            eff_name = self.dl.get_effect_name(eff_id)
+                        for eff_name in effects:
                             print('        {}'.format(eff_name))
-                    if item.market_group_id:
+                    mkt_path = self.get_market_path(item)
+                    if mkt_path is not None:
                         print('      Market group:')
-                        mktgrp = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.market_path_new[item.market_group_id]))
-                        print('        {}'.format(mktgrp))
+                        print('        {}'.format(mkt_path))
                     print('      Published flag:\n        {}'.format(bool(item.published)))
                     print()
-
-    def get_changes_summary(self, published_only):
-        """
-        Convert data exposed by loader into format specific for printing
-        logic we're using - top-level sections are categories, then groups
-        are sub-sections, and items are listed in these sub-sections.
-        Format: {group ID: (removed, changed, added)}
-        Removed and added: {type ID: type}
-        Changed: {type ID: (old type, new type)}
-        """
-        changes = {}
-        removed = self.dl.get_removed_items(published_only)
-        changed = self.dl.get_changed_items(published_only)
-        added = self.dl.get_added_items(published_only)
-        for grp_id in self.dl.group_iter():
-            # Check which items were changed for this particular group
-            filfunc = lambda i: removed[i].group_id == grp_id
-            removed_grp = dict((i, removed[i]) for i in filter(filfunc, removed))
-            filfunc = lambda i: added[i].group_id == grp_id
-            added_grp = dict((i, added[i]) for i in filter(filfunc, added))
-            filfunc = lambda i: changed[i].old.group_id == grp_id or changed[i].new.group_id == grp_id
-            changed_grp = dict((tid, changed[tid]) for tid in filter(filfunc, changed))
-            # Do not fill anything if nothing changed
-            if not removed_grp and not changed_grp and not added_grp:
-                continue
-            # Fill container with data we gathered
-            changes[grp_id] = Changes(removed=removed_grp, changed=changed_grp, added=added_grp)
-        return changes
-
-
-class TextPrinter(PrinterSkeleton):
-    pass
 
 
 if __name__ == '__main__':
