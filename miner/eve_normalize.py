@@ -23,7 +23,6 @@ from collections import OrderedDict
 from itertools import chain
 
 from reverence.carbon.common.script.sys.row import Row
-from reverence.config import FSDLiteStorage
 
 
 class EveNormalizer(object):
@@ -49,12 +48,7 @@ class EveNormalizer(object):
         # Primitive objects do not need any conversion
         if type(obj) in self._primitives:
             return obj
-        # Try to find parent class for passed object, and if we
-        # have any in our records - run handler for it
-        for candidate_cls in self._subclass_match:
-            if isinstance(obj, candidate_cls):
-                method = self._subclass_match[candidate_cls]
-                return method(self, obj)
+        # Try strict class/guid matching first
         cls = type(obj)
         try:
             method = self._class_match[cls]
@@ -71,6 +65,12 @@ class EveNormalizer(object):
             pass
         else:
             return method(self, obj)
+        # Try to find parent class for passed object, and if we
+        # have any in our records - run handler for it
+        for candidate_cls in self._subclass_match:
+            if isinstance(obj, candidate_cls):
+                method = self._subclass_match[candidate_cls]
+                return method(self, obj)
         # If we got here, routing failed
         msg = 'unable to route {}'.format(type(obj))
         guid = getattr(obj, '__guid__', None)
@@ -193,6 +193,21 @@ class EveNormalizer(object):
         """
         return self._pythonize_dbrow(obj.line)
 
+    _primitives = (
+        types.NoneType,
+        types.BooleanType,
+        types.FloatType,
+        types.IntType,
+        types.LongType,
+        types.UnicodeType
+    )
+
+    _class_match = {
+        types.StringType: _pythonize_string,
+        types.ListType: _pythonize_iterable,
+        types.TupleType: _pythonize_iterable,
+    }
+
     _name_match = {
         # Usually seen in cache
         'dbutil.CFilterRowset': _pythonize_indexed_lists,
@@ -222,25 +237,9 @@ class EveNormalizer(object):
         # actually provides its subclasses, but it doesn't make sense
         # to specify them all
         (Row, _pythonize_row),
-        # Nextgen FSD format
-        (FSDLiteStorage, _pythonize_map)
+        # Includes dictionaries and FSDLiteStorage
+        (types.DictType, _pythonize_map)
     ])
-
-    _class_match = {
-        types.StringType: _pythonize_string,
-        types.DictType: _pythonize_map,
-        types.ListType: _pythonize_iterable,
-        types.TupleType: _pythonize_iterable,
-    }
-
-    _primitives = (
-        types.NoneType,
-        types.BooleanType,
-        types.FloatType,
-        types.IntType,
-        types.LongType,
-        types.UnicodeType
-    )
 
 
 class UnknownContainerTypeError(Exception):
