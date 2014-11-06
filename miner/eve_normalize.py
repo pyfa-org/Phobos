@@ -23,6 +23,7 @@ from collections import OrderedDict
 from itertools import chain
 
 from reverence.carbon.common.script.sys.row import Row
+from reverence.config import FSDLiteStorage
 
 
 class EveNormalizer(object):
@@ -156,6 +157,13 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
+ #   def _pythonize_fsdlite(self, obj):
+        """
+        Basically, JSON stored in SQLite database, accessible almost
+        as any regular python object.
+        """
+
+
     def _pythonize_indexed_lists(self, obj):
         """
         Indexed lists are represented as dictionary, where keys are some
@@ -221,13 +229,15 @@ class EveNormalizer(object):
         # actually provides its subclasses, but it doesn't make sense
         # to specify them all
         (Row, _pythonize_row),
+        # Nextgen FSD format
+        (FSDLiteStorage, _pythonize_map)
     ])
 
     _class_match = {
         types.StringType: _pythonize_string,
         types.DictType: _pythonize_map,
         types.ListType: _pythonize_iterable,
-        types.TupleType: _pythonize_iterable
+        types.TupleType: _pythonize_iterable,
     }
 
     _primitives = (
