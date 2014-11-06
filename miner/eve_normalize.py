@@ -157,13 +157,6 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
- #   def _pythonize_fsdlite(self, obj):
-        """
-        Basically, JSON stored in SQLite database, accessible almost
-        as any regular python object.
-        """
-
-
     def _pythonize_indexed_lists(self, obj):
         """
         Indexed lists are represented as dictionary, where keys are some
