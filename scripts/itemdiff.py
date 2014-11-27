@@ -383,92 +383,137 @@ class PrinterSkeleton:
         return changes
 
 
+class moreindent:
+    """
+    Context manager for text printer's indentation.
+    """
+
+    def __init__(self, instance):
+        self.instance = instance
+
+    def __enter__(self):
+        self.instance._indent_more()
+
+    def __exit__(self, *exc_details):
+        self.instance._indent_less()
+        return False
+
+
 class TextPrinter(PrinterSkeleton):
+
+    def __init__(self, data_loader, published_only, indent_increment):
+        PrinterSkeleton.__init__(self, data_loader, published_only)
+        self._indent_length = 0
+        self._indent_increment = indent_increment
+
+    def _indent_more(self):
+        self._indent_length += self._indent_increment
+
+    def _indent_less(self):
+        self._indent_length -= self._indent_increment
+
+    @property
+    def _indent(self):
+        return ' ' * self._indent_length
 
     def fake_run(self):
         for cat_id, cat_name in self.category_iter():
             print('Category: {}'.format(cat_name), end='\n\n')
-            for grp_id, grp_name in self.group_iter(cat_id):
-                print('  Group: {}'.format(grp_name), end='\n\n')
-                # Removed items
-                for item in self.removed_types_iter(grp_id):
-                    print('    [-] {}'.format(item.name), end='\n\n')
+            with moreindent(self):
+                for grp_id, grp_name in self.group_iter(cat_id):
+                    print('{}Group: {}'.format(self._indent, grp_name), end='\n\n')
+                    with moreindent(self):
+                        # Removed items
+                        for item in self.removed_types_iter(grp_id):
+                            print('{}[-] {}'.format(self._indent, item.name), end='\n\n')
 
-                # Changed items
-                for old, new in self.changed_types_iter(grp_id):
-                    if old.group_id != new.group_id:
-                        # If some item was moved from one group to another, it was added
-                        # to both; here we print only small notice in group from which it
-                        # was moved, and full data in target group
-                        if old.group_id == grp_id:
-                            new_grp = self.dl.get_group_name(new.group_id)
-                            new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
-                            print('    [*] {} (moved to {} > {})'.format(new.name, new_cat, new_grp), end='\n\n')
-                            continue
-                        else:
-                            old_grp = self.dl.get_group_name(old.group_id)
-                            old_cat = self.dl.get_category_name(self.dl.get_group_category((old.group_id)))
-                            suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
-                    else:
-                        suffix = ''
-                    print('    [*] {}{}'.format(new.name, suffix))
-                    if old.attributes != new.attributes:
-                        print('      Attributes:')
-                        attrid_rmvd = set(old.attributes).difference(new.attributes)
-                        attrid_changed = set(filter(lambda i: old.attributes[i] != new.attributes[i], set(new.attributes).intersection(old.attributes)))
-                        attrid_add = set(new.attributes).difference(old.attributes)
-                        for attr_id in sorted(attrid_rmvd.union(attrid_changed).union(attrid_add), key=self.dl.get_attr_name):
-                            attr_name = self.dl.get_attr_name(attr_id)
-                            if attr_id in attrid_rmvd:
-                                attr_val = old.attributes[attr_id]
-                                print('        [-] {}: {}'.format(attr_name, attr_val))
-                            if attr_id in attrid_changed:
-                                attr_val_old = old.attributes[attr_id]
-                                attr_val_new = new.attributes[attr_id]
-                                print('        [*] {}: {} => {}'.format(attr_name, attr_val_old, attr_val_new))
-                            if attr_id in attrid_add:
-                                attr_val = new.attributes[attr_id]
-                                print('        [+] {}: {}'.format(attr_name, attr_val))
-                    if old.effects != new.effects:
-                        print('      Effects:')
-                        eff_rmvd = set(old.effects).difference(new.effects)
-                        eff_add = set(new.effects).difference(old.effects)
-                        for eff_id in sorted(eff_rmvd.union(eff_add), key=self.dl.get_effect_name):
-                            eff_name = self.dl.get_effect_name(eff_id)
-                            if eff_id in eff_rmvd:
-                                print('        [-] {}'.format(eff_name))
-                            if eff_id in eff_add:
-                                print('        [+] {}'.format(eff_name))
-                    if old.market_group_id != new.market_group_id:
-                        print('      Market group:')
-                        mktgrp_old = self.get_market_path(old)
-                        mktgrp_new = self.get_market_path(new)
-                        print('        From: {}'.format(mktgrp_old))
-                        print('        To: {}'.format(mktgrp_new))
-                    if old.published != new.published:
-                        print('      Published flag:\n        {} => {}'.format(bool(old.published), bool(new.published)))
+                        # Changed items
+                        for old, new in self.changed_types_iter(grp_id):
+                            if old.group_id != new.group_id:
+                                # If some item was moved from one group to another, it was added
+                                # to both; here we print only small notice in group from which it
+                                # was moved, and full data in target group
+                                if old.group_id == grp_id:
+                                    new_grp = self.dl.get_group_name(new.group_id)
+                                    new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
+                                    print('{}[*] {} (moved to {} > {})'.format(self._indent, new.name, new_cat, new_grp), end='\n\n')
+                                    continue
+                                else:
+                                    old_grp = self.dl.get_group_name(old.group_id)
+                                    old_cat = self.dl.get_category_name(self.dl.get_group_category((old.group_id)))
+                                    suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
+                            else:
+                                suffix = ''
+                            print('{}[*] {}{}'.format(self._indent, new.name, suffix))
+                            with moreindent(self):
+                                if old.attributes != new.attributes:
+                                    print('{}Attributes:'.format(self._indent))
+                                    attrid_rmvd = set(old.attributes).difference(new.attributes)
+                                    attrid_changed = set(filter(lambda i: old.attributes[i] != new.attributes[i], set(new.attributes).intersection(old.attributes)))
+                                    attrid_add = set(new.attributes).difference(old.attributes)
+                                    for attr_id in sorted(attrid_rmvd.union(attrid_changed).union(attrid_add), key=self.dl.get_attr_name):
+                                        with moreindent(self):
+                                            attr_name = self.dl.get_attr_name(attr_id)
+                                            if attr_id in attrid_rmvd:
+                                                attr_val = old.attributes[attr_id]
+                                                print('{}[-] {}: {}'.format(self._indent, attr_name, attr_val))
+                                            if attr_id in attrid_changed:
+                                                attr_val_old = old.attributes[attr_id]
+                                                attr_val_new = new.attributes[attr_id]
+                                                print('{}[*] {}: {} => {}'.format(self._indent, attr_name, attr_val_old, attr_val_new))
+                                            if attr_id in attrid_add:
+                                                attr_val = new.attributes[attr_id]
+                                                print('{}[+] {}: {}'.format(self._indent, attr_name, attr_val))
+                                if old.effects != new.effects:
+                                    print('{}Effects:'.format(self._indent))
+                                    with moreindent(self):
+                                        eff_rmvd = set(old.effects).difference(new.effects)
+                                        eff_add = set(new.effects).difference(old.effects)
+                                        for eff_id in sorted(eff_rmvd.union(eff_add), key=self.dl.get_effect_name):
+                                            eff_name = self.dl.get_effect_name(eff_id)
+                                            if eff_id in eff_rmvd:
+                                                print('{}[-] {}'.format(self._indent, eff_name))
+                                            if eff_id in eff_add:
+                                                print('{}[+] {}'.format(self._indent, eff_name))
+                                if old.market_group_id != new.market_group_id:
+                                    print('{}Market group:'.format(self._indent))
+                                    with moreindent(self):
+                                        mktgrp_old = self.get_market_path(old)
+                                        mktgrp_new = self.get_market_path(new)
+                                        print('{}From: {}'.format(self._indent, mktgrp_old))
+                                        print('{}To: {}'.format(self._indent, mktgrp_new))
+                                if old.published != new.published:
+                                    print('{}Published flag:'.format(self._indent))
+                                    with moreindent(self):
+                                        print('{}{} => {}'.format(self._indent, bool(old.published), bool(new.published)))
 
-                    print()
+                                print()
 
-                # Added items
-                for item in self.added_types_iter(grp_id):
-                    print('    [+] {}'.format(item.name))
-                    attribs = tuple(self.attrib_iter(item))
-                    if attribs:
-                        print('      Attributes:')
-                        for attr_name, attr_val in attribs:
-                            print('        {}: {}'.format(attr_name, attr_val))
-                    effects = tuple(self.effect_iter(item))
-                    if effects:
-                        print('      Effects:')
-                        for eff_name in effects:
-                            print('        {}'.format(eff_name))
-                    mkt_path = self.get_market_path(item)
-                    if mkt_path is not None:
-                        print('      Market group:')
-                        print('        {}'.format(mkt_path))
-                    print('      Published flag:\n        {}'.format(bool(item.published)))
-                    print()
+                        # Added items
+                        for item in self.added_types_iter(grp_id):
+                            print('{}[+] {}'.format(self._indent, item.name))
+                            with moreindent(self):
+                                attribs = tuple(self.attrib_iter(item))
+                                if attribs:
+                                    print('{}Attributes:'.format(self._indent))
+                                    with moreindent(self):
+                                        for attr_name, attr_val in attribs:
+                                            print('{}{}: {}'.format(self._indent, attr_name, attr_val))
+                                effects = tuple(self.effect_iter(item))
+                                if effects:
+                                    print('{}Effects:'.format(self._indent))
+                                    with moreindent(self):
+                                        for eff_name in effects:
+                                            print('{}{}'.format(self._indent, eff_name))
+                                mkt_path = self.get_market_path(item)
+                                if mkt_path is not None:
+                                    print('{}Market group:'.format(self._indent))
+                                    with moreindent(self):
+                                        print('{}{}'.format(self._indent, mkt_path))
+                                print('{}Published flag:'.format(self._indent))
+                                with moreindent(self):
+                                    print('{}{}'.format(self._indent, bool(item.published)))
+                                print()
 
 
 if __name__ == '__main__':
@@ -482,7 +527,7 @@ if __name__ == '__main__':
     path_new = os.path.expanduser(args.new)
 
     dl = DataLoader(path_old, path_new)
-    TextPrinter(dl, published_only=False).fake_run()
+    TextPrinter(dl, published_only=False, indent_increment=2).fake_run()
 
 
 
