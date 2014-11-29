@@ -20,8 +20,7 @@
 
 import os.path
 from ConfigParser import ConfigParser
-from datetime import datetime
-from time import mktime
+from time import time
 
 from .abstract_miner import AbstractMiner
 
@@ -58,6 +57,6 @@ class MetadataMiner(AbstractMiner):
                 eve_version = None
             container_data.append({field_names[0]: 'client_build', field_names[1]: eve_version})
             # Generate UNIX-style timestamp of current UTC time
-            timestamp = int(mktime(datetime.utcnow().timetuple()))
+            timestamp = int(time())
             container_data.append({field_names[0]: 'dump_time', field_names[1]: timestamp})
             return tuple(container_data)
