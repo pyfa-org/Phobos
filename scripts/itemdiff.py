@@ -308,12 +308,23 @@ class PrinterSkeleton:
         self._dl = data_loader
         self._changes = self._get_changes_summary(unpublished)
 
-    def _iter_category(self):
+    def _iter_category(self, cat_list):
         """
         Iterate through all category IDs of categories
         which contain changed items.
+
+        Required arguments:
+        cat_list -- list with category names, when not empty
+        this method will iterate only over categories whose
+        names are in this list.
         """
         cat_ids = set(self._dl.get_group_category(grp_id) for grp_id in self._changes)
+        # Filter out category names which are not provided in the list
+        if cat_list:
+            # Normalize list of provided names & category names too for
+            # easier and more user-friendly matching
+            cat_list = tuple(c.lower() for c in cat_list)
+            cat_ids = set(filter(lambda cat_id: self._dl.get_category_name(cat_id).lower() in cat_list, cat_ids))
         for cat_id in sorted(cat_ids, key=self._dl.get_category_name):
             cat_name = self._dl.get_category_name(cat_id)
             yield cat_id, cat_name
@@ -439,9 +450,9 @@ class TextPrinter(PrinterSkeleton):
         self._indent_length = 0
         self._indent_increment = indent_increment
 
-    def run(self):
+    def run(self, cat_list):
         self._print_metadata()
-        self._print_categories()
+        self._print_categories(cat_list)
 
     # Indentation stuff
 
@@ -469,11 +480,11 @@ class TextPrinter(PrinterSkeleton):
             print('{}{} (data extracted at {})'.format(self._indent, self._dl.version_new, time_new))
         print()
 
-    def _print_categories(self):
+    def _print_categories(self, cat_list):
         """
         Print data for all categories.
         """
-        for cat_id, cat_name in self._iter_category():
+        for cat_id, cat_name in self._iter_category(cat_list):
             print('{}Category: {}'.format(self._indent, cat_name), end='\n\n')
             with moreindent(self):
                 self._print_groups(cat_id)
@@ -648,11 +659,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
     parser.add_argument('-o', '--old', help='path to phobos JSON dump with old data', required=True)
     parser.add_argument('-n', '--new', help='path to phobos JSON dump with new data', required=True)
-    parser.add_argument('-a', '--all', help='print data for all items, not just published', required=False, default=False, action='store_true')
+    parser.add_argument('-a', '--all', help='print data for all items, not just published', default=False, action='store_true')
+    parser.add_argument('-c', '--categories', help='comma-separated list of category names, for which data will be shown', default='')
     args = parser.parse_args()
 
     path_old = os.path.expanduser(args.old)
     path_new = os.path.expanduser(args.new)
 
+    category_list = tuple(filter(lambda c: c, (c.strip() for c in args.categories.split(','))))
     dl = DataLoader(path_old, path_new)
-    TextPrinter(dl, unpublished=args.all, indent_increment=2).run()
+    TextPrinter(dl, unpublished=args.all, indent_increment=2).run(category_list)
