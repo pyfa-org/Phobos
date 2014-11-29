@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import enum
 import json
 import os.path
@@ -64,18 +65,28 @@ class DataLoader:
     def __init__(self, path_old, path_new):
         self.path_old = path_old
         self.path_new = path_new
+        # Items
         self.items_old = {}
         self.items_new = {}
         self.load_item_data()
+        # Names
         self.names_old = {}
         self.names_new = {}
         self.load_name_data()
+        # Group-category relations
         self.group_cat_old = {}
         self.group_cat_new = {}
         self.load_group_categories()
+        # Market group full paths
         self.market_path_old = {}
         self.market_path_new = {}
         self.load_market_paths()
+        # Metadata
+        self.version_old = None
+        self.version_new = None
+        self.timestamp_old = None
+        self.timestamp_new = None
+        self.load_metadata()
 
     # Item-related methods
 
@@ -227,6 +238,25 @@ class DataLoader:
             eff_names = names['effects'] = {}
             for row in self.get_file(base_path, 'dgmeffects'):
                 eff_names[row['effectID']] = row['effectName']
+
+    # Metadata stuff
+
+    def load_metadata(self):
+        metadata_old = self.get_metadata_fields(self.path_old)
+        self.version_old = metadata_old['client_build']
+        self.timestamp_old = metadata_old['dump_time']
+        metadata_new = self.get_metadata_fields(self.path_new)
+        self.version_new = metadata_new['client_build']
+        self.timestamp_new = metadata_new['dump_time']
+
+    def get_metadata_fields(self, path):
+        fields = {}
+        metadata = self.get_file(path, 'phbmetadata')
+        for row in metadata:
+            name = row['field_name']
+            value = row['field_value']
+            fields[name] = value
+        return fields
 
     def get_type_name(self, type_id):
         return self.__get_name('types', type_id)
@@ -410,6 +440,7 @@ class TextPrinter(PrinterSkeleton):
         self._indent_increment = indent_increment
 
     def run(self):
+        self._print_metadata()
         self._print_categories()
 
     # Indentation stuff
@@ -423,6 +454,19 @@ class TextPrinter(PrinterSkeleton):
     @property
     def _indent(self):
         return ' ' * self._indent_length
+
+    def _print_metadata(self):
+        ver_old = self._dl.version_old
+        ver_new = self._dl.version_new
+        tz_utc = datetime.timezone(datetime.timedelta())
+        time_fmt = '%Y-%m-%d %H:%M:%S'
+        time_old = datetime.datetime.fromtimestamp(self._dl.timestamp_old, tz=tz_utc).strftime(time_fmt)
+        time_new = datetime.datetime.fromtimestamp(self._dl.timestamp_new, tz=tz_utc).strftime(time_fmt)
+        print('{}Comparing EVE client versions:'.format(self._indent))
+        with moreindent(self):
+            print('{}{} (data extracted at {})'.format(self._indent, ver_old, time_old))
+            print('{}{} (data extracted at {})'.format(self._indent, ver_new, time_new))
+        print()
 
     def _print_categories(self):
         """
