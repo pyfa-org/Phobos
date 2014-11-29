@@ -459,8 +459,8 @@ class TextPrinter(PrinterSkeleton):
         """
         Print version and timestamp info about dumps being compared.
         """
-        tz_utc = timezone(timedelta())
-        time_fmt = '%Y-%m-%d %H:%M:%S'
+        tz_utc = timezone(timedelta(), 'UTC')
+        time_fmt = '%Y-%m-%d %H:%M:%S %Z'
         time_old = datetime.fromtimestamp(self._dl.timestamp_old, tz=tz_utc).strftime(time_fmt)
         time_new = datetime.fromtimestamp(self._dl.timestamp_new, tz=tz_utc).strftime(time_fmt)
         print('{}Comparing EVE client versions:'.format(self._indent))
