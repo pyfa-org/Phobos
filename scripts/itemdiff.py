@@ -275,75 +275,75 @@ class DataLoader:
 class PrinterSkeleton:
 
     def __init__(self, data_loader, published_only=False):
-        self.dl = data_loader
-        self.changes = self.get_changes_summary(published_only=published_only)
+        self._dl = data_loader
+        self._changes = self._get_changes_summary(published_only=published_only)
 
-    def category_iter(self):
+    def _iter_category(self):
         """
         Iterate through all category IDs of categories
         which contain changed items.
         """
-        cat_ids = set(self.dl.get_group_category(grp_id) for grp_id in self.changes)
-        for cat_id in sorted(cat_ids, key=self.dl.get_category_name):
-            cat_name = self.dl.get_category_name(cat_id)
+        cat_ids = set(self._dl.get_group_category(grp_id) for grp_id in self._changes)
+        for cat_id in sorted(cat_ids, key=self._dl.get_category_name):
+            cat_name = self._dl.get_category_name(cat_id)
             yield cat_id, cat_name
 
-    def group_iter(self, cat_id):
+    def _iter_group(self, cat_id):
         """
         Iterate over group IDs of groups which contain
         changed items and belong to certain category.
         """
-        grp_ids = set(filter(lambda grp_id: self.dl.get_group_category(grp_id) == cat_id, self.changes))
-        for grp_id in sorted(grp_ids, key=self.dl.get_group_name):
-            grp_name = self.dl.get_group_name(grp_id)
+        grp_ids = set(filter(lambda grp_id: self._dl.get_group_category(grp_id) == cat_id, self._changes))
+        for grp_id in sorted(grp_ids, key=self._dl.get_group_name):
+            grp_name = self._dl.get_group_name(grp_id)
             yield grp_id, grp_name
 
-    def removed_types_iter(self, grp_id):
+    def _iter_types_removed(self, grp_id):
         """
         Iterate through all types which have been
         removed and belonged to given group.
         """
-        removed = self.changes[grp_id].removed
+        removed = self._changes[grp_id].removed
         for type_ in sorted(removed.values(), key=lambda t: t.name):
             yield type_
 
-    def changed_types_iter(self, grp_id):
+    def _iter_types_changed(self, grp_id):
         """
         Iterate through all types which have been
         changed and belonged or now belong to given
         group.
         """
-        changed = self.changes[grp_id].changed
-        for type_id in sorted(changed, key=self.dl.get_type_name):
+        changed = self._changes[grp_id].changed
+        for type_id in sorted(changed, key=self._dl.get_type_name):
             yield changed[type_id].old, changed[type_id].new
 
-    def added_types_iter(self, grp_id):
+    def _iter_types_added(self, grp_id):
         """
         Iterate through all types which have been
         added and belong to given group.
         """
-        added = self.changes[grp_id].added
+        added = self._changes[grp_id].added
         for type_ in sorted(added.values(), key=lambda t: t.name):
             yield type_
 
-    def attrib_iter(self, item):
+    def _iter_attrib(self, item):
         """
         Iterate over attribute names and values of passed item.
         """
-        for attr_id in sorted(item.attributes, key=self.dl.get_attr_name):
-            attr_name = self.dl.get_attr_name(attr_id)
+        for attr_id in sorted(item.attributes, key=self._dl.get_attr_name):
+            attr_name = self._dl.get_attr_name(attr_id)
             attr_val = item.attributes[attr_id]
             yield attr_name, attr_val
 
-    def effect_iter(self, item):
+    def _iter_effect(self, item):
         """
         Iterate over effect names of passed item.
         """
-        for eff_id in sorted(item.effects, key=self.dl.get_effect_name):
-            eff_name = self.dl.get_effect_name(eff_id)
+        for eff_id in sorted(item.effects, key=self._dl.get_effect_name):
+            eff_name = self._dl.get_effect_name(eff_id)
             yield eff_name
 
-    def get_market_path(self, item):
+    def _get_market_path(self, item):
         """
         Convert path exposed by loader into human-readable
         Path > To > Item's > Market > Group.
@@ -351,10 +351,10 @@ class PrinterSkeleton:
         mktgrp = item.market_group_id
         if mktgrp is None:
             return None
-        mkt_path = ' > '.join(self.dl.get_mktgrp_name(i) for i in reversed(self.dl.get_market_path(mktgrp)))
+        mkt_path = ' > '.join(self._dl.get_mktgrp_name(i) for i in reversed(self._dl.get_market_path(mktgrp)))
         return mkt_path
 
-    def get_changes_summary(self, published_only):
+    def _get_changes_summary(self, published_only):
         """
         Convert data exposed by loader into format specific for printing
         logic we're using - top-level sections are categories, then groups
@@ -364,10 +364,10 @@ class PrinterSkeleton:
         Changed: {type ID: (old type, new type)}
         """
         changes = {}
-        removed = self.dl.get_removed_items(published_only)
-        changed = self.dl.get_changed_items(published_only)
-        added = self.dl.get_added_items(published_only)
-        for grp_id in self.dl.group_iter():
+        removed = self._dl.get_removed_items(published_only)
+        changed = self._dl.get_changed_items(published_only)
+        added = self._dl.get_added_items(published_only)
+        for grp_id in self._dl.group_iter():
             # Check which items were changed for this particular group
             filfunc = lambda i: removed[i].group_id == grp_id
             removed_grp = dict((i, removed[i]) for i in filter(filfunc, removed))
@@ -400,11 +400,19 @@ class moreindent:
 
 
 class TextPrinter(PrinterSkeleton):
+    """
+    Print item changes as text.
+    """
 
     def __init__(self, data_loader, published_only, indent_increment):
         PrinterSkeleton.__init__(self, data_loader, published_only)
         self._indent_length = 0
         self._indent_increment = indent_increment
+
+    def run(self):
+        self._print_categories()
+
+    # Indentation stuff
 
     def _indent_more(self):
         self._indent_length += self._indent_increment
@@ -416,104 +424,178 @@ class TextPrinter(PrinterSkeleton):
     def _indent(self):
         return ' ' * self._indent_length
 
-    def fake_run(self):
-        for cat_id, cat_name in self.category_iter():
-            print('Category: {}'.format(cat_name), end='\n\n')
+    def _print_categories(self):
+        """
+        Print data for all categories.
+        """
+        for cat_id, cat_name in self._iter_category():
+            print('{}Category: {}'.format(self._indent, cat_name), end='\n\n')
             with moreindent(self):
-                for grp_id, grp_name in self.group_iter(cat_id):
-                    print('{}Group: {}'.format(self._indent, grp_name), end='\n\n')
-                    with moreindent(self):
-                        # Removed items
-                        for item in self.removed_types_iter(grp_id):
-                            print('{}[-] {}'.format(self._indent, item.name), end='\n\n')
+                self._print_groups(cat_id)
 
-                        # Changed items
-                        for old, new in self.changed_types_iter(grp_id):
-                            if old.group_id != new.group_id:
-                                # If some item was moved from one group to another, it was added
-                                # to both; here we print only small notice in group from which it
-                                # was moved, and full data in target group
-                                if old.group_id == grp_id:
-                                    new_grp = self.dl.get_group_name(new.group_id)
-                                    new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
-                                    print('{}[*] {} (moved to {} > {})'.format(self._indent, new.name, new_cat, new_grp), end='\n\n')
-                                    continue
-                                else:
-                                    old_grp = self.dl.get_group_name(old.group_id)
-                                    old_cat = self.dl.get_category_name(self.dl.get_group_category((old.group_id)))
-                                    suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
-                            else:
-                                suffix = ''
-                            print('{}[*] {}{}'.format(self._indent, new.name, suffix))
-                            with moreindent(self):
-                                if old.attributes != new.attributes:
-                                    print('{}Attributes:'.format(self._indent))
-                                    attrid_rmvd = set(old.attributes).difference(new.attributes)
-                                    attrid_changed = set(filter(lambda i: old.attributes[i] != new.attributes[i], set(new.attributes).intersection(old.attributes)))
-                                    attrid_add = set(new.attributes).difference(old.attributes)
-                                    for attr_id in sorted(attrid_rmvd.union(attrid_changed).union(attrid_add), key=self.dl.get_attr_name):
-                                        with moreindent(self):
-                                            attr_name = self.dl.get_attr_name(attr_id)
-                                            if attr_id in attrid_rmvd:
-                                                attr_val = old.attributes[attr_id]
-                                                print('{}[-] {}: {}'.format(self._indent, attr_name, attr_val))
-                                            if attr_id in attrid_changed:
-                                                attr_val_old = old.attributes[attr_id]
-                                                attr_val_new = new.attributes[attr_id]
-                                                print('{}[*] {}: {} => {}'.format(self._indent, attr_name, attr_val_old, attr_val_new))
-                                            if attr_id in attrid_add:
-                                                attr_val = new.attributes[attr_id]
-                                                print('{}[+] {}: {}'.format(self._indent, attr_name, attr_val))
-                                if old.effects != new.effects:
-                                    print('{}Effects:'.format(self._indent))
-                                    with moreindent(self):
-                                        eff_rmvd = set(old.effects).difference(new.effects)
-                                        eff_add = set(new.effects).difference(old.effects)
-                                        for eff_id in sorted(eff_rmvd.union(eff_add), key=self.dl.get_effect_name):
-                                            eff_name = self.dl.get_effect_name(eff_id)
-                                            if eff_id in eff_rmvd:
-                                                print('{}[-] {}'.format(self._indent, eff_name))
-                                            if eff_id in eff_add:
-                                                print('{}[+] {}'.format(self._indent, eff_name))
-                                if old.market_group_id != new.market_group_id:
-                                    print('{}Market group:'.format(self._indent))
-                                    with moreindent(self):
-                                        mktgrp_old = self.get_market_path(old)
-                                        mktgrp_new = self.get_market_path(new)
-                                        print('{}From: {}'.format(self._indent, mktgrp_old))
-                                        print('{}To: {}'.format(self._indent, mktgrp_new))
-                                if old.published != new.published:
-                                    print('{}Published flag:'.format(self._indent))
-                                    with moreindent(self):
-                                        print('{}{} => {}'.format(self._indent, bool(old.published), bool(new.published)))
+    def _print_groups(self, cat_id):
+        """
+        Print data for all groups which belong to passed
+        category.
+        """
+        for grp_id, grp_name in self._iter_group(cat_id):
+            print('{}Group: {}'.format(self._indent, grp_name), end='\n\n')
+            with moreindent(self):
+                self._print_items_removed(grp_id)
+                self._print_items_changed(grp_id)
+                self._print_items_added(grp_id)
 
-                                print()
+    def _print_items_removed(self, grp_id):
+        """
+        Print data for all removed items belonging to
+        passed group.
+        """
+        for item in self._iter_types_removed(grp_id):
+            print('{}[-] {}'.format(self._indent, item.name), end='\n\n')
+            print()
 
-                        # Added items
-                        for item in self.added_types_iter(grp_id):
-                            print('{}[+] {}'.format(self._indent, item.name))
-                            with moreindent(self):
-                                attribs = tuple(self.attrib_iter(item))
-                                if attribs:
-                                    print('{}Attributes:'.format(self._indent))
-                                    with moreindent(self):
-                                        for attr_name, attr_val in attribs:
-                                            print('{}{}: {}'.format(self._indent, attr_name, attr_val))
-                                effects = tuple(self.effect_iter(item))
-                                if effects:
-                                    print('{}Effects:'.format(self._indent))
-                                    with moreindent(self):
-                                        for eff_name in effects:
-                                            print('{}{}'.format(self._indent, eff_name))
-                                mkt_path = self.get_market_path(item)
-                                if mkt_path is not None:
-                                    print('{}Market group:'.format(self._indent))
-                                    with moreindent(self):
-                                        print('{}{}'.format(self._indent, mkt_path))
-                                print('{}Published flag:'.format(self._indent))
-                                with moreindent(self):
-                                    print('{}{}'.format(self._indent, bool(item.published)))
-                                print()
+    def _print_items_changed(self, grp_id):
+        """
+        Print data for all changed items belonging to
+        passed group.
+        """
+        for old, new in self._iter_types_changed(grp_id):
+            if old.group_id != new.group_id:
+                # When item was moved from current group to another, print just
+                # short notice about it, no details...
+                if old.group_id == grp_id:
+                    new_grp = self.dl.get_group_name(new.group_id)
+                    new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
+                    print('{}[*] {} (moved to {} > {})'.format(self._indent, new.name, new_cat, new_grp), end='\n\n')
+                    continue
+                # ...and details are written in the target group
+                else:
+                    old_grp = self.dl.get_group_name(old.group_id)
+                    old_cat = self.dl.get_category_name(self.dl.get_group_category((old.group_id)))
+                    suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
+            else:
+                suffix = ''
+            print('{}[*] {}{}'.format(self._indent, new.name, suffix))
+            with moreindent(self):
+                self._print_attrs_comparison(old, new)
+                self._print_effects_comparison(old, new)
+                self._print_market_group_comparison(old, new)
+                self._print_published_comparison(old, new)
+            print()
+
+    def _print_items_added(self, grp_id):
+        """
+        Print data for all added items belonging to
+        passed group.
+        """
+        for item in self._iter_types_added(grp_id):
+            print('{}[+] {}'.format(self._indent, item.name))
+            with moreindent(self):
+                self._print_attrs(item)
+                self._print_effects(item)
+                self._print_market_group(item)
+                self._print_published(item)
+            print()
+
+    def _print_attrs(self, item):
+        """
+        Print attributes for single item.
+        """
+        attribs = tuple(self._iter_attrib(item))
+        if attribs:
+            print('{}Attributes:'.format(self._indent))
+            with moreindent(self):
+                for attr_name, attr_val in attribs:
+                    print('{}{}: {}'.format(self._indent, attr_name, attr_val))
+
+    def _print_attrs_comparison(self, old, new):
+        """
+        Print attribute comparison for two items.
+        """
+        if old.attributes != new.attributes:
+            print('{}Attributes:'.format(self._indent))
+            attrid_rmvd = set(old.attributes).difference(new.attributes)
+            attrid_changed = set(filter(lambda i: old.attributes[i] != new.attributes[i], set(new.attributes).intersection(old.attributes)))
+            attrid_add = set(new.attributes).difference(old.attributes)
+            for attr_id in sorted(attrid_rmvd.union(attrid_changed).union(attrid_add), key=self._dl.get_attr_name):
+                with moreindent(self):
+                    attr_name = self._dl.get_attr_name(attr_id)
+                    if attr_id in attrid_rmvd:
+                        attr_val = old.attributes[attr_id]
+                        print('{}[-] {}: {}'.format(self._indent, attr_name, attr_val))
+                    if attr_id in attrid_changed:
+                        attr_val_old = old.attributes[attr_id]
+                        attr_val_new = new.attributes[attr_id]
+                        print('{}[*] {}: {} => {}'.format(self._indent, attr_name, attr_val_old, attr_val_new))
+                    if attr_id in attrid_add:
+                        attr_val = new.attributes[attr_id]
+                        print('{}[+] {}: {}'.format(self._indent, attr_name, attr_val))
+
+    def _print_effects(self, item):
+        """
+        Print effects for single item.
+        """
+        effects = tuple(self._iter_effect(item))
+        if effects:
+            print('{}Effects:'.format(self._indent))
+            with moreindent(self):
+                for eff_name in effects:
+                    print('{}{}'.format(self._indent, eff_name))
+
+    def _print_effects_comparison(self, old, new):
+        """
+        Print effect comparison for two items.
+        """
+        if old.effects != new.effects:
+            print('{}Effects:'.format(self._indent))
+            with moreindent(self):
+                eff_rmvd = set(old.effects).difference(new.effects)
+                eff_add = set(new.effects).difference(old.effects)
+                for eff_id in sorted(eff_rmvd.union(eff_add), key=self._dl.get_effect_name):
+                    eff_name = self._dl.get_effect_name(eff_id)
+                    if eff_id in eff_rmvd:
+                        print('{}[-] {}'.format(self._indent, eff_name))
+                    if eff_id in eff_add:
+                        print('{}[+] {}'.format(self._indent, eff_name))
+
+    def _print_market_group(self, item):
+        """
+        Print market group for single item.
+        """
+        mkt_path = self._get_market_path(item)
+        if mkt_path is not None:
+            print('{}Market group:'.format(self._indent))
+            with moreindent(self):
+                print('{}{}'.format(self._indent, mkt_path))
+
+    def _print_market_group_comparison(self, old, new):
+        """
+        Print market group comparison for two items.
+        """
+        if old.market_group_id != new.market_group_id:
+            print('{}Market group:'.format(self._indent))
+            with moreindent(self):
+                mktgrp_old = self._get_market_path(old)
+                mktgrp_new = self._get_market_path(new)
+                print('{}From: {}'.format(self._indent, mktgrp_old))
+                print('{}To: {}'.format(self._indent, mktgrp_new))
+
+    def _print_published(self, item):
+        """
+        Print published flag for single item.
+        """
+        print('{}Published flag:'.format(self._indent))
+        with moreindent(self):
+            print('{}{}'.format(self._indent, bool(item.published)))
+
+    def _print_published_comparison(self, old, new):
+        """
+        Print published flag comparison for two items.
+        """
+        if old.published != new.published:
+            print('{}Published flag:'.format(self._indent))
+            with moreindent(self):
+                print('{}{} => {}'.format(self._indent, bool(old.published), bool(new.published)))
 
 
 if __name__ == '__main__':
@@ -527,7 +609,4 @@ if __name__ == '__main__':
     path_new = os.path.expanduser(args.new)
 
     dl = DataLoader(path_old, path_new)
-    TextPrinter(dl, published_only=False, indent_increment=2).fake_run()
-
-
-
+    TextPrinter(dl, published_only=True, indent_increment=2).run()
