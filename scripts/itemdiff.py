@@ -126,14 +126,14 @@ class DataLoader:
                     continue
                 item.effects.append(row['effectID'])
 
-    def get_removed_items(self, published_only):
-        typeids_old = self._get_old_typeids(published_only)
-        typeids_new = self._get_new_typeids(published_only)
+    def get_removed_items(self, unpublished):
+        typeids_old = self._get_old_typeids(unpublished)
+        typeids_new = self._get_new_typeids(unpublished)
         return dict((tid, self.items_old[tid]) for tid in typeids_old.difference(typeids_new))
 
-    def get_changed_items(self, published_only):
-        typeids_old = self._get_old_typeids(published_only)
-        typeids_new = self._get_new_typeids(published_only)
+    def get_changed_items(self, unpublished):
+        typeids_old = self._get_old_typeids(unpublished)
+        typeids_new = self._get_new_typeids(unpublished)
         changed_items = {}
         for type_id in typeids_old.intersection(typeids_new):
             type_old = self.items_old[type_id]
@@ -142,22 +142,22 @@ class DataLoader:
                 changed_items[type_id] = ChangedItem(old=type_old, new=type_new)
         return changed_items
 
-    def get_added_items(self, published_only):
-        typeids_old = self._get_old_typeids(published_only)
-        typeids_new = self._get_new_typeids(published_only)
+    def get_added_items(self, unpublished):
+        typeids_old = self._get_old_typeids(unpublished)
+        typeids_new = self._get_new_typeids(unpublished)
         return dict((tid, self.items_new[tid]) for tid in typeids_new.difference(typeids_old))
 
-    def _get_old_typeids(self, published_only):
-        if published_only:
-            return set(filter(lambda i: self.items_old[i].published, self.items_old))
-        else:
+    def _get_old_typeids(self, unpublished):
+        if unpublished:
             return set(self.items_old)
-
-    def _get_new_typeids(self, published_only):
-        if published_only:
-            return set(filter(lambda i: self.items_new[i].published, self.items_new))
         else:
+            return set(filter(lambda i: self.items_old[i].published, self.items_old))
+
+    def _get_new_typeids(self, unpublished):
+        if unpublished:
             return set(self.items_new)
+        else:
+            return set(filter(lambda i: self.items_new[i].published, self.items_new))
 
     # Methods related to mapping groups onto categories
 
@@ -304,9 +304,9 @@ class DataLoader:
 
 class PrinterSkeleton:
 
-    def __init__(self, data_loader, published_only=False):
+    def __init__(self, data_loader, unpublished):
         self._dl = data_loader
-        self._changes = self._get_changes_summary(published_only=published_only)
+        self._changes = self._get_changes_summary(unpublished)
 
     def _iter_category(self):
         """
@@ -384,7 +384,7 @@ class PrinterSkeleton:
         mkt_path = ' > '.join(self._dl.get_mktgrp_name(i) for i in reversed(self._dl.get_market_path(mktgrp)))
         return mkt_path
 
-    def _get_changes_summary(self, published_only):
+    def _get_changes_summary(self, unpublished):
         """
         Convert data exposed by loader into format specific for printing
         logic we're using - top-level sections are categories, then groups
@@ -394,9 +394,9 @@ class PrinterSkeleton:
         Changed: {type ID: (old type, new type)}
         """
         changes = {}
-        removed = self._dl.get_removed_items(published_only)
-        changed = self._dl.get_changed_items(published_only)
-        added = self._dl.get_added_items(published_only)
+        removed = self._dl.get_removed_items(unpublished)
+        changed = self._dl.get_changed_items(unpublished)
+        added = self._dl.get_added_items(unpublished)
         for grp_id in self._dl.group_iter():
             # Check which items were changed for this particular group
             filfunc = lambda i: removed[i].group_id == grp_id
@@ -434,8 +434,8 @@ class TextPrinter(PrinterSkeleton):
     Print item changes as text.
     """
 
-    def __init__(self, data_loader, published_only, indent_increment):
-        PrinterSkeleton.__init__(self, data_loader, published_only)
+    def __init__(self, data_loader, unpublished, indent_increment):
+        PrinterSkeleton.__init__(self, data_loader, unpublished)
         self._indent_length = 0
         self._indent_increment = indent_increment
 
@@ -648,10 +648,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
     parser.add_argument('-o', '--old', help='path to phobos JSON dump with old data', required=True)
     parser.add_argument('-n', '--new', help='path to phobos JSON dump with new data', required=True)
+    parser.add_argument('-a', '--all', help='print data for all items, not just published', required=False, default=False, action='store_true')
     args = parser.parse_args()
 
     path_old = os.path.expanduser(args.old)
     path_new = os.path.expanduser(args.new)
 
     dl = DataLoader(path_old, path_new)
-    TextPrinter(dl, published_only=False, indent_increment=2).run()
+    TextPrinter(dl, unpublished=args.all, indent_increment=2).run()
