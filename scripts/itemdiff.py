@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-import datetime
 import enum
 import json
 import os.path
 from collections import namedtuple
+from datetime import datetime, timedelta, timezone
 
 
 ChangedItem = namedtuple('ChangedItem', ('old', 'new'))
@@ -456,16 +456,17 @@ class TextPrinter(PrinterSkeleton):
         return ' ' * self._indent_length
 
     def _print_metadata(self):
-        ver_old = self._dl.version_old
-        ver_new = self._dl.version_new
-        tz_utc = datetime.timezone(datetime.timedelta())
+        """
+        Print version and timestamp info about dumps being compared.
+        """
+        tz_utc = timezone(timedelta())
         time_fmt = '%Y-%m-%d %H:%M:%S'
-        time_old = datetime.datetime.fromtimestamp(self._dl.timestamp_old, tz=tz_utc).strftime(time_fmt)
-        time_new = datetime.datetime.fromtimestamp(self._dl.timestamp_new, tz=tz_utc).strftime(time_fmt)
+        time_old = datetime.fromtimestamp(self._dl.timestamp_old, tz=tz_utc).strftime(time_fmt)
+        time_new = datetime.fromtimestamp(self._dl.timestamp_new, tz=tz_utc).strftime(time_fmt)
         print('{}Comparing EVE client versions:'.format(self._indent))
         with moreindent(self):
-            print('{}{} (data extracted at {})'.format(self._indent, ver_old, time_old))
-            print('{}{} (data extracted at {})'.format(self._indent, ver_new, time_new))
+            print('{}{} (data extracted at {})'.format(self._indent, self._dl.version_old, time_old))
+            print('{}{} (data extracted at {})'.format(self._indent, self._dl.version_new, time_new))
         print()
 
     def _print_categories(self):
