@@ -609,4 +609,4 @@ if __name__ == '__main__':
     path_new = os.path.expanduser(args.new)
 
     dl = DataLoader(path_old, path_new)
-    TextPrinter(dl, published_only=True, indent_increment=2).run()
+    TextPrinter(dl, published_only=False, indent_increment=2).run()
