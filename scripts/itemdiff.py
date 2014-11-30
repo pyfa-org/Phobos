@@ -32,7 +32,8 @@ class Type(Container):
         self.market_group_id = None
         self.attributes = {}
         self.effects = []
-        self.materials_repr = {}
+        self.mats_build = {}
+        self.mats_reprocess = {}
         Container.__init__(self, **kwargs)
 
     def __eq__(self, o):
@@ -44,7 +45,8 @@ class Type(Container):
             self.market_group_id != o.market_group_id or
             self.attributes != o.attributes or
             self.effects != o.effects or
-            self.materials_repr != o.materials_repr
+            self.mats_build != o.mats_build or
+            self.mats_reprocess != o.mats_reprocess
         ):
             return False
         else:
@@ -67,6 +69,10 @@ class DataLoader:
     def __init__(self, path_old, path_new):
         self.path_old = path_old
         self.path_new = path_new
+        # Group-category relations
+        self.group_cat_old = {}
+        self.group_cat_new = {}
+        self.load_group_categories()
         # Items
         self.items_old = {}
         self.items_new = {}
@@ -75,10 +81,6 @@ class DataLoader:
         self.names_old = {}
         self.names_new = {}
         self.load_name_data()
-        # Group-category relations
-        self.group_cat_old = {}
-        self.group_cat_new = {}
-        self.load_group_categories()
         # Market group full paths
         self.market_path_old = {}
         self.market_path_new = {}
@@ -89,6 +91,22 @@ class DataLoader:
         self.timestamp_old = None
         self.timestamp_new = None
         self.load_metadata()
+
+    # Methods related to mapping groups onto categories
+
+    def load_group_categories(self):
+        for base_path, group_cat in (
+            (self.path_old, self.group_cat_old),
+            (self.path_new, self.group_cat_new)
+        ):
+            for row in self.get_file(base_path, 'invgroups'):
+                group_cat[row['groupID']] = row['categoryID']
+
+    def get_group_category(self, group_id):
+        try:
+            return self.group_cat_new[group_id]
+        except KeyError:
+            return self.group_cat_old[group_id]
 
     # Item-related methods
 
@@ -128,14 +146,30 @@ class DataLoader:
                     continue
                 item.effects.append(row['effectID'])
 
-            for material_rows in self.get_file(base_path, 'invtypematerials').values():
-                for row in material_rows:
+            for bp_data in self.get_file(base_path, 'blueprints').values():
+                bp_activities = bp_data['activities']
+                try:
+                    mat_data = bp_activities['manufacturing']['materials']
+                    prod_data = bp_activities['manufacturing']['products'][0]
+                except (KeyError, IndexError):
+                    continue
+                prod_type_id = prod_data['typeID']
+                for row in mat_data:
+                    try:
+                        prod_item = items[prod_type_id]
+                    except KeyError:
+                        continue
+                    prod_item.mats_build[row['typeID']] = row['quantity']
+
+            for reprocess_rows in self.get_file(base_path, 'invtypematerials').values():
+                for row in reprocess_rows:
                     type_id = row['typeID']
                     try:
                         item = items[type_id]
                     except KeyError:
                         continue
-                    item.materials_repr[row['materialTypeID']] = row['quantity']
+                    item.mats_reprocess[row['materialTypeID']] = row['quantity']
+
 
     def get_removed_items(self, unpublished):
         typeids_old = self._get_old_typeids(unpublished)
@@ -169,22 +203,6 @@ class DataLoader:
             return set(self.items_new)
         else:
             return set(filter(lambda i: self.items_new[i].published, self.items_new))
-
-    # Methods related to mapping groups onto categories
-
-    def load_group_categories(self):
-        for base_path, group_cat in (
-            (self.path_old, self.group_cat_old),
-            (self.path_new, self.group_cat_new)
-        ):
-            for row in self.get_file(base_path, 'invgroups'):
-                group_cat[row['groupID']] = row['categoryID']
-
-    def get_group_category(self, group_id):
-        try:
-            return self.group_cat_new[group_id]
-        except KeyError:
-            return self.group_cat_old[group_id]
 
     # Market-related methods
 
@@ -400,14 +418,24 @@ class PrinterSkeleton:
             eff_name = self._dl.get_effect_name(eff_id)
             yield eff_name
 
-    def _iter_materials_repr(self, item):
+    def _iter_materials_reprocess(self, item):
         """
         Iterate over materials and quantities you receive
         after reprocessing passed item.
         """
-        for mat_id in sorted(item.materials_repr, key=self._dl.get_type_name):
+        for mat_id in sorted(item.mats_reprocess, key=self._dl.get_type_name):
             mat_name = self._dl.get_type_name(mat_id)
-            mat_amt = item.materials_repr[mat_id]
+            mat_amt = item.mats_reprocess[mat_id]
+            yield mat_name, mat_amt
+
+    def _iter_materials_build(self, item):
+        """
+        Iterate over materials and quantities you spend
+        to build passed item.
+        """
+        for mat_id in sorted(item.mats_build, key=self._dl.get_type_name):
+            mat_name = self._dl.get_type_name(mat_id)
+            mat_amt = item.mats_build[mat_id]
             yield mat_name, mat_amt
 
     def _get_market_path(self, item):
@@ -559,11 +587,11 @@ class TextPrinter(PrinterSkeleton):
                 suffix = ''
             print('{}[*] {}{}'.format(self._indent, new.name, suffix))
             with moreindent(self):
-                self._print_effects_comparison(old, new)
-                self._print_attrs_comparison(old, new)
-                self._print_materials_comparison(old, new)
-                self._print_market_group_comparison(old, new)
-                self._print_published_comparison(old, new)
+                self._print_item_effects_comparison(old, new)
+                self._print_item_attrs_comparison(old, new)
+                self._print_item_materials_comparison(old, new)
+                self._print_item_market_group_comparison(old, new)
+                self._print_item_published_comparison(old, new)
             print()
 
     def _print_items_added(self, grp_id):
@@ -574,14 +602,14 @@ class TextPrinter(PrinterSkeleton):
         for item in self._iter_types_added(grp_id):
             print('{}[+] {}'.format(self._indent, item.name))
             with moreindent(self):
-                self._print_effects(item)
-                self._print_attrs(item)
-                self._print_materials(item)
-                self._print_market_group(item)
-                self._print_published(item)
+                self._print_item_effects(item)
+                self._print_item_attrs(item)
+                self._print_item_materials(item)
+                self._print_item_market_group(item)
+                self._print_item_published(item)
             print()
 
-    def _print_effects(self, item):
+    def _print_item_effects(self, item):
         """
         Print effects for single item.
         """
@@ -592,7 +620,7 @@ class TextPrinter(PrinterSkeleton):
                 for eff_name in effects:
                     print('{}{}'.format(self._indent, eff_name))
 
-    def _print_effects_comparison(self, old, new):
+    def _print_item_effects_comparison(self, old, new):
         """
         Print effect comparison for two items.
         """
@@ -608,7 +636,7 @@ class TextPrinter(PrinterSkeleton):
                     if eff_id in eff_add:
                         print('{}[+] {}'.format(self._indent, eff_name))
 
-    def _print_attrs(self, item):
+    def _print_item_attrs(self, item):
         """
         Print attributes for single item.
         """
@@ -617,9 +645,9 @@ class TextPrinter(PrinterSkeleton):
             print('{}Attributes:'.format(self._indent))
             with moreindent(self):
                 for attr_name, attr_val in attribs:
-                    print('{}{}: {}'.format(self._indent, attr_name, attr_val))
+                    print('{}{}: {}'.format(self._indent, attr_name, self._fti(attr_val)))
 
-    def _print_attrs_comparison(self, old, new):
+    def _print_item_attrs_comparison(self, old, new):
         """
         Print attribute comparison for two items.
         """
@@ -641,40 +669,51 @@ class TextPrinter(PrinterSkeleton):
                 name = key_name_fetcher(key)
                 if key in keys_rmvd:
                     value = old[key]
-                    print('{}[-] {}: {}'.format(self._indent, name, value))
+                    print('{}[-] {}: {}'.format(self._indent, name, self._fti(value)))
                 if key in keys_changed:
                     value_old = old[key]
                     value_new = new[key]
-                    print('{}[*] {}: {} => {}'.format(self._indent, name, value_old, value_new))
+                    print('{}[*] {}: {} => {}'.format(self._indent, name, self._fti(value_old), self._fti(value_new)))
                 if key in keys_added:
                     value = new[key]
-                    print('{}[+] {}: {}'.format(self._indent, name, value))
+                    print('{}[+] {}: {}'.format(self._indent, name, self._fti(value)))
 
-    def _print_materials(self, item):
+    def _print_item_materials(self, item):
         """
         Print materials you receive from reprocessing and materials
         you need to build passed item.
         """
-        reprocessing = tuple(self._iter_materials_repr(item))
-        if reprocessing:
+        building = tuple(self._iter_materials_build(item))
+        reprocessing = tuple(self._iter_materials_reprocess(item))
+        if reprocessing or building:
             print('{}Materials:'.format(self._indent))
             with moreindent(self):
-                print('{}Reprocessing:'.format(self._indent))
-                with moreindent(self):
-                    for mat_name, mat_amt in reprocessing:
-                        print('{}{}: {}'.format(self._indent, mat_name, mat_amt))
+                if building:
+                    print('{}Construction:'.format(self._indent))
+                    with moreindent(self):
+                        for mat_name, mat_amt in building:
+                            print('{}{}: {}'.format(self._indent, mat_name, self._fti(mat_amt)))
+                if reprocessing:
+                    print('{}Reprocessing:'.format(self._indent))
+                    with moreindent(self):
+                        for mat_name, mat_amt in reprocessing:
+                            print('{}{}: {}'.format(self._indent, mat_name, self._fti(mat_amt)))
 
-    def _print_materials_comparison(self, old, new):
+    def _print_item_materials_comparison(self, old, new):
         """
         Print reprocessing/construction materials comparison for two items.
         """
-        if old.materials_repr != new.materials_repr:
+        if old.mats_build != new.mats_build or old.mats_reprocess != new.mats_reprocess:
             print('{}Materials:'.format(self._indent))
             with moreindent(self):
-                print('{}Reprocessing:'.format(self._indent))
-                self._print_dict_comparison(old.materials_repr, new.materials_repr, self._dl.get_type_name)
+                if old.mats_build != new.mats_build:
+                    print('{}Construction:'.format(self._indent))
+                    self._print_dict_comparison(old.mats_build, new.mats_build, self._dl.get_type_name)
+                if old.mats_reprocess != new.mats_reprocess:
+                    print('{}Reprocessing:'.format(self._indent))
+                    self._print_dict_comparison(old.mats_reprocess, new.mats_reprocess, self._dl.get_type_name)
 
-    def _print_market_group(self, item):
+    def _print_item_market_group(self, item):
         """
         Print market group for single item.
         """
@@ -684,7 +723,7 @@ class TextPrinter(PrinterSkeleton):
             with moreindent(self):
                 print('{}{}'.format(self._indent, mkt_path))
 
-    def _print_market_group_comparison(self, old, new):
+    def _print_item_market_group_comparison(self, old, new):
         """
         Print market group comparison for two items.
         """
@@ -696,7 +735,7 @@ class TextPrinter(PrinterSkeleton):
                 print('{}From: {}'.format(self._indent, mktgrp_old))
                 print('{}To: {}'.format(self._indent, mktgrp_new))
 
-    def _print_published(self, item):
+    def _print_item_published(self, item):
         """
         Print published flag for single item.
         """
@@ -704,7 +743,7 @@ class TextPrinter(PrinterSkeleton):
         with moreindent(self):
             print('{}{}'.format(self._indent, bool(item.published)))
 
-    def _print_published_comparison(self, old, new):
+    def _print_item_published_comparison(self, old, new):
         """
         Print published flag comparison for two items.
         """
@@ -712,6 +751,15 @@ class TextPrinter(PrinterSkeleton):
             print('{}Published flag:'.format(self._indent))
             with moreindent(self):
                 print('{}{} => {}'.format(self._indent, bool(old.published), bool(new.published)))
+
+    def _fti(self, num):
+        """
+        Convert float to int if equal.
+        """
+        if int(num) == num:
+            return int(num)
+        else:
+            return num
 
 
 if __name__ == '__main__':
