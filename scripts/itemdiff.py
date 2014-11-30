@@ -32,6 +32,7 @@ class Type(Container):
         self.market_group_id = None
         self.attributes = {}
         self.effects = []
+        self.materials = {}
         Container.__init__(self, **kwargs)
 
     def __eq__(self, o):
@@ -42,7 +43,8 @@ class Type(Container):
             self.group_id != o.group_id or
             self.market_group_id != o.market_group_id or
             self.attributes != o.attributes or
-            self.effects != o.effects
+            self.effects != o.effects or
+            self.materials != o.materials
         ):
             return False
         else:
@@ -125,6 +127,15 @@ class DataLoader:
                 except KeyError:
                     continue
                 item.effects.append(row['effectID'])
+
+            for material_rows in self.get_file(base_path, 'invtypematerials').values():
+                for row in material_rows:
+                    type_id = row['typeID']
+                    try:
+                        item = items[type_id]
+                    except KeyError:
+                        continue
+                    item.materials[row['materialTypeID']] = row['quantity']
 
     def get_removed_items(self, unpublished):
         typeids_old = self._get_old_typeids(unpublished)
@@ -310,8 +321,7 @@ class PrinterSkeleton:
 
     def _iter_category(self, cat_list):
         """
-        Iterate through all category IDs of categories
-        which contain changed items.
+        Iterate over all categories which contain changed items.
 
         Required arguments:
         cat_list -- list with category names, when not empty
@@ -331,8 +341,8 @@ class PrinterSkeleton:
 
     def _iter_group(self, cat_id):
         """
-        Iterate over group IDs of groups which contain
-        changed items and belong to certain category.
+        Iterate over groups which contain changed items
+        and belong to certain category.
         """
         grp_ids = set(filter(lambda grp_id: self._dl.get_group_category(grp_id) == cat_id, self._changes))
         for grp_id in sorted(grp_ids, key=self._dl.get_group_name):
@@ -341,7 +351,7 @@ class PrinterSkeleton:
 
     def _iter_types_removed(self, grp_id):
         """
-        Iterate through all types which have been
+        Iterate over all types which have been
         removed and belonged to given group.
         """
         removed = self._changes[grp_id].removed
@@ -367,7 +377,7 @@ class PrinterSkeleton:
         for type_ in sorted(added.values(), key=lambda t: t.name):
             yield type_
 
-    def _iter_attrib(self, item):
+    def _iter_attribs(self, item):
         """
         Iterate over attribute names and values of passed item.
         """
@@ -376,13 +386,23 @@ class PrinterSkeleton:
             attr_val = item.attributes[attr_id]
             yield attr_name, attr_val
 
-    def _iter_effect(self, item):
+    def _iter_effects(self, item):
         """
         Iterate over effect names of passed item.
         """
         for eff_id in sorted(item.effects, key=self._dl.get_effect_name):
             eff_name = self._dl.get_effect_name(eff_id)
             yield eff_name
+
+    def _iter_materials(self, item):
+        """
+        Iterate over materials and quantities required
+        to construct passed item.
+        """
+        for mat_id in sorted(item.materials, key=self._dl.get_type_name):
+            mat_name = self._dl.get_type_name(mat_id)
+            mat_amt = item.materials[mat_id]
+            yield mat_name, mat_amt
 
     def _get_market_path(self, item):
         """
@@ -533,8 +553,9 @@ class TextPrinter(PrinterSkeleton):
                 suffix = ''
             print('{}[*] {}{}'.format(self._indent, new.name, suffix))
             with moreindent(self):
-                self._print_attrs_comparison(old, new)
                 self._print_effects_comparison(old, new)
+                self._print_attrs_comparison(old, new)
+                self._print_materials_comparison(old, new)
                 self._print_market_group_comparison(old, new)
                 self._print_published_comparison(old, new)
             print()
@@ -547,51 +568,18 @@ class TextPrinter(PrinterSkeleton):
         for item in self._iter_types_added(grp_id):
             print('{}[+] {}'.format(self._indent, item.name))
             with moreindent(self):
-                self._print_attrs(item)
                 self._print_effects(item)
+                self._print_attrs(item)
+                self._print_materials(item)
                 self._print_market_group(item)
                 self._print_published(item)
             print()
-
-    def _print_attrs(self, item):
-        """
-        Print attributes for single item.
-        """
-        attribs = tuple(self._iter_attrib(item))
-        if attribs:
-            print('{}Attributes:'.format(self._indent))
-            with moreindent(self):
-                for attr_name, attr_val in attribs:
-                    print('{}{}: {}'.format(self._indent, attr_name, attr_val))
-
-    def _print_attrs_comparison(self, old, new):
-        """
-        Print attribute comparison for two items.
-        """
-        if old.attributes != new.attributes:
-            print('{}Attributes:'.format(self._indent))
-            attrid_rmvd = set(old.attributes).difference(new.attributes)
-            attrid_changed = set(filter(lambda i: old.attributes[i] != new.attributes[i], set(new.attributes).intersection(old.attributes)))
-            attrid_add = set(new.attributes).difference(old.attributes)
-            for attr_id in sorted(attrid_rmvd.union(attrid_changed).union(attrid_add), key=self._dl.get_attr_name):
-                with moreindent(self):
-                    attr_name = self._dl.get_attr_name(attr_id)
-                    if attr_id in attrid_rmvd:
-                        attr_val = old.attributes[attr_id]
-                        print('{}[-] {}: {}'.format(self._indent, attr_name, attr_val))
-                    if attr_id in attrid_changed:
-                        attr_val_old = old.attributes[attr_id]
-                        attr_val_new = new.attributes[attr_id]
-                        print('{}[*] {}: {} => {}'.format(self._indent, attr_name, attr_val_old, attr_val_new))
-                    if attr_id in attrid_add:
-                        attr_val = new.attributes[attr_id]
-                        print('{}[+] {}: {}'.format(self._indent, attr_name, attr_val))
 
     def _print_effects(self, item):
         """
         Print effects for single item.
         """
-        effects = tuple(self._iter_effect(item))
+        effects = tuple(self._iter_effects(item))
         if effects:
             print('{}Effects:'.format(self._indent))
             with moreindent(self):
@@ -613,6 +601,67 @@ class TextPrinter(PrinterSkeleton):
                         print('{}[-] {}'.format(self._indent, eff_name))
                     if eff_id in eff_add:
                         print('{}[+] {}'.format(self._indent, eff_name))
+
+    def _print_attrs(self, item):
+        """
+        Print attributes for single item.
+        """
+        attribs = tuple(self._iter_attribs(item))
+        if attribs:
+            print('{}Attributes:'.format(self._indent))
+            with moreindent(self):
+                for attr_name, attr_val in attribs:
+                    print('{}{}: {}'.format(self._indent, attr_name, attr_val))
+
+    def _print_attrs_comparison(self, old, new):
+        """
+        Print attribute comparison for two items.
+        """
+        if old.attributes != new.attributes:
+            print('{}Attributes:'.format(self._indent))
+            self._print_dict_comparison(old.attributes, new.attributes, self._dl.get_attr_name)
+
+    def _print_dict_comparison(self, old, new, key_name_fetcher):
+        """
+        Take two dictionaries in {entity ID: entity value} format
+        and name fetcher, and print human-friendly diff between
+        them.
+        """
+        keys_rmvd = set(old).difference(new)
+        keys_changed = set(filter(lambda i: old[i] != new[i], set(new).intersection(old)))
+        keys_added = set(new).difference(old)
+        for key in sorted(keys_rmvd.union(keys_changed).union(keys_added), key=key_name_fetcher):
+            with moreindent(self):
+                name = key_name_fetcher(key)
+                if key in keys_rmvd:
+                    value = old[key]
+                    print('{}[-] {}: {}'.format(self._indent, name, value))
+                if key in keys_changed:
+                    value_old = old[key]
+                    value_new = new[key]
+                    print('{}[*] {}: {} => {}'.format(self._indent, name, value_old, value_new))
+                if key in keys_added:
+                    value = new[key]
+                    print('{}[+] {}: {}'.format(self._indent, name, value))
+
+    def _print_materials(self, item):
+        """
+        Print materials needed to build single item.
+        """
+        materials = tuple(self._iter_materials(item))
+        if materials:
+            print('{}Materials:'.format(self._indent))
+            with moreindent(self):
+                for mat_name, mat_amt in materials:
+                    print('{}{}: {}'.format(self._indent, mat_name, mat_amt))
+
+    def _print_materials_comparison(self, old, new):
+        """
+        Print construction materials comparison for two items.
+        """
+        if old.materials != new.materials:
+            print('{}Materials:'.format(self._indent))
+            self._print_dict_comparison(old.materials, new.materials, self._dl.get_type_name)
 
     def _print_market_group(self, item):
         """
