@@ -536,7 +536,7 @@ class TextPrinter(PrinterSkeleton):
 
     def _print_categories(self, cat_list):
         """
-        Print data for all categories.
+        Print diff data for items from all categories.
         """
         for cat_id, cat_name in self._iter_category(cat_list):
             print('{}Category: {}'.format(self._indent, cat_name), end='\n\n')
@@ -545,8 +545,8 @@ class TextPrinter(PrinterSkeleton):
 
     def _print_groups(self, cat_id):
         """
-        Print data for all groups which belong to passed
-        category.
+        Print diff data for items from all groups which
+        belong to passed category.
         """
         for grp_id, grp_name in self._iter_group(cat_id):
             print('{}Group: {}'.format(self._indent, grp_name), end='\n\n')
@@ -570,13 +570,17 @@ class TextPrinter(PrinterSkeleton):
         passed group.
         """
         for old, new in self._iter_types_changed(grp_id):
+            if new.name != old.name:
+                name = '{} => {}'.format(old.name, new.name)
+            else:
+                name = new.name
             if old.group_id != new.group_id:
                 # When item was moved from current group to another, print just
                 # short notice about it, no details...
                 if old.group_id == grp_id:
                     new_grp = self.dl.get_group_name(new.group_id)
                     new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
-                    print('{}[*] {} (moved to {} > {})'.format(self._indent, new.name, new_cat, new_grp), end='\n\n')
+                    print('{}[*] {} (moved to {} > {})'.format(self._indent, name, new_cat, new_grp), end='\n\n')
                     continue
                 # ...and details are written in the target group
                 else:
@@ -585,7 +589,7 @@ class TextPrinter(PrinterSkeleton):
                     suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
             else:
                 suffix = ''
-            print('{}[*] {}{}'.format(self._indent, new.name, suffix))
+            print('{}[*] {}{}'.format(self._indent, name, suffix))
             with moreindent(self):
                 if process_effects:
                     self._print_item_effects_comparison(old, new)
