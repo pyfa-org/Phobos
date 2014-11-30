@@ -32,7 +32,7 @@ class Type(Container):
         self.market_group_id = None
         self.attributes = {}
         self.effects = []
-        self.materials = {}
+        self.materials_repr = {}
         Container.__init__(self, **kwargs)
 
     def __eq__(self, o):
@@ -44,7 +44,7 @@ class Type(Container):
             self.market_group_id != o.market_group_id or
             self.attributes != o.attributes or
             self.effects != o.effects or
-            self.materials != o.materials
+            self.materials_repr != o.materials_repr
         ):
             return False
         else:
@@ -135,7 +135,7 @@ class DataLoader:
                         item = items[type_id]
                     except KeyError:
                         continue
-                    item.materials[row['materialTypeID']] = row['quantity']
+                    item.materials_repr[row['materialTypeID']] = row['quantity']
 
     def get_removed_items(self, unpublished):
         typeids_old = self._get_old_typeids(unpublished)
@@ -269,29 +269,35 @@ class DataLoader:
             fields[name] = value
         return fields
 
-    def get_type_name(self, type_id):
-        return self.__get_name('types', type_id)
+    def get_type_name(self, type_id, prefer_old=False):
+        return self.__get_name('types', type_id, prefer_old)
 
-    def get_group_name(self, group_id):
-        return self.__get_name('groups', group_id)
+    def get_group_name(self, group_id, prefer_old=False):
+        return self.__get_name('groups', group_id, prefer_old)
 
-    def get_category_name(self, category_id):
-        return self.__get_name('categories', category_id)
+    def get_category_name(self, category_id, prefer_old=False):
+        return self.__get_name('categories', category_id, prefer_old)
 
-    def get_attr_name(self, attr_id):
-        return self.__get_name('attribs', attr_id)
+    def get_attr_name(self, attr_id, prefer_old=False):
+        return self.__get_name('attribs', attr_id, prefer_old)
 
-    def get_effect_name(self, effect_id):
-        return self.__get_name('effects', effect_id)
+    def get_effect_name(self, effect_id, prefer_old=False):
+        return self.__get_name('effects', effect_id, prefer_old)
 
-    def get_mktgrp_name(self, mktgrp_id):
-        return self.__get_name('market_groups', mktgrp_id)
+    def get_mktgrp_name(self, mktgrp_id, prefer_old=False):
+        return self.__get_name('market_groups', mktgrp_id, prefer_old)
 
-    def __get_name(self, alias, entity_id):
+    def __get_name(self, alias, entity_id, prefer_old):
+        if prefer_old:
+            d1 = self.names_old
+            d2 = self.names_new
+        else:
+            d1 = self.names_new
+            d2 = self.names_old
         try:
-            return self.names_new[alias][entity_id]
+            return d1[alias][entity_id]
         except KeyError:
-            return self.names_old[alias][entity_id]
+            return d2[alias][entity_id]
 
     # Auxiliary methods
 
@@ -394,14 +400,14 @@ class PrinterSkeleton:
             eff_name = self._dl.get_effect_name(eff_id)
             yield eff_name
 
-    def _iter_materials(self, item):
+    def _iter_materials_repr(self, item):
         """
-        Iterate over materials and quantities required
-        to construct passed item.
+        Iterate over materials and quantities you receive
+        after reprocessing passed item.
         """
-        for mat_id in sorted(item.materials, key=self._dl.get_type_name):
+        for mat_id in sorted(item.materials_repr, key=self._dl.get_type_name):
             mat_name = self._dl.get_type_name(mat_id)
-            mat_amt = item.materials[mat_id]
+            mat_amt = item.materials_repr[mat_id]
             yield mat_name, mat_amt
 
     def _get_market_path(self, item):
@@ -646,22 +652,27 @@ class TextPrinter(PrinterSkeleton):
 
     def _print_materials(self, item):
         """
-        Print materials needed to build single item.
+        Print materials you receive from reprocessing and materials
+        you need to build passed item.
         """
-        materials = tuple(self._iter_materials(item))
-        if materials:
+        reprocessing = tuple(self._iter_materials_repr(item))
+        if reprocessing:
             print('{}Materials:'.format(self._indent))
             with moreindent(self):
-                for mat_name, mat_amt in materials:
-                    print('{}{}: {}'.format(self._indent, mat_name, mat_amt))
+                print('{}Reprocessing:'.format(self._indent))
+                with moreindent(self):
+                    for mat_name, mat_amt in reprocessing:
+                        print('{}{}: {}'.format(self._indent, mat_name, mat_amt))
 
     def _print_materials_comparison(self, old, new):
         """
-        Print construction materials comparison for two items.
+        Print reprocessing/construction materials comparison for two items.
         """
-        if old.materials != new.materials:
+        if old.materials_repr != new.materials_repr:
             print('{}Materials:'.format(self._indent))
-            self._print_dict_comparison(old.materials, new.materials, self._dl.get_type_name)
+            with moreindent(self):
+                print('{}Reprocessing:'.format(self._indent))
+                self._print_dict_comparison(old.materials_repr, new.materials_repr, self._dl.get_type_name)
 
     def _print_market_group(self, item):
         """

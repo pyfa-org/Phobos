@@ -65,6 +65,3 @@ For example, Cambion traits in JSON format:
       }
     },
   ]
-
-todo list:
-- Reimplement few scripts to use phobos (item diff)
