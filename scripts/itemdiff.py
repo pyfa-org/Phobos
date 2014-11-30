@@ -39,14 +39,14 @@ class Type(Container):
     def __eq__(self, o):
         if (
             self.id != o.id or
-            self.published != o.published or
+            (process_pub is True and self.published != o.published) or
             self.name != o.name or
             self.group_id != o.group_id or
-            self.market_group_id != o.market_group_id or
-            self.attributes != o.attributes or
-            self.effects != o.effects or
-            self.mats_build != o.mats_build or
-            self.mats_reprocess != o.mats_reprocess
+            (process_mkt is True and self.market_group_id != o.market_group_id) or
+            (process_attrs is True and self.attributes != o.attributes) or
+            (process_effects is True and self.effects != o.effects) or
+            (process_mats is True and self.mats_build != o.mats_build) or
+            (process_mats is True and self.mats_reprocess != o.mats_reprocess)
         ):
             return False
         else:
@@ -587,11 +587,16 @@ class TextPrinter(PrinterSkeleton):
                 suffix = ''
             print('{}[*] {}{}'.format(self._indent, new.name, suffix))
             with moreindent(self):
-                self._print_item_effects_comparison(old, new)
-                self._print_item_attrs_comparison(old, new)
-                self._print_item_materials_comparison(old, new)
-                self._print_item_market_group_comparison(old, new)
-                self._print_item_published_comparison(old, new)
+                if process_effects:
+                    self._print_item_effects_comparison(old, new)
+                if process_attrs:
+                    self._print_item_attrs_comparison(old, new)
+                if process_mats:
+                    self._print_item_materials_comparison(old, new)
+                if process_mkt:
+                    self._print_item_market_group_comparison(old, new)
+                if process_pub:
+                    self._print_item_published_comparison(old, new)
             print()
 
     def _print_items_added(self, grp_id):
@@ -602,11 +607,16 @@ class TextPrinter(PrinterSkeleton):
         for item in self._iter_types_added(grp_id):
             print('{}[+] {}'.format(self._indent, item.name))
             with moreindent(self):
-                self._print_item_effects(item)
-                self._print_item_attrs(item)
-                self._print_item_materials(item)
-                self._print_item_market_group(item)
-                self._print_item_published(item)
+                if process_effects:
+                    self._print_item_effects(item)
+                if process_attrs:
+                    self._print_item_attrs(item)
+                if process_mats:
+                    self._print_item_materials(item)
+                if process_mkt:
+                    self._print_item_market_group(item)
+                if process_pub:
+                    self._print_item_published(item)
             print()
 
     def _print_item_effects(self, item):
@@ -769,7 +779,15 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--new', help='path to phobos JSON dump with new data', required=True)
     parser.add_argument('-a', '--all', help='print data for all items, not just published', default=False, action='store_true')
     parser.add_argument('-c', '--categories', help='comma-separated list of category names, for which data will be shown', default='')
+    parser.add_argument('-x', '--exclude', help='exclude some data from comparison, specified as string with letters; e - effects, a - attributes, m - materials, k - market groups, p - published flag', default='')
     args = parser.parse_args()
+
+    # Global flags which control diffs for which stuff is shown
+    process_effects = 'e' not in args.exclude
+    process_attrs = 'a' not in args.exclude
+    process_mats = 'm' not in args.exclude
+    process_mkt = 'k' not in args.exclude
+    process_pub = 'p' not in args.exclude
 
     path_old = os.path.expanduser(args.old)
     path_new = os.path.expanduser(args.new)
