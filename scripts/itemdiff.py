@@ -4,7 +4,7 @@ import argparse
 import enum
 import json
 import os.path
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta, timezone
 
 
@@ -39,14 +39,14 @@ class Type(Container):
     def __eq__(self, o):
         if (
             self.id != o.id or
-            (process_pub is True and self.published != o.published) or
+            (process_pub and self.published != o.published) or
             self.name != o.name or
             self.group_id != o.group_id or
-            (process_mkt is True and self.market_group_id != o.market_group_id) or
-            (process_attrs is True and self.attributes != o.attributes) or
-            (process_effects is True and self.effects != o.effects) or
-            (process_mats is True and self.mats_build != o.mats_build) or
-            (process_mats is True and self.mats_reprocess != o.mats_reprocess)
+            (process_mkt and self.market_group_id != o.market_group_id) or
+            (process_attrs and self.attributes != o.attributes) or
+            (process_effects and self.effects != o.effects) or
+            (process_mats and self.mats_build != o.mats_build) or
+            (process_mats and self.mats_reprocess != o.mats_reprocess)
         ):
             return False
         else:
@@ -328,13 +328,31 @@ class DataLoader:
             data = json.load(f)
         return data
 
-    def category_iter(self):
+    # Simple iterators over IDs of several entities
+
+    def iter_types(self):
+        for type_id in sorted(set(self.names_old['types']).union(self.names_new['types'])):
+            yield type_id
+
+    def iter_groups(self):
+        for group_id in sorted(set(self.names_old['groups']).union(self.names_new['groups'])):
+            yield group_id
+
+    def iter_categories(self):
         for category_id in sorted(set(self.names_old['categories']).union(self.names_new['categories'])):
             yield category_id
 
-    def group_iter(self):
-        for group_id in sorted(set(self.names_old['groups']).union(self.names_new['groups'])):
-            yield group_id
+    def iter_attribs(self):
+        for attr_id in sorted(set(self.names_old['attribs']).union(self.names_new['attribs'])):
+            yield attr_id
+
+    def iter_effects(self):
+        for eff_id in sorted(set(self.names_old['effects']).union(self.names_new['effects'])):
+            yield eff_id
+
+    def iter_mktgroups(self):
+        for mktgrp_id in sorted(set(self.names_old['market_groups']).union(self.names_new['market_groups'])):
+            yield mktgrp_id
 
 
 class PrinterSkeleton:
@@ -438,6 +456,66 @@ class PrinterSkeleton:
             mat_amt = item.mats_build[mat_id]
             yield mat_name, mat_amt
 
+    def _iter_renames_types(self):
+        """
+        Iterate over changed type names.
+        """
+        for type_id in self._dl.iter_types():
+            old_name = self._dl.get_type_name(type_id, prefer_old=True)
+            new_name = self._dl.get_type_name(type_id, prefer_old=False)
+            if old_name != new_name:
+                yield type_id, old_name, new_name
+
+    def _iter_renames_groups(self):
+        """
+        Iterate over changed group names.
+        """
+        for group_id in self._dl.iter_groups():
+            old_name = self._dl.get_group_name(group_id, prefer_old=True)
+            new_name = self._dl.get_group_name(group_id, prefer_old=False)
+            if old_name != new_name:
+                yield group_id, old_name, new_name
+
+    def _iter_renames_categories(self):
+        """
+        Iterate over changed category names.
+        """
+        for cat_id in self._dl.iter_categories():
+            old_name = self._dl.get_category_name(cat_id, prefer_old=True)
+            new_name = self._dl.get_category_name(cat_id, prefer_old=False)
+            if old_name != new_name:
+                yield cat_id, old_name, new_name
+
+    def _iter_renames_mktgroups(self):
+        """
+        Iterate over changed market group names.
+        """
+        for mktgrp_id in self._dl.iter_mktgroups():
+            old_name = self._dl.get_mktgrp_name(mktgrp_id, prefer_old=True)
+            new_name = self._dl.get_mktgrp_name(mktgrp_id, prefer_old=False)
+            if old_name != new_name:
+                yield mktgrp_id, old_name, new_name
+
+    def _iter_renames_attribs(self):
+        """
+        Iterate over changed attribute names.
+        """
+        for attr_id in self._dl.iter_attribs():
+            old_name = self._dl.get_attr_name(attr_id, prefer_old=True)
+            new_name = self._dl.get_attr_name(attr_id, prefer_old=False)
+            if old_name != new_name:
+                yield attr_id, old_name, new_name
+
+    def _iter_renames_effects(self):
+        """
+        Iterate over changed effect names.
+        """
+        for effect_id in self._dl.iter_effects():
+            old_name = self._dl.get_effect_name(effect_id, prefer_old=True)
+            new_name = self._dl.get_effect_name(effect_id, prefer_old=False)
+            if old_name != new_name:
+                yield effect_id, old_name, new_name
+
     def _get_market_path(self, item):
         """
         Convert path exposed by loader into human-readable
@@ -462,7 +540,7 @@ class PrinterSkeleton:
         removed = self._dl.get_removed_items(unpublished)
         changed = self._dl.get_changed_items(unpublished)
         added = self._dl.get_added_items(unpublished)
-        for grp_id in self._dl.group_iter():
+        for grp_id in self._dl.iter_groups():
             # Check which items were changed for this particular group
             filfunc = lambda i: removed[i].group_id == grp_id
             removed_grp = dict((i, removed[i]) for i in filter(filfunc, removed))
@@ -507,6 +585,8 @@ class TextPrinter(PrinterSkeleton):
     def run(self, cat_list):
         self._print_metadata()
         self._print_categories(cat_list)
+        if process_renames:
+            self._print_renames()
 
     # Indentation stuff
 
@@ -570,7 +650,7 @@ class TextPrinter(PrinterSkeleton):
         passed group.
         """
         for old, new in self._iter_types_changed(grp_id):
-            if new.name != old.name:
+            if process_renames and new.name != old.name:
                 name = '{} => {}'.format(old.name, new.name)
             else:
                 name = new.name
@@ -775,6 +855,27 @@ class TextPrinter(PrinterSkeleton):
         else:
             return num
 
+    def _print_renames(self):
+        renames = OrderedDict([
+            ('items', self._iter_renames_types),
+            ('groups', self._iter_renames_groups),
+            ('categories', self._iter_renames_categories),
+            ('attributes', self._iter_renames_attribs),
+            ('effects', self._iter_renames_effects),
+            ('market groups', self._iter_renames_mktgroups),
+        ])
+
+        for header, iterator in renames.items():
+            rename_data = tuple(iterator())
+            if rename_data:
+                print('{}Renamed {}:'.format(self._indent, header))
+                print()
+                with moreindent(self):
+                    for _, old, new in rename_data:
+                        print('{}"{}"'.format(self._indent, old))
+                        print('{}"{}"'.format(self._indent, new))
+                        print()
+
 
 if __name__ == '__main__':
 
@@ -783,7 +884,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--new', help='path to phobos JSON dump with new data', required=True)
     parser.add_argument('-a', '--all', help='print data for all items, not just published', default=False, action='store_true')
     parser.add_argument('-c', '--categories', help='comma-separated list of category names, for which data will be shown', default='')
-    parser.add_argument('-x', '--exclude', help='exclude some data from comparison, specified as string with letters; e - effects, a - attributes, m - materials, k - market groups, p - published flag', default='')
+    parser.add_argument('-x', '--exclude', help='exclude some data from comparison, specified as string with letters; e - effects, a - attributes, m - materials, k - market groups, p - published flag, r - renames', default='')
     args = parser.parse_args()
 
     # Global flags which control diffs for which stuff is shown
@@ -792,6 +893,7 @@ if __name__ == '__main__':
     process_mats = 'm' not in args.exclude
     process_mkt = 'k' not in args.exclude
     process_pub = 'p' not in args.exclude
+    process_renames = 'r' not in args.exclude
 
     path_old = os.path.expanduser(args.old)
     path_new = os.path.expanduser(args.new)
