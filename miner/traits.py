@@ -149,6 +149,10 @@ class TraitMiner(AbstractMiner):
             # processing. Also, they are flooded with various HTML tags, we strip them
             # here.
             if bonus_amt is not None:
+                # Some bonuses are represented as non-rounded float, like
+                # 33.2999992371 for Confessor's defensive mode resistance bonus,
+                # here we make sure it's properly rounded to values like 33.3
+                bonus_amt = round(bonus_amt, 5)
                 if int(bonus_amt) == bonus_amt:
                     bonus_amt = int(bonus_amt)
                 unit = self._get_unit_displayname(bonus_data['unitID'], language)
