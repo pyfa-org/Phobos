@@ -658,14 +658,14 @@ class TextPrinter(PrinterSkeleton):
                 # When item was moved from current group to another, print just
                 # short notice about it, no details...
                 if old.group_id == grp_id:
-                    new_grp = self.dl.get_group_name(new.group_id)
-                    new_cat = self.dl.get_category_name(self.dl.get_group_category((new.group_id)))
+                    new_grp = self._dl.get_group_name(new.group_id)
+                    new_cat = self._dl.get_category_name(self._dl.get_group_category((new.group_id)))
                     print('{}[*] {} (moved to {} > {})'.format(self._indent, name, new_cat, new_grp), end='\n\n')
                     continue
                 # ...and details are written in the target group
                 else:
-                    old_grp = self.dl.get_group_name(old.group_id)
-                    old_cat = self.dl.get_category_name(self.dl.get_group_category((old.group_id)))
+                    old_grp = self._dl.get_group_name(old.group_id)
+                    old_cat = self._dl.get_category_name(self._dl.get_group_category((old.group_id)))
                     suffix = ' (moved from {} > {})'.format(old_cat, old_grp)
             else:
                 suffix = ''
