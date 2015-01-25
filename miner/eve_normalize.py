@@ -227,6 +227,7 @@ class EveNormalizer(object):
         'FSD_NamedVector': _pythonize_fsd_named_vector,
         'FSD_Object': _pythonize_fsd_object,
         '_FixedSizeList': _pythonize_iterable,
+        '_VariableSizedList': _pythonize_iterable,
         # Misc
         'blue.DBRow': _pythonize_dbrow,
         'universe.SolarSystemWrapper': _pythonize_pyobj,
