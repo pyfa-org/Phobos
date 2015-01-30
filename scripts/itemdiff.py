@@ -324,7 +324,7 @@ class DataLoader:
         Loads contents of JSON file with specified name.
         """
         fpath = os.path.join(base_path, '{}.json'.format(fname))
-        with open(fpath) as f:
+        with open(fpath, encoding='utf-8') as f:
             data = json.load(f)
         return data
 
