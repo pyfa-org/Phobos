@@ -114,9 +114,6 @@ class FlowManager(object):
         name_set.add(name_filter[pos_current:])
         return name_set
 
-    def _translate(self):
-        pass
-
     def _make_spec(self):
         """
         Make specification on what we're processing: where
