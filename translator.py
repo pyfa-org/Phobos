@@ -29,8 +29,8 @@ class Translator(object):
     Class responsible for text localization.
     """
 
-    def __init__(self, spickle_miner):
-        self._spminer = spickle_miner
+    def __init__(self, pickle_miner):
+        self._pickle_miner = pickle_miner
         # Format: {language code: {message ID: message text}}
         self._loaded_langs = {}
         # Container for data we fetch from shared language data
@@ -237,7 +237,7 @@ class Translator(object):
     # Related to loading language data
 
     def _load_pickle(self, name):
-        return self._spminer.get_data(name)
+        return self._pickle_miner.get_data(name)
 
     def _load_lang_data(self, language):
         """
@@ -246,8 +246,8 @@ class Translator(object):
         """
         msg_map_phb = {}
         try:
-            lang_data_old = self._load_pickle('res/localization/localization_{}'.format(language))
-            lang_data_fsd = self._load_pickle('res/localizationfsd/localization_fsd_{}'.format(language))
+            lang_data_old = self._load_pickle('res:/localization/localization_{}'.format(language))
+            lang_data_fsd = self._load_pickle('res:/localizationfsd/localization_fsd_{}'.format(language))
         except ContainerNameError:
             msg = u'data for language "{}" cannot be loaded'.format(language)
             raise LanguageNotAvailable(msg)
@@ -345,8 +345,8 @@ class Translator(object):
         """
         languages = set()
         lbl_map_phb = {}
-        main_old = self._load_pickle('res/localization/localization_main')
-        main_fsd = self._load_pickle('res/localizationfsd/localization_fsd_main')
+        main_old = self._load_pickle('res:/localization/localization_main')
+        main_fsd = self._load_pickle('res:/localizationfsd/localization_fsd_main')
         # Load list of languages
         languages.update(main_old['languages'].keys())
         languages.update(main_fsd['languages'])

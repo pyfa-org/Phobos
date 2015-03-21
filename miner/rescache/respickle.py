@@ -22,17 +22,17 @@ import pickle
 
 from miner.abstract_miner import AbstractMiner
 from util import CachedProperty
-from .unstuff import Unstuffer
+from .resbrowser import ResourceBrowser
 
 
-class StuffedPickleMiner(AbstractMiner):
+class ResourcePickleMiner(AbstractMiner):
     """
-    Class, which attempts to get data from stuffed
+    Class, which attempts to get data from resource
     pickles (this is not guaranteed to succeed).
     """
 
     def __init__(self, rvr):
-        self._unstuffer = Unstuffer(rvr)
+        self._resbrowser = ResourceBrowser(rvr)
 
     def contname_iter(self):
         for resolved_name in sorted(self._resolved_source_map):
@@ -44,7 +44,7 @@ class StuffedPickleMiner(AbstractMiner):
         except KeyError:
             self._container_not_found(resolved_name)
         else:
-            resfiledata = self._unstuffer.get_file(resfilepath)
+            resfiledata = self._resbrowser.get_file(resfilepath)
             data = pickle.loads(resfiledata)
             return data
 
@@ -58,7 +58,7 @@ class StuffedPickleMiner(AbstractMiner):
         pickle_ext = '.pickle'
         # Format: {safe path: [source paths]}
         safe_source_map = {}
-        for source_path in self._unstuffer.get_filelist():
+        for source_path in self._resbrowser.get_filelist():
             # We also strip .pickle extension from names
             if not source_path.endswith(pickle_ext):
                 continue

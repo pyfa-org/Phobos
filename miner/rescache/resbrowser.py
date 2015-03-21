@@ -18,4 +18,30 @@
 #===============================================================================
 
 
-from .stuffed_pickle import StuffedPickleMiner
+from itertools import chain
+
+
+class ResourceBrowser(object):
+    """
+    Class, responsible for browsing/retrieval of resources.
+    """
+
+    def __init__(self, rvr):
+        self._rvr = rvr
+
+    def get_filelist(self):
+        """
+        Aggregate filepaths from all resource files and return
+        them in the form of single list.
+        """
+        resfilepaths = chain(
+            self._rvr.rot.res._nameMap.keys(),
+            *(stuff.files for stuff in self._rvr.rot.efs.stuff)
+        )
+        return sorted(resfilepaths)
+
+    def get_file(self, resfilepath):
+        """
+        Return file contents for requested resource.
+        """
+        return self._rvr.readstuff(resfilepath)

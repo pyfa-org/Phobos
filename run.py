@@ -48,6 +48,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
     parser.add_argument('-e', '--eve', help='path to eve folder', required=True)
+    parser.add_argument('-r', '--res', help='path to eve shared cache folder', required=True)
     parser.add_argument('-c', '--cache', help='path to eve cache folder', required=True)
     parser.add_argument('-s', '--server', default='tranquility', help='server which was specified in EVE shortcut, defaults to tranquility')
     languages = ('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi')
@@ -58,14 +59,15 @@ if __name__ == '__main__':
 
     # Expand home directory
     path_eve = os.path.expanduser(args.eve)
+    path_res = os.path.expanduser(args.res)
     path_cache = os.path.expanduser(args.cache)
     path_json = os.path.expanduser(args.json)
 
     rvr_language = args.translate if args.translate != 'multi' else 'en-us'
-    rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, server=args.server, languageID=rvr_language)
+    rvr = reverence.blue.EVE(path_eve, respath=path_res, cachepath=path_cache, server=args.server, languageID=rvr_language)
 
-    spickle_miner = StuffedPickleMiner(rvr)
-    trans = Translator(spickle_miner)
+    pickle_miner = ResourcePickleMiner(rvr)
+    trans = Translator(pickle_miner)
     bulkdata_miner = BulkdataMiner(rvr, trans)
     miners = (
         MetadataMiner(path_eve),
@@ -73,7 +75,7 @@ if __name__ == '__main__':
         TraitMiner(bulkdata_miner, trans),
         SqliteMiner(path_eve, trans),
         CachedCallsMiner(rvr, trans),
-        spickle_miner
+        pickle_miner
     )
 
     writers = (
