@@ -18,29 +18,40 @@
 #===============================================================================
 
 
-from itertools import chain
+import csv
+import os.path
 
 
-class Unstuffer(object):
+class ResourceBrowser(object):
     """
-    Class, responsible for browsing virtual filesystem of
-    .stuff files and read data from there.
+    Class, responsible for browsing/retrieval of resources.
     """
 
-    def __init__(self, rvr):
-        self._efs = rvr.rot.efs
+    def __init__(self, path_eve, path_resources):
+        # Get resource file list
+        # Format:
+        # {embedFS file name: full path to file}
+        self._resfiles = {}
+        path_index = os.path.join(path_eve, 'resfileindex.txt')
+        with open(path_index) as csvfile:
+            index_reader = csv.reader(csvfile)
+            for row in index_reader:
+                embedfs_path = row[0]
+                resource_path = os.path.join(path_resources, 'ResFiles', row[1])
+                self._resfiles[embedfs_path] = resource_path
 
     def get_filelist(self):
         """
-        Aggregate filepaths from all .stuff files and return
+        Aggregate filepaths from all resource files and return
         them in the form of single list.
         """
-        resfilepaths = chain(*(stuff.files for stuff in self._efs.stuff))
-        return sorted(resfilepaths)
+        return sorted(self._resfiles)
 
-    def get_file(self, resfilepath):
+    def get_file(self, embedfs_path):
         """
-        Return file contents for requested resource located
-        on .stuff filesystem.
+        Return file contents for requested resource.
         """
-        return self._efs.open(resfilepath).read()
+        resource_path = self._resfiles[embedfs_path]
+        with open(resource_path) as f:
+            data = f.read()
+        return data

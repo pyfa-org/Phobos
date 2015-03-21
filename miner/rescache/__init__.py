@@ -18,4 +18,4 @@
 #===============================================================================
 
 
-from .stuffed_pickle import StuffedPickleMiner
+from .respickle import ResourcePickleMiner
