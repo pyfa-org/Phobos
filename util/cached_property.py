@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014 Anton Vorobyov
+# Copyright (C) 2014-2015 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
