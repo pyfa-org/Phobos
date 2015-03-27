@@ -64,7 +64,7 @@ if __name__ == '__main__':
     path_json = os.path.expanduser(args.json)
 
     rvr_language = args.translate if args.translate != 'multi' else 'en-us'
-    rvr = reverence.blue.EVE(path_eve, respath=path_res, cachepath=path_cache, server=args.server, languageID=rvr_language)
+    rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, sharedcachepath=path_res, server=args.server, languageID=rvr_language)
 
     pickle_miner = ResourcePickleMiner(rvr)
     trans = Translator(pickle_miner)

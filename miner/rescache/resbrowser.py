@@ -18,9 +18,6 @@
 #===============================================================================
 
 
-from itertools import chain
-
-
 class ResourceBrowser(object):
     """
     Class, responsible for browsing/retrieval of resources.
@@ -34,11 +31,7 @@ class ResourceBrowser(object):
         Aggregate filepaths from all resource files and return
         them in the form of single list.
         """
-        resfilepaths = chain(
-            self._rvr.rot.res._nameMap.keys(),
-            *(stuff.files for stuff in self._rvr.rot.efs.stuff)
-        )
-        return sorted(resfilepaths)
+        return sorted(self._rvr.rescache._nameMap.keys())
 
     def get_file(self, resfilepath):
         """

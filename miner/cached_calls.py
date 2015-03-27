@@ -35,9 +35,7 @@ class CachedCallsMiner(AbstractMiner):
     """
 
     def __init__(self, rvr, translator):
-        # Get path to folder with cached method calls
-        cache = rvr.getcachemgr()
-        self._path_cachedcalls = os.path.join(cache.machocachepath, 'CachedMethodCalls')
+        self._path_cachedcalls = os.path.join(rvr.paths.machocache, 'CachedMethodCalls')
         self._translator = translator
 
     def contname_iter(self):
