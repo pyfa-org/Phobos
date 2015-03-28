@@ -1,6 +1,10 @@
 # Phobos
 Phobos is script for dumping EVE client data into JSON format.
 
+### Dependencies
+
+* [Reverence](https://github.com/ntt/reverence)
+
 ### How to use
 
     python run.py --eve=<path to EVE client> --res=<path to shared resource cache> --cache=<path to EVE client cache>  [--translate=<language>] --json=<output folder> [--list=<comma-separated list of containers to dump>]
