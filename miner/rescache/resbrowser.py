@@ -31,7 +31,7 @@ class ResourceBrowser(object):
         Aggregate filepaths from all resource files and return
         them in the form of single list.
         """
-        return sorted(self._rvr.rescache._nameMap.keys())
+        return sorted(self._rvr.rescache._index.keys())
 
     def get_file(self, resfilepath):
         """
