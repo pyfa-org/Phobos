@@ -56,12 +56,7 @@ class SqliteMiner(AbstractMiner):
             for sqlite_row in c:
                 row = dict(zip(headers, sqlite_row))
                 rows.append(row)
-            # Define translation specification
-            trans_specs = {
-                ('mapbulk', 'marketGroups'): ('marketGroupName', 'description')
-            }
-            spec = trans_specs.get((dbname, table_name))
-            self._translator.translate_container(rows, language, spec=spec, verbose=verbose)
+            self._translator.translate_container(rows, language, verbose=verbose)
             return rows
 
     @CachedProperty

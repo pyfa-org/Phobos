@@ -162,6 +162,9 @@ class Translator(object):
         if trans_text != orig_text:
             self.__increment_stats(stats, text_fname, 1)
 
+    # Regular expression to detect message ID fields for translation
+    _keyword_regexp = re.compile('^.*({}).*$'.format('|'.join(('description', 'name', 'text'))), flags=re.IGNORECASE)
+
     def __translatable_fields_iter(self, row, spec):
         """
         Receive dictionary, find there pairs of field
@@ -181,23 +184,32 @@ class Translator(object):
                 tail = msgid_fname[-len(suffix):]
                 if tail != suffix:
                     continue
-                # There should be corresponding field which will
-                # use this message ID (CCP's convention is fieldName /
-                # fieldNameID pair)
-                text_fname = msgid_fname[:-len(suffix)]
-                if text_fname not in row:
-                    continue
-                # Now, verify text and message ID field contents - text can be string
-                # or None, message ID can be int or None
-                text = row[text_fname]
-                if text is not None and isinstance(text, types.StringTypes) is False:
-                    continue
+                # Message ID can None or integer
                 msgid = row[msgid_fname]
                 if msgid is not None and isinstance(msgid, (types.IntType, types.LongType)) is False:
                     continue
-                # If both text and message ID are None, skip them too to avoid
-                # false translations
-                if text is None and msgid is None:
+                # There're 2 conventions which CCP use for text and message fields:
+                # 1) There're pair of fields named like fieldName / fieldNameID pair
+                # 2) For cases when there's no fieldName, we rely on name of fieldNameID
+                # field - it should contain one of the keywords like 'name' to be translated
+                text_fname = msgid_fname[:-len(suffix)]
+                # FIrst convention
+                if text_fname in row:
+                    # Text can be string or None
+                    text = row[text_fname]
+                    if text is not None and isinstance(text, types.StringTypes) is False:
+                        continue
+                    # If both text and message ID are None, skip them to avoid
+                    # unnecessary translations (which can convert None to empty
+                    # string which is undesired in some cases)
+                    if text is None and msgid is None:
+                        continue
+                # Second convention
+                elif re.match(self._keyword_regexp, text_fname):
+                    # We don't have anything to check here
+                    pass
+                # Skip field names which don't fit into any of these 2 conventions
+                else:
                     continue
                 yield (text_fname, msgid_fname)
         else:
