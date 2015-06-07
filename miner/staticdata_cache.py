@@ -18,6 +18,8 @@
 #===============================================================================
 
 
+import json
+import glob
 import os.path
 import sqlite3
 
@@ -25,17 +27,15 @@ from util import CachedProperty
 from .abstract_miner import AbstractMiner
 
 
-class SqliteMiner(AbstractMiner):
+class StaticdataCacheMiner(AbstractMiner):
     """
-    Extract data from SQLite databases bundled with client.
+    Some of cache tables are stored in FSDLite (SQLite + JSON)
+    format. We simplify it into plain dict of keyed data rows.,
     """
 
     def __init__(self, path_eve, translator):
-        # Format: {db alias: db connection}
-        self._databases = {
-            'mapbulk': sqlite3.connect(os.path.join(path_eve, 'bulkdata', 'mapbulk.db')),
-            'mapObjects': sqlite3.connect(os.path.join(path_eve, 'bin', 'staticdata', 'mapObjects.db'))
-        }
+        self._dbext = '.db'
+        self._path_staticdata = os.path.join(path_eve, 'bin', 'staticdata')
         self._translator = translator
 
     def contname_iter(self):
@@ -43,25 +43,24 @@ class SqliteMiner(AbstractMiner):
             yield resolved_name
 
     def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
+
         try:
-            dbname, table_name = self._resolved_source_map[resolved_name]
+            source_name = self._resolved_source_map[resolved_name]
         except KeyError:
             self._container_not_found(resolved_name)
         else:
-            dbconn = self._databases[dbname]
+            file_name = '{}{}'.format(source_name, self._dbext)
+            file_path = os.path.join(self._path_staticdata, file_name)
+            dbconn = sqlite3.connect(file_path)
             c = dbconn.cursor()
-            rows = []
-            c.execute(u'select * from {}'.format(table_name))
-            headers = list(map(lambda x: x[0], c.description))
+            rows = {}
+            c.execute(u'select key, value from cache')
             for sqlite_row in c:
-                row = dict(zip(headers, sqlite_row))
-                rows.append(row)
-            # Define translation specification
-            trans_specs = {
-                ('mapbulk', 'marketGroups'): ('marketGroupName', 'description')
-            }
-            spec = trans_specs.get((dbname, table_name))
-            self._translator.translate_container(rows, language, spec=spec, verbose=verbose)
+                key = sqlite_row[0]
+                value = sqlite_row[1]
+                row = json.loads(value)
+                rows[key] = row
+            self._translator.translate_container(rows, language, verbose=verbose)
             return rows
 
     @CachedProperty
@@ -69,19 +68,27 @@ class SqliteMiner(AbstractMiner):
         """
         Map between secured/conflict-free names and the place where
         data source is located.
-        Format: {resolved name: (db alias, table name)}
+        Format: {resolved name: source file name}
         """
-        # Format: {safe name: [(db alias, table name), ...]}
+        # Format: {safe name: [raw names]}
         safe_source_map = {}
-        for dbname, dbconn in self._databases.items():
+        for file_path in glob.glob(os.path.join(self._path_staticdata, '*{}'.format(self._dbext))):
+            if not os.path.isfile(file_path):
+                continue
+            # Check if there's cache table, and skip files w/o it
+            dbconn = sqlite3.connect(file_path)
             c = dbconn.cursor()
-            c.execute('select name from sqlite_master where type = \'table\'')
+            c.execute('select count(*) from sqlite_master where type = \'table\' and name = \'cache\'')
+            has_cache = False
             for row in c:
-                table_name = row[0]
-                source_name = u'{}_{}'.format(dbname, table_name)
-                safe_name = self._secure_name(source_name)
-                sources = safe_source_map.setdefault(safe_name, [])
-                sources.append((dbname, table_name))
+                has_cache = bool(row[0])
+            if not has_cache:
+                continue
+            file_name = os.path.split(file_path)[1]
+            source_name = os.path.splitext(file_name)[0]
+            safe_name = self._secure_name(source_name)
+            sources = safe_source_map.setdefault(safe_name, [])
+            sources.append(source_name)
         resolved_source_map = {}
         for safe_name, sources in safe_source_map.items():
             # Use number suffix with 'miner' marker to resolve conflicts

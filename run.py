@@ -74,6 +74,7 @@ if __name__ == '__main__':
         bulkdata_miner,
         TraitMiner(bulkdata_miner, trans),
         SqliteMiner(path_eve, trans),
+        StaticdataCacheMiner(path_eve, trans),
         CachedCallsMiner(rvr, trans),
         pickle_miner
     )
