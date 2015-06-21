@@ -40,13 +40,14 @@ def striptags(text):
 
 class TraitMiner(AbstractMiner):
     """
-    Actually, phobos dumps all the required data needed
+    Phobos actually dumps all the required data needed
     to compose item traits. We're doing it internally for
     convenience of phobos users anyway.
     """
 
-    def __init__(self, bulkminer, translator):
+    def __init__(self, staticminer, bulkminer, translator):
         self._container_name = self._secure_name('phbtraits')
+        self._staticminer = staticminer
         self._bulkminer = bulkminer
         self._translator = translator
         # Format: {language: {type ID: type name}}
@@ -77,10 +78,9 @@ class TraitMiner(AbstractMiner):
           number field is optional
         """
         trait_rows = []
-        for type_id, type_data in self._bulkminer.get_data('fsdTypeOverrides').items():
-            trait_data = type_data.get('infoBubbleTypeBonuses')
-            if trait_data is None:
-                continue
+        bubble_data = self._staticminer.get_data('infoBubbles')
+        for type_id, trait_data in bubble_data['infoBubbleTypeBonuses'].items():
+            type_id = int(type_id)
             trait_row = {'typeID': type_id}
             # For multi-language, each trait row will contain traits for
             # all languages in fields named like traits_en-us
@@ -103,13 +103,13 @@ class TraitMiner(AbstractMiner):
         """
         traits = {}
         # Go through skill-based traits first
-        skill_ids = list(filter(lambda i: i not in SPECIAL_TYPES, trait_data))
+        skill_ids = list(int(i) for i in filter(lambda i: int(i) not in SPECIAL_TYPES, trait_data))
         if skill_ids:
             skill_rows = []
             for skill_typeid in skill_ids:
                 skill_name = self._get_type_name(skill_typeid, language)
                 section_header = self._translator.get_by_label('UI/ShipTree/SkillNameCaption', language, skillName=skill_name)
-                section_data = trait_data[skill_typeid]
+                section_data = trait_data[unicode(skill_typeid)]
                 bonuses = self._section_bonuses(section_data, language)
                 skill_row = {'header': section_header, 'bonuses': bonuses}
                 skill_rows.append(skill_row)
@@ -120,10 +120,10 @@ class TraitMiner(AbstractMiner):
             (ROLE_BONUS_TYPE, 'UI/ShipTree/RoleBonus', 'role'),
             (MISC_BONUS_TYPE, 'UI/ShipTree/MiscBonus', 'misc')
         ):
-            if special_typeid not in trait_data:
+            if unicode(special_typeid) not in trait_data:
                 continue
             section_header = self._translator.get_by_label(special_label, language)
-            section_data = trait_data[special_typeid]
+            section_data = trait_data[unicode(special_typeid)]
             bonuses = self._section_bonuses(section_data, language)
             special_row = {'header': section_header, 'bonuses': bonuses}
             traits[cont_alias] = special_row
@@ -140,8 +140,8 @@ class TraitMiner(AbstractMiner):
         bonuses = []
         # Use sorting as defined by EVE (index seems to be not used
         # for anything apart from this)
-        for bonus_index in sorted(section_data):
-            bonus_data = section_data[bonus_index]
+        for bonus_index in sorted(int(i) for i in section_data):
+            bonus_data = section_data[unicode(bonus_index)]
             bonus_msgid = bonus_data['nameID']
             bonus_text = self._translator.get_by_message(bonus_msgid, language)
             bonus_amt = bonus_data.get('bonus')
@@ -185,10 +185,11 @@ class TraitMiner(AbstractMiner):
         try:
             type_name_map = self._type_name_map_all[language]
         except KeyError:
-            invtypes = self._bulkminer.get_data('invtypes', language=language)
+            evetypes = self._staticminer.get_data('evetypes', language=language)
             type_name_map = {}
-            for row in invtypes:
-                type_name_map[row['typeID']] = row.get('typeName')
+            for type_id, type_row in evetypes.items():
+                type_id = int(type_id)
+                type_name_map[type_id] = type_row.get('typeName')
             self._type_name_map_all[language] = type_name_map
         return type_name_map[typeid]
 

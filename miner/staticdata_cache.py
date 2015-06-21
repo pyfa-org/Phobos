@@ -43,7 +43,6 @@ class StaticdataCacheMiner(AbstractMiner):
             yield resolved_name
 
     def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
-
         try:
             source_name = self._resolved_source_map[resolved_name]
         except KeyError:
