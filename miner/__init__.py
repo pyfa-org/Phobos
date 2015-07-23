@@ -21,9 +21,8 @@
 from .bulkdata import BulkdataMiner
 from .cached_calls import CachedCallsMiner
 from .metadata import MetadataMiner
-from .rescache import ResourcePickleMiner
+from .rescache import ResourcePickleMiner, ResourceStaticCacheMiner
 from .sqlite import SqliteMiner
-from .staticdata_cache import StaticdataCacheMiner
 from .traits import TraitMiner
 from .abstract_miner import ContainerNameError
 
@@ -33,7 +32,7 @@ __all__ = (
     'CachedCallsMiner',
     'MetadataMiner',
     'ResourcePickleMiner',
+    'ResourceStaticCacheMiner',
     'SqliteMiner',
-    'StaticdataCacheMiner',
     'TraitMiner'
 )

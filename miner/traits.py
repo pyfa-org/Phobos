@@ -78,7 +78,7 @@ class TraitMiner(AbstractMiner):
           number field is optional
         """
         trait_rows = []
-        bubble_data = self._staticminer.get_data('infoBubbles')
+        bubble_data = self._staticminer.get_data('infobubbles')
         for type_id, trait_data in bubble_data['infoBubbleTypeBonuses'].items():
             type_id = int(type_id)
             trait_row = {'typeID': type_id}

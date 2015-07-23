@@ -69,13 +69,13 @@ if __name__ == '__main__':
     pickle_miner = ResourcePickleMiner(rvr)
     trans = Translator(pickle_miner)
     bulkdata_miner = BulkdataMiner(rvr, trans)
-    staticcache_miner = StaticdataCacheMiner(path_eve, trans)
+    staticcache_miner = ResourceStaticCacheMiner(rvr, trans)
     miners = (
         MetadataMiner(path_eve),
         bulkdata_miner,
+        staticcache_miner,
         TraitMiner(staticcache_miner, bulkdata_miner, trans),
         SqliteMiner(path_eve, trans),
-        staticcache_miner,
         CachedCallsMiner(rvr, trans),
         pickle_miner
     )

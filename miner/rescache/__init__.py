@@ -19,3 +19,4 @@
 
 
 from .respickle import ResourcePickleMiner
+from .resstaticcache import ResourceStaticCacheMiner
