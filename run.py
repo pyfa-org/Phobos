@@ -21,6 +21,31 @@
 
 import sys
 
+from flow import FlowManager
+from miner import *
+from translator import Translator
+from writer import *
+
+def run(rvr, path_json):
+    pickle_miner = ResourcePickleMiner(rvr)
+    trans = Translator(pickle_miner)
+    bulkdata_miner = BulkdataMiner(rvr, trans)
+    staticcache_miner = ResourceStaticCacheMiner(rvr, trans)
+    miners = (
+        MetadataMiner(path_eve),
+        bulkdata_miner,
+        staticcache_miner,
+        TraitMiner(staticcache_miner, bulkdata_miner, trans),
+        SqliteMiner(rvr.paths.root, trans),
+        CachedCallsMiner(rvr, trans),
+        pickle_miner
+    )
+
+    writers = (
+        JsonWriter(path_json, indent=2),
+    )
+
+    FlowManager(miners, writers).run(args.list, args.translate)
 
 if __name__ == '__main__':
 
@@ -39,12 +64,6 @@ if __name__ == '__main__':
     import os.path
 
     import reverence
-
-    from flow import FlowManager
-    from miner import *
-    from translator import Translator
-    from writer import *
-
 
     parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
     parser.add_argument('-e', '--eve', help='path to eve folder', required=True)
@@ -66,22 +85,4 @@ if __name__ == '__main__':
     rvr_language = args.translate if args.translate != 'multi' else 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, sharedcachepath=path_res, server=args.server, languageID=rvr_language)
 
-    pickle_miner = ResourcePickleMiner(rvr)
-    trans = Translator(pickle_miner)
-    bulkdata_miner = BulkdataMiner(rvr, trans)
-    staticcache_miner = ResourceStaticCacheMiner(rvr, trans)
-    miners = (
-        MetadataMiner(path_eve),
-        bulkdata_miner,
-        staticcache_miner,
-        TraitMiner(staticcache_miner, bulkdata_miner, trans),
-        SqliteMiner(path_eve, trans),
-        CachedCallsMiner(rvr, trans),
-        pickle_miner
-    )
-
-    writers = (
-        JsonWriter(path_json, indent=2),
-    )
-
-    FlowManager(miners, writers).run(args.list, args.translate)
+    run(rvr, path_json)
