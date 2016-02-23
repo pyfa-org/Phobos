@@ -14,9 +14,9 @@ Phobos is script for dumping EVE client data into JSON format.
 * `--server`: Optional.
     * Server to pull data from. Defaults to `tranquility`
 * `--eve`: Optional.
-    * Path to EVE client (this is different for each server). If none is provided, Phobos will try to resolve it under the `SharedCache` directory based on server provided. eg: `C:\EVE\SharedCache\<server>`;
+    * Path to EVE client (this is different for each server). If none is provided, Phobos will try to resolve it under the `SharedCache` directory based on server provided. eg: `C:\EVE\SharedCache\tq`.
 * `--cache`: Optional.
-    * Path to client-server specific data (which contains client cache and settings). If none is provided, reverence will attempt to resolve it automatically. eg: `C:\Users\<user name>\AppData\Local\CCP\EVE\c_eve_sharedcache_tq_tranquility`
+    * Path to client-server specific data (which contains client cache and settings). If none is provided, reverence will attempt to resolve it automatically. eg: `C:\Users\<user>\AppData\Local\CCP\EVE\c_eve_sharedcache_tq_tranquility`
 * `--translate`: Optional.
     * Specify language to which strings will be translated. You can choose either individual languages (for a list, invoke script with `--help` argument) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation, original text is not modified, but new text fields are added, named using `<field name>_<language code>` convention (eg: `typeName_en-us`). Multi-language translation mode is default.
 * `--list`: Optional.
