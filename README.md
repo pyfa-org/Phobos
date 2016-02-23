@@ -5,23 +5,31 @@ Phobos is script for dumping EVE client data into JSON format.
 
 * [Reverence](https://github.com/ntt/reverence)
 
-### How to use
-
-    python run.py --eve=<path to EVE client> --res=<path to shared resource cache> --cache=<path to EVE client cache>  [--translate=<language>] --json=<output folder> [--list=<comma-separated list of containers to dump>]
-
-### Example
-(or, how I usually launch it on Linux)
-
-    $ python run.py --eve="~/.wine_eve/drive_c/Program Files/CCP/EVE/" --res="~/.wine_eve/drive_c/users/Public/Application Data/CCP/EVE/SharedCache" --cache="~/.wine_eve/drive_c/users/"$USER"/Local Settings/Application Data/CCP/EVE/c_program_files_ccp_eve_tranquility/" --translate=en-us --json=~/Desktop/phobos_dump_tq --list="invtypes, marketProxy()_GetMarketGroups(), phbmetadata"
-
 ### Arguments:
 
-* --eve: path to EVE client, on Windows usually C:\Program Files (x86)\CCP\EVE\;
-* --res: path to shared cache with resources, on Windows usually C:\ProgramData\CCP\EVE\SharedCache\;
-* --cache: path to client-server specific data (which contains client cache and settings), on Windows usually C:\Users\<user_name>\AppData\Local\CCP\EVE\c_program_files_ccp_eve_tranquility
-* --translate: specify language to which strings will be translated. You can choose either individual languages (for a list - invoke script with --help argument) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation - original text is not modified, but new text fields are added, named using <field name>_<language code> convention. Multi-language translation mode is default.
-* --json: output folder for JSON files.
-* --list: you can provide list of comma-separated 'containers' to dump, it uses names script prints to stdout. For list of all available names you can launch script without specifying this option (by default it dumps everything it can find).
+* `--res`: Required.
+     * Path to SharedCache with resources. eg: `C:\EVE\SharedCache`.
+* `--json`: Required.
+    * Output folder for JSON files.
+* `--server`: Optional.
+    * Server to pull data from. Defaults to `tranquility`
+* `--eve`: Optional.
+    * Path to EVE client (this is different for each server). If none is provided, Phobos will try to resolve it under the `SharedCache` directory based on server provided. eg: `C:\EVE\SharedCache\<server>`;
+* `--cache`: Optional.
+    * Path to client-server specific data (which contains client cache and settings). If none is provided, reverence will attempt to resolve it automatically. eg: `C:\Users\<user name>\AppData\Local\CCP\EVE\c_eve_sharedcache_tq_tranquility`
+* `--translate`: Optional.
+    * Specify language to which strings will be translated. You can choose either individual languages (for a list, invoke script with `--help` argument) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation, original text is not modified, but new text fields are added, named using `<field name>_<language code>` convention (eg: `typeName_en-us`). Multi-language translation mode is default.
+* `--list`: Optional.
+    * Specify list of comma-separated 'containers' to dump, it uses names script prints to stdout. For list of all available names you can launch script without specifying this option (by default it dumps everything it can find).
+
+### A note on paths
+When the new EVE launcher was introduced, it allowed the launching against test servers from within the launcher without having a separate installation of client per server. This was made possible by the Shared Resource Cache that the different client versions share between themselves.
+
+When CCP first released the beta, the Shared Cache was usually located at `C:\ProgramData\CCP\EVE\SharedCache` and the old client was still used (eg: `C:\Program Data (x86)\CCP\EVE`). However, with the release of the new launcher, the default install path is `C:\EVE\SharedCache`, and the separate eve clients are located in sub directories of the Shared Cache (eg: `C:\EVE\SharedCache\tq`). Please note that the old client may still be available wherever it was installed; be sure not to use that one as it is no longer updated. Double check your paths.
+
+### Example
+
+    $ python run.py --res=C:\EVE\SharedCache --json=~\Desktop\phobos_dump_tq --translate=en-us --list="invtypes, marketProxy()_GetMarketGroups(), phbmetadata"
 
 ### Phobos-specific data
 Besides raw data Phobos pulls from client, it provides two custom containers.

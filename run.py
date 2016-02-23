@@ -20,6 +20,7 @@
 
 
 import sys
+import os.path
 
 from flow import FlowManager
 from miner import *
@@ -66,21 +67,25 @@ if __name__ == '__main__':
     import reverence
 
     parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
-    parser.add_argument('-e', '--eve', help='path to eve folder', required=True)
-    parser.add_argument('-r', '--res', help='path to eve shared cache folder', required=True)
-    parser.add_argument('-c', '--cache', help='path to eve cache folder', required=True)
-    parser.add_argument('-s', '--server', default='tranquility', help='server which was specified in EVE shortcut, defaults to tranquility')
+    parser.add_argument('-r', '--res', help="Path to EVE SharedCache folder", required=True)
+    parser.add_argument('-j', '--json', help='Output folder for the JSON files', required=True)
+    servers = {"tranquility": "tq", "singularity": "sisi", "duality": "duality"}
+    parser.add_argument('-s', '--server', default='tranquility', choices=servers.keys(), help='Server to pull data from. Defaults to tranquility')
+    parser.add_argument('-e', '--eve', help="Path to EVE folder. Defaults to standard directory location under SharedCache")
+    parser.add_argument('-c', '--cache', help="Path to EVE cache folder. Reverence will attempt to find cache by default if none is provided")
     languages = ('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi')
-    parser.add_argument('-t', '--translate', default='multi', choices=languages, help='attempt to translate strings into specified language')
-    parser.add_argument('-j', '--json', help='output folder for the json files')
-    parser.add_argument('-l', '--list', default='', help='comma-separated list of container names to dump')
+    parser.add_argument('-t', '--translate', default='multi', choices=languages, help='Attempt to translate strings into specified language. Defaults to multi')
+    parser.add_argument('-l', '--list', default='', help='Comma-separated list of container names to dump')
     args = parser.parse_args()
 
     # Expand home directory
-    path_eve = os.path.expanduser(args.eve)
     path_res = os.path.expanduser(args.res)
-    path_cache = os.path.expanduser(args.cache)
     path_json = os.path.expanduser(args.json)
+    path_eve = os.path.expanduser(args.eve) if args.eve else None
+    path_cache = os.path.expanduser(args.cache) if args.cache else None
+
+    if path_eve is None:
+        path_eve = os.path.join(path_res, servers[args.server])
 
     rvr_language = args.translate if args.translate != 'multi' else 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, sharedcachepath=path_res, server=args.server, languageID=rvr_language)
