@@ -67,12 +67,12 @@ if __name__ == '__main__':
     import reverence
 
     parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
-    parser.add_argument('-r', '--res', help="Path to EVE SharedCache folder", required=True)
+    parser.add_argument('-r', '--res', help='Path to EVE SharedCache folder', required=True)
     parser.add_argument('-j', '--json', help='Output folder for the JSON files', required=True)
-    servers = {"tranquility": "tq", "singularity": "sisi", "duality": "duality"}
+    servers = {'tranquility': 'tq', 'singularity': 'sisi', 'duality': 'duality'}
     parser.add_argument('-s', '--server', default='tranquility', choices=servers.keys(), help='Server to pull data from. Defaults to tranquility')
-    parser.add_argument('-e', '--eve', help="Path to EVE folder. Defaults to standard directory location under SharedCache")
-    parser.add_argument('-c', '--cache', help="Path to EVE cache folder. Reverence will attempt to find cache by default if none is provided")
+    parser.add_argument('-e', '--eve', help='Path to EVE folder. Defaults to standard directory location under SharedCache')
+    parser.add_argument('-c', '--cache', help='Path to EVE cache folder. Reverence will attempt to find cache by default if none is provided')
     languages = ('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi')
     parser.add_argument('-t', '--translate', default='multi', choices=languages, help='Attempt to translate strings into specified language. Defaults to multi')
     parser.add_argument('-l', '--list', default='', help='Comma-separated list of container names to dump')
