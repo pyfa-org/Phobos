@@ -23,14 +23,6 @@ import re
 from .abstract_miner import AbstractMiner
 
 
-ROLE_BONUS_TYPE = -1
-MISC_BONUS_TYPE = -2
-SPECIAL_TYPES = (
-    ROLE_BONUS_TYPE,
-    MISC_BONUS_TYPE
-)
-
-
 tags = re.compile('\<.+?\>')
 
 
@@ -103,27 +95,31 @@ class TraitMiner(AbstractMiner):
         """
         traits = {}
         # Go through skill-based traits first
-        skill_ids = list(int(i) for i in filter(lambda i: int(i) not in SPECIAL_TYPES, trait_data))
-        if skill_ids:
-            skill_rows = []
-            for skill_typeid in skill_ids:
-                skill_name = self._get_type_name(skill_typeid, language)
-                section_header = self._translator.get_by_label('UI/ShipTree/SkillNameCaption', language, skillName=skill_name)
-                section_data = trait_data[unicode(skill_typeid)]
-                bonuses = self._section_bonuses(section_data, language)
-                skill_row = {'header': section_header, 'bonuses': bonuses}
-                skill_rows.append(skill_row)
-            # Sort skill sections by headers
-            traits['skills'] = tuple(sorted(skill_rows, key=lambda r: r['header']))
+        if "types" in trait_data:
+            skill_ids = [int(k) for k in trait_data["types"].keys()]
+            if skill_ids:
+                skill_rows = []
+                for skill_typeid in skill_ids:
+                    skill_name = self._get_type_name(skill_typeid, language)
+                    section_header = self._translator.get_by_label('UI/ShipTree/SkillNameCaption', language, skillName=skill_name)
+                    section_data = trait_data[u"types"][unicode(skill_typeid)]
+                    bonuses = self._section_bonuses(section_data, language)
+                    skill_row = {'header': section_header, 'bonuses': bonuses}
+                    skill_rows.append(skill_row)
+                # Sort skill sections by headers
+                traits['skills'] = tuple(sorted(skill_rows, key=lambda r: r['header']))
+
         # Then traits for all known special sections
-        for special_typeid, special_label, cont_alias in (
-            (ROLE_BONUS_TYPE, 'UI/ShipTree/RoleBonus', 'role'),
-            (MISC_BONUS_TYPE, 'UI/ShipTree/MiscBonus', 'misc')
+        for special_type, special_label, cont_alias in (
+            ('roleBonuses', 'UI/ShipTree/RoleBonus', 'role'),
+            ('miscBonuses', 'UI/ShipTree/MiscBonus', 'misc')
         ):
-            if unicode(special_typeid) not in trait_data:
+            if special_type not in trait_data:
                 continue
             section_header = self._translator.get_by_label(special_label, language)
-            section_data = trait_data[unicode(special_typeid)]
+            section_data = trait_data[special_type]
+            if len(section_data) == 0:
+                continue
             bonuses = self._section_bonuses(section_data, language)
             special_row = {'header': section_header, 'bonuses': bonuses}
             traits[cont_alias] = special_row
@@ -140,8 +136,9 @@ class TraitMiner(AbstractMiner):
         bonuses = []
         # Use sorting as defined by EVE (index seems to be not used
         # for anything apart from this)
-        for bonus_index in sorted(int(i) for i in section_data):
-            bonus_data = section_data[unicode(bonus_index)]
+        sorted_bonuses = sorted(section_data, key=lambda k: k['importance'])
+        for bonus_data in sorted_bonuses:
+            #bonus_data = section_data[unicode(bonus_index)]
             bonus_msgid = bonus_data['nameID']
             bonus_text = self._translator.get_by_message(bonus_msgid, language)
             bonus_amt = bonus_data.get('bonus')
