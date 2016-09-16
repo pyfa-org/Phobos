@@ -12,7 +12,7 @@ Phobos is script for dumping EVE client data into JSON format.
 * `--json`: Required.
     * Output folder for JSON files.
 * `--server`: Optional.
-    * Server to pull data from. Defaults to `tranquility`
+    * Server to pull data from. Defaults to `tranquility`。If Server is Serenity,must set --eve value。(如果服务器选择为“晨曦”，必须设置--eve的值，否则可能会出错。)
 * `--eve`: Optional.
     * Path to EVE client (this is different for each server). If none is provided, Phobos will try to resolve it under the `SharedCache` directory based on server provided. eg: `C:\EVE\SharedCache\tq`.
 * `--cache`: Optional.
