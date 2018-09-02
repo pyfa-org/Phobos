@@ -25,7 +25,7 @@ from .rescache import ResourcePickleMiner, ResourceStaticCacheMiner
 from .sqlite import SqliteMiner
 from .traits import TraitMiner
 from .abstract_miner import ContainerNameError
-from .dynamicAttributes import DynamicAttributesMiner
+from .dynamic_attributes import DynamicAttributesMiner
 
 
 __all__ = (
