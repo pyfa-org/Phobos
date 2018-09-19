@@ -18,7 +18,6 @@
 #===============================================================================
 
 
-import re
 import contextlib
 import tempfile
 import shutil
@@ -26,6 +25,7 @@ import sys
 import os
 
 from .abstract_miner import AbstractMiner
+
 
 LOADER_FILE = 'app:/bin/dynamicItemAttributesLoader.pyd'
 RES_FILE = 'res:/staticdata/dynamicitemattributes.fsdbinary'
@@ -64,7 +64,7 @@ class DynamicAttributesMiner(AbstractMiner):
             sys.path.append(temp_dir)
             res_cache = os.path.join(self._rvr.paths.sharedcache, "ResFiles")
 
-            # Need to copy the file to  our cuirrent directory
+            # Need to copy the file to  our current directory
             attribute_loader_file = os.path.join(res_cache, self.file_index[LOADER_FILE][1])
             dst = os.path.join(os.getcwd(), os.path.split(LOADER_FILE)[1])
             shutil.copyfile(attribute_loader_file, dst)
@@ -72,6 +72,9 @@ class DynamicAttributesMiner(AbstractMiner):
             # The loader expect it to be the correct filename, so copy trhe file as well
             dynattribute_file = os.path.join(res_cache, self._rvr.rescache._index[RES_FILE.lower()][1])
             dst = os.path.join(os.getcwd(), self.binary_file)
+            print(os.getcwd())
+            import time
+            time.sleep(10)
             shutil.copyfile(dynattribute_file, dst)
 
             import dynamicItemAttributesLoader

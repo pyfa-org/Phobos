@@ -20,7 +20,6 @@
 
 
 import sys
-import os.path
 
 from flow import FlowManager
 from miner import *
@@ -36,6 +35,7 @@ def run(rvr, path_json):
         MetadataMiner(path_eve),
         bulkdata_miner,
         staticcache_miner,
+        DynamicAttributesMiner(rvr),
         TraitMiner(staticcache_miner, bulkdata_miner, trans),
         SqliteMiner(rvr.paths.root, trans),
         CachedCallsMiner(rvr, trans),
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     path_json = os.path.expanduser(args.json)
     path_eve = os.path.expanduser(args.eve) if args.eve else None
     path_cache = os.path.expanduser(args.cache) if args.cache else None
-    
+
     if path_eve is None:
         path_eve = os.path.join(path_res, servers[args.server])
 
