@@ -288,7 +288,10 @@ class Translator(object):
         If text is empty, attempt to use fallback language. If
         it is not found too, return empty string.
         """
-        lang_data = self._get_language_data(lang)
+        try:
+            lang_data = self._get_language_data(lang)
+        except LanguageNotAvailable:
+            lang_data = self._get_language_data(fallback_lang)
         msg_data = lang_data.get(msgid, self._msg_data_stub)
         # Use fallback language  only when fetching text for primary
         # language failed, and when fallback language doesn't match
