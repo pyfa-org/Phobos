@@ -106,8 +106,7 @@ class TraitMiner(AbstractMiner):
                     bonuses = self._section_bonuses(section_data, language)
                     skill_row = {'header': section_header, 'bonuses': bonuses}
                     skill_rows.append(skill_row)
-                # Sort skill sections by headers
-                traits['skills'] = tuple(sorted(skill_rows, key=lambda r: r['header']))
+                traits['skills'] = tuple(skill_rows)
 
         # Then traits for all known special sections
         for special_type, special_label, cont_alias in (
