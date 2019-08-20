@@ -33,14 +33,14 @@ class AbstractMiner(object):
         """
         Provide an iterator over containers provided by miner.
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_data(self, resolved_name, **kwargs):
         """
         Fetch data from specified container.
         """
-        pass
+        raise NotImplementedError
 
     def _secure_name(self, source_name, arg=False):
         """

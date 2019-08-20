@@ -20,21 +20,21 @@
 
 from .bulkdata import BulkdataMiner
 from .cached_calls import CachedCallsMiner
+from .fsdbinary import FsdBinaryMiner
 from .metadata import MetadataMiner
 from .rescache import ResourcePickleMiner, ResourceStaticCacheMiner
 from .sqlite import SqliteMiner
 from .traits import TraitMiner
 from .abstract_miner import ContainerNameError
-from .dynamic_attributes import DynamicAttributesMiner
 
 
 __all__ = (
     'BulkdataMiner',
     'CachedCallsMiner',
+    'FsdBinaryMiner',
     'MetadataMiner',
     'ResourcePickleMiner',
     'ResourceStaticCacheMiner',
     'SqliteMiner',
-    'TraitMiner',
-    'DynamicAttributesMiner'
+    'TraitMiner'
 )
