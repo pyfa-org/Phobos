@@ -35,7 +35,7 @@ def run(rvr, path_json):
         MetadataMiner(path_eve),
         bulkdata_miner,
         staticcache_miner,
-        FsdBinaryMiner(rvr),
+        FsdBinaryMiner(rvr, trans),
         TraitMiner(staticcache_miner, bulkdata_miner, trans),
         SqliteMiner(rvr.paths.root, trans),
         CachedCallsMiner(rvr, trans),
