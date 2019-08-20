@@ -44,7 +44,10 @@ class FsdBinaryMiner(AbstractMiner):
 
     def __init__(self, rvr):
         self._fsd_spec = {
-            'dynamicattributes': ('app:/bin/dynamicItemAttributesLoader.pyd', 'res:/staticdata/dynamicitemattributes.fsdbinary')}
+            'dynamicattributes': ('app:/bin/dynamicItemAttributesLoader.pyd', 'res:/staticdata/dynamicitemattributes.fsdbinary'),
+            'iconIDs': ('app:/bin/iconIDsLoader.pyd', 'res:/staticdata/iconids.fsdbinary'),
+            'marketGroups': ('app:/bin/marketGroupsLoader.pyd', 'res:/staticdata/marketgroups.fsdbinary'),
+            'metaGroups': ('app:/bin/metaGroupsLoader.pyd', 'res:/staticdata/metagroups.fsdbinary')}
         self._rvr = rvr
         eve_path = os.path.join(rvr.paths.sharedcache, 'index_{}.txt'.format(os.path.basename(rvr.paths.root)))
         with open(eve_path, 'r') as f:
@@ -61,13 +64,13 @@ class FsdBinaryMiner(AbstractMiner):
         except KeyError:
             self._container_not_found(resolved_name)
         else:
-            res_cache = os.path.join(self._rvr.paths.sharedcache, "ResFiles")
+            res_cache_path = os.path.join(self._rvr.paths.sharedcache, "ResFiles")
             loader_filename = os.path.split(loader_location)[1]
             loader_relpath = self.client_index[loader_location][1]
-            loader_fullpath = os.path.join(res_cache, loader_relpath)
+            loader_fullpath = os.path.join(res_cache_path, loader_relpath)
             resource_filename = os.path.split(resource_location)[1]
-            resource_relpath = self._rvr.rescache._index[resource_location.lower()][1]
-            resource_fullpath = os.path.join(res_cache, resource_relpath)
+            resource_relpath = self._rvr.rescache._index[resource_location][1]
+            resource_fullpath = os.path.join(res_cache_path, resource_relpath)
 
             with tempdir('phobos-') as temp_dir:
                 cwd = os.getcwd()
