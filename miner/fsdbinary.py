@@ -44,10 +44,10 @@ class FsdBinaryMiner(AbstractMiner):
 
     def __init__(self, rvr, translator):
         self._fsd_spec = {
-            'dynamicattributes': ('app:/bin/dynamicItemAttributesLoader.pyd', 'res:/staticdata/dynamicitemattributes.fsdbinary'),
-            'iconIDs': ('app:/bin/iconIDsLoader.pyd', 'res:/staticdata/iconids.fsdbinary'),
-            'marketGroups': ('app:/bin/marketGroupsLoader.pyd', 'res:/staticdata/marketgroups.fsdbinary'),
-            'metaGroups': ('app:/bin/metaGroupsLoader.pyd', 'res:/staticdata/metagroups.fsdbinary')}
+            'dynamicattributes': ('app:/bin64/dynamicItemAttributesLoader.pyd', 'res:/staticdata/dynamicitemattributes.fsdbinary'),
+            'iconIDs': ('app:/bin64/iconIDsLoader.pyd', 'res:/staticdata/iconids.fsdbinary'),
+            'marketGroups': ('app:/bin64/marketGroupsLoader.pyd', 'res:/staticdata/marketgroups.fsdbinary'),
+            'metaGroups': ('app:/bin64/metaGroupsLoader.pyd', 'res:/staticdata/metagroups.fsdbinary')}
         self._rvr = rvr
         self._translator = translator
         eve_path = os.path.join(rvr.paths.sharedcache, 'index_{}.txt'.format(os.path.basename(rvr.paths.root)))
