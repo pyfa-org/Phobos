@@ -25,7 +25,7 @@ from .metadata import MetadataMiner
 from .rescache import ResourcePickleMiner, ResourceStaticCacheMiner
 from .sqlite import SqliteMiner
 from .traits import TraitMiner
-from .abstract_miner import ContainerNameError
+from .base import ContainerNameError
 
 
 __all__ = (

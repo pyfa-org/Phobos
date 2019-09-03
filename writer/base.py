@@ -21,7 +21,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class AbstractWriter(object):
+class BaseWriter(object):
     """
     Abstract class, which defines interface to classes
     which write data into some kind of persistent storage.

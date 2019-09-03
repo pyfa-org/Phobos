@@ -130,7 +130,7 @@ class FlowManager(object):
     def _flow_src_map(self):
         """
         Resolve name collisions on cross-miner level by appending
-        miner name to container name when necessary, as result -\
+        miner name to container name when necessary, as result -
         compose map between flow names and miners/miner source names.
         Format: {flow name: (miner: resolved miner name)}
         """

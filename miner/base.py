@@ -21,7 +21,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class AbstractMiner(object):
+class BaseMiner(object):
     """
     Abstract class, which defines interface to all data miners
     used in Phobos.

@@ -22,10 +22,10 @@ import os.path
 import sqlite3
 
 from util import CachedProperty
-from .abstract_miner import AbstractMiner
+from .base import BaseMiner
 
 
-class SqliteMiner(AbstractMiner):
+class SqliteMiner(BaseMiner):
     """
     Extract data from SQLite databases bundled with client.
     """

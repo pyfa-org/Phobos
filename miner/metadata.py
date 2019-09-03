@@ -22,10 +22,10 @@ import os.path
 from ConfigParser import ConfigParser
 from time import time
 
-from .abstract_miner import AbstractMiner
+from .base import BaseMiner
 
 
-class MetadataMiner(AbstractMiner):
+class MetadataMiner(BaseMiner):
     """
     Provide some metadata on when this data dump has been made
     and which data source has been used for that.

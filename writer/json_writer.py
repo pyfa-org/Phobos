@@ -23,7 +23,7 @@ import os.path
 import re
 import types
 
-from .abstract_writer import AbstractWriter
+from .base import BaseWriter
 
 
 class CustomEncoder(json.JSONEncoder):
@@ -83,7 +83,7 @@ class CustomEncoder(json.JSONEncoder):
         obj.update(new_dict)
 
 
-class JsonWriter(AbstractWriter):
+class JsonWriter(BaseWriter):
     """
     Class, which stores fetched data on storage device
     as JSON files.

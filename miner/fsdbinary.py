@@ -26,7 +26,7 @@ import shutil
 import sys
 import tempfile
 
-from .abstract_miner import AbstractMiner
+from .base import BaseMiner
 
 
 @contextlib.contextmanager
@@ -40,7 +40,7 @@ def tempdir(prefix='tmp'):
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-class FsdBinaryMiner(AbstractMiner):
+class FsdBinaryMiner(BaseMiner):
 
     def __init__(self, rvr, translator):
         self._fsd_spec = {

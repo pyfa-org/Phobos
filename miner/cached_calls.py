@@ -24,11 +24,11 @@ import os.path
 from reverence import blue
 
 from util import CachedProperty
-from .abstract_miner import AbstractMiner
+from .base import BaseMiner
 from .eve_normalize import EveNormalizer
 
 
-class CachedCallsMiner(AbstractMiner):
+class CachedCallsMiner(BaseMiner):
     """
     Class, responsible for fetching data from EVE client's
     remote service call cache.

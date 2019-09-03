@@ -39,14 +39,13 @@ def run(rvr, path_json):
         TraitMiner(staticcache_miner, bulkdata_miner, trans),
         SqliteMiner(rvr.paths.root, trans),
         CachedCallsMiner(rvr, trans),
-        pickle_miner
-    )
+        pickle_miner)
 
     writers = (
-        JsonWriter(path_json, indent=2),
-    )
+        JsonWriter(path_json, indent=2),)
 
     FlowManager(miners, writers).run(args.list, args.translate)
+
 
 if __name__ == '__main__':
 

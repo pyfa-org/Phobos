@@ -19,11 +19,11 @@
 
 
 from util import CachedProperty
-from .abstract_miner import AbstractMiner
+from .base import BaseMiner
 from .eve_normalize import EveNormalizer
 
 
-class BulkdataMiner(AbstractMiner):
+class BulkdataMiner(BaseMiner):
     """
     Class, responsible for fetching data out of bulkdata, which is included
     with EVE client.

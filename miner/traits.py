@@ -20,7 +20,7 @@
 
 import re
 
-from .abstract_miner import AbstractMiner
+from .base import BaseMiner
 
 
 tags = re.compile('\<.+?\>')
@@ -30,7 +30,7 @@ def striptags(text):
     return tags.sub('', text)
 
 
-class TraitMiner(AbstractMiner):
+class TraitMiner(BaseMiner):
     """
     Phobos actually dumps all the required data needed
     to compose item traits. We're doing it internally for

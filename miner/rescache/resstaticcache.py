@@ -23,12 +23,12 @@ import os
 import re
 import sqlite3
 
-from miner.abstract_miner import AbstractMiner
+from miner.base import BaseMiner
 from util import CachedProperty
 from .resbrowser import ResourceBrowser
 
 
-class ResourceStaticCacheMiner(AbstractMiner):
+class ResourceStaticCacheMiner(BaseMiner):
     """
     Class, which fetches data from FSDLite format
     static cache files.

@@ -20,12 +20,12 @@
 
 import pickle
 
-from miner.abstract_miner import AbstractMiner
+from miner.base import BaseMiner
 from util import CachedProperty
 from .resbrowser import ResourceBrowser
 
 
-class ResourcePickleMiner(AbstractMiner):
+class ResourcePickleMiner(BaseMiner):
     """
     Class, which attempts to get data from resource
     pickles (this is not guaranteed to succeed).
