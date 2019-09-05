@@ -18,6 +18,7 @@
 #===============================================================================
 
 
+import inspect
 import types
 from collections import OrderedDict
 from itertools import chain
@@ -32,12 +33,16 @@ class EveNormalizer(object):
     python built-in types.
     """
 
-    def run(self, eve_container):
+    def __init__(self):
+        self._loader_module = None
+
+    def run(self, eve_container, loader_module=None):
         """
         Entry point for conversion jobs. Runs method which recursively
         changes contents of passed container to present them in pythonized
         data structures.
         """
+        self._loader_module = loader_module
         data = self._route_object(eve_container)
         return data
 
@@ -71,6 +76,10 @@ class EveNormalizer(object):
             if isinstance(obj, candidate_cls):
                 method = self._subclass_match[candidate_cls]
                 return method(self, obj)
+        # Check if class is defined in passed loader, if it is, then
+        # we're dealing with FSD binary item
+        if self._loader_module is not None and inspect.getmodule(type(obj)) is self._loader_module:
+            return self.pythonize_fsdbinary_item(obj)
         # If we got here, routing failed
         msg = 'unable to route {}'.format(type(obj))
         guid = getattr(obj, '__guid__', None)
@@ -193,6 +202,14 @@ class EveNormalizer(object):
         """
         return self._pythonize_dbrow(obj.line)
 
+    def pythonize_fsdbinary_item(self, obj):
+        item = {}
+        for attr_name in dir(obj):
+            if attr_name.startswith('__') and attr_name.endswith('__'):
+                continue
+            item[attr_name] = self._route_object(getattr(obj, attr_name))
+        return item
+
     _primitives = (
         types.NoneType,
         types.BooleanType,
@@ -226,6 +243,9 @@ class EveNormalizer(object):
         'FSD_Object': _pythonize_fsd_object,
         '_FixedSizeList': _pythonize_iterable,
         '_VariableSizedList': _pythonize_iterable,
+        # FSD-binary-related classes
+        'dict': _pythonize_map,  # cfsd.dict
+        'list': _pythonize_iterable,  # cfsd.list
         # Misc
         'blue.DBRow': _pythonize_dbrow,
         'universe.SolarSystemWrapper': _pythonize_pyobj}

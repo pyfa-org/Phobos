@@ -27,6 +27,7 @@ import sys
 import tempfile
 
 from .base import BaseMiner
+from .eve_normalize import EveNormalizer
 
 
 @contextlib.contextmanager
@@ -93,40 +94,6 @@ class FsdBinaryMiner(BaseMiner):
                 os.chdir(cwd)
                 sys.path.remove(temp_dir)
 
-            def normalize_list(data):
-                l = [normalize_object(v) for v in data]
-                return l
-
-            def normalize_dict(data):
-                d = {}
-                for k, v in data.items():
-                    d[normalize_object(k)] = normalize_object(v)
-                return d
-
-            def normalize_fsd_item(data):
-                item = {}
-                for attr_name in dir(data):
-                    if attr_name.startswith('__') and attr_name.endswith('__'):
-                        continue
-                    item[attr_name] = normalize_object(getattr(data, attr_name))
-                return item
-
-            class_map = {
-                'dict': normalize_dict,
-                'list': normalize_list}
-            primitives = (int, float, str, unicode, bool, type(None))
-
-            def normalize_object(obj):
-                if isinstance(obj, primitives):
-                    return obj
-                type_name = type(obj).__name__
-                if type_name in class_map:
-                    converter = class_map[type_name]
-                    return converter(obj)
-                if inspect.getmodule(type(obj)) is loader_module:
-                    return normalize_fsd_item(obj)
-                print('unable to convert object from fsdbinary format', obj)
-
-            normalized_data = normalize_object(fsd_data)
+            normalized_data = EveNormalizer().run(fsd_data, loader_module=loader_module)
             self._translator.translate_container(normalized_data, language, verbose=verbose)
             return normalized_data
