@@ -1,9 +1,21 @@
 # Phobos
 Phobos is script for dumping EVE client data into JSON format.
 
-### Dependencies
+It uses collection of data miners which extract data from files of various formats. It does not provide stable "API" by design: if CCP changes data scheme within EVE client, output files will also change.
 
+### A note on safety
+Several data miners used in Phobos are doing potentially very dangerous thing security-wise, they are loading external code:
+ 
+- ResourcePickleMiner: [unpickles](https://docs.python.org/2.7/library/pickle.html) serialized python files
+- FsdBinaryMiner: executes loaders provided by the EVE client to access data in FSD binary format
+ 
+It doesn't mean that you should not use these miners. Generally speaking, if you trust EVE client and Phobos - you should trust these loaders. Phobos runs simple validation on files which will be worked upon (checksum according to the client's file registry). Still, it is recommended to run Phobos in some sandboxed environment (e.g. separate Wine prefix for Linux).
+
+### Requirements
+
+* Python 2.7
 * [Reverence](https://github.com/ntt/reverence)
+* 64-bit python built for Windows is needed to access data in FSD binary format
 
 ### Arguments:
 
@@ -34,10 +46,10 @@ When CCP first released the beta, the Shared Cache was usually located at `C:\Pr
 ### Phobos-specific data
 Besides raw data Phobos pulls from client, it provides two custom containers.
 
-#### phbmetadata
+#### phobos/metadata
 Contains just two parameters: client version and UNIX timestamp of the time script was invoked.
 
-#### phbtraits
+#### phobos/traits
 Traits for various ships. Data has following format:
 
     Returned value:
