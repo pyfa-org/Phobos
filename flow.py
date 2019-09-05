@@ -20,7 +20,7 @@
 
 import re
 
-from util import CachedProperty
+from util import cachedproperty
 
 
 class FlowManager(object):

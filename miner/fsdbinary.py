@@ -26,8 +26,8 @@ import struct
 import sys
 import tempfile
 
+from util import EveNormalizer
 from .base import BaseMiner
-from .eve_normalize import EveNormalizer
 
 
 @contextlib.contextmanager

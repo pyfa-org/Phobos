@@ -18,4 +18,5 @@
 #===============================================================================
 
 
-from .cached_property import CachedProperty
+from .cached_property import cachedproperty
+from .eve_normalize import EveNormalizer

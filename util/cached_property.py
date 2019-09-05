@@ -18,7 +18,7 @@
 #===============================================================================
 
 
-class CachedProperty(object):
+class cachedproperty(object):
     """
     Decorator class, imitates property behavior, but additionally
     caches results returned by decorated method as attribute of

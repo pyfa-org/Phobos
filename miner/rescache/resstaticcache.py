@@ -24,7 +24,7 @@ import re
 import sqlite3
 
 from miner.base import BaseMiner
-from util import CachedProperty
+from util import cachedproperty
 from .resbrowser import ResourceBrowser
 
 
@@ -64,7 +64,7 @@ class ResourceStaticCacheMiner(BaseMiner):
             self._translator.translate_container(rows, language, verbose=verbose)
             return rows
 
-    @CachedProperty
+    @cachedproperty
     def _contname_respath_map(self):
         """
         Map between container names and resource path names to static cache files.

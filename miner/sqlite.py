@@ -21,7 +21,7 @@
 import os.path
 import sqlite3
 
-from util import CachedProperty
+from util import cachedproperty
 from .base import BaseMiner
 
 
@@ -61,7 +61,7 @@ class SqliteMiner(BaseMiner):
             self._translator.translate_container(rows, language, verbose=verbose)
             return rows
 
-    @CachedProperty
+    @cachedproperty
     def _contname_dbtable_map(self):
         """
         Map between container names and DB tables where data is stored.

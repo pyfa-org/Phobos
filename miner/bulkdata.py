@@ -18,9 +18,8 @@
 #===============================================================================
 
 
-from util import CachedProperty
+from util import EveNormalizer
 from .base import BaseMiner
-from .eve_normalize import EveNormalizer
 
 
 class BulkdataMiner(BaseMiner):

@@ -21,7 +21,7 @@
 import pickle
 
 from miner.base import BaseMiner
-from util import CachedProperty
+from util import cachedproperty
 from .resbrowser import ResourceBrowser
 
 
@@ -50,7 +50,7 @@ class ResourcePickleMiner(BaseMiner):
             data = pickle.loads(resfiledata)
             return data
 
-    @CachedProperty
+    @cachedproperty
     def _contname_respath_map(self):
         """
         Map between container names and resource path names to pickle files.

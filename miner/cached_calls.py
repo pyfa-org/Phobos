@@ -23,9 +23,8 @@ import os.path
 
 from reverence import blue
 
-from util import CachedProperty
+from util import EveNormalizer, cachedproperty
 from .base import BaseMiner
-from .eve_normalize import EveNormalizer
 
 
 class CachedCallsMiner(BaseMiner):
@@ -55,7 +54,7 @@ class CachedCallsMiner(BaseMiner):
             self._translator.translate_container(normalized_data, language, verbose=verbose)
             return normalized_data
 
-    @CachedProperty
+    @cachedproperty
     def _contname_filepath_map(self):
         """
         Make map with cache filenames, keyed against formatted call names.
