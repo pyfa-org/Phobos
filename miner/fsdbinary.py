@@ -20,9 +20,9 @@
 
 import contextlib
 import importlib
-import inspect
 import os
 import shutil
+import struct
 import sys
 import tempfile
 
@@ -64,6 +64,9 @@ class FsdBinaryMiner(BaseMiner):
             yield container_name
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
+        if os.name != 'nt' or struct.calcsize('P') * 8 != 64:
+            msg = 'need 64-bit python under Windows to fetch data'
+            raise PlatformError(msg)
         try:
             loader_location, resource_location = self._fsd_spec[container_name]
         except KeyError:
@@ -97,3 +100,8 @@ class FsdBinaryMiner(BaseMiner):
             normalized_data = EveNormalizer().run(fsd_data, loader_module=loader_module)
             self._translator.translate_container(normalized_data, language, verbose=verbose)
             return normalized_data
+
+
+class PlatformError(Exception):
+    """Raised when FSD binary miner is used on incorrect platform."""
+    pass
