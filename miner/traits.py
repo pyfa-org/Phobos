@@ -39,9 +39,9 @@ class TraitMiner(BaseMiner):
 
     name = 'phobos'
 
-    def __init__(self, staticminer, bulkminer, translator):
-        self._staticminer = staticminer
-        self._bulkminer = bulkminer
+    def __init__(self, fsdlite_miner, bulkdata_miner, translator):
+        self._fsdlite_miner = fsdlite_miner
+        self._bulkdata_miner = bulkdata_miner
         self._translator = translator
         self._container_name = 'traits'
         # Format: {language: {type ID: type name}}
@@ -71,7 +71,7 @@ class TraitMiner(BaseMiner):
           number field is optional
         """
         trait_rows = []
-        bubble_data = self._staticminer.get_data('infobubbles')
+        bubble_data = self._fsdlite_miner.get_data('infobubbles')
         for type_id, trait_data in bubble_data['infoBubbleTypeBonuses'].items():
             type_id = int(type_id)
             trait_row = {'typeID': type_id}
@@ -180,7 +180,7 @@ class TraitMiner(BaseMiner):
         try:
             type_name_map = self._type_name_map_all[language]
         except KeyError:
-            evetypes = self._staticminer.get_data('evetypes', language=language)
+            evetypes = self._fsdlite_miner.get_data('evetypes', language=language)
             type_name_map = {}
             for type_id, type_row in evetypes.items():
                 type_id = int(type_id)
@@ -195,7 +195,7 @@ class TraitMiner(BaseMiner):
         try:
             unit_display_map = self._unit_display_map_all[language]
         except KeyError:
-            dgmunits = self._bulkminer.get_data('dgmunits', language=language)
+            dgmunits = self._bulkdata_miner.get_data('dgmunits', language=language)
             unit_display_map = {}
             for row in dgmunits:
                 unit_display_map[row['unitID']] = row.get('displayName')

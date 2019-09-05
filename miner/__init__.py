@@ -18,23 +18,23 @@
 #===============================================================================
 
 
+from .base import ContainerNameError
 from .bulkdata import BulkdataMiner
 from .cached_calls import CachedCallsMiner
-from .fsdbinary import FsdBinaryMiner
+from .fsd_binary import FsdBinaryMiner
+from .fsd_lite import FsdLiteMiner
 from .metadata import MetadataMiner
-from .rescache import ResourcePickleMiner, ResourceStaticCacheMiner
 from .sqlite import SqliteMiner
 from .traits import TraitMiner
-from .base import ContainerNameError
+from .unpickle import PickleMiner
 
 
 __all__ = (
     'BulkdataMiner',
     'CachedCallsMiner',
     'FsdBinaryMiner',
+    'FsdLiteMiner',
     'MetadataMiner',
-    'ResourcePickleMiner',
-    'ResourceStaticCacheMiner',
+    'PickleMiner',
     'SqliteMiner',
-    'TraitMiner'
-)
+    'TraitMiner')

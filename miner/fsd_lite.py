@@ -24,17 +24,13 @@ import re
 import sqlite3
 
 from miner.base import BaseMiner
-from util import cachedproperty
-from .resbrowser import ResourceBrowser
+from util import ResourceBrowser, cachedproperty
 
 
-class ResourceStaticCacheMiner(BaseMiner):
-    """
-    Class, which fetches data from FSDLite format
-    static cache files.
-    """
+class FsdLiteMiner(BaseMiner):
+    """Class, which fetches data from FSDLite format static cache files."""
 
-    name = 'resource_static'
+    name = 'fsd_lite'
 
     def __init__(self, rvr, translator):
         self._rvr = rvr

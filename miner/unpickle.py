@@ -21,15 +21,11 @@
 import pickle
 
 from miner.base import BaseMiner
-from util import cachedproperty
-from .resbrowser import ResourceBrowser
+from util import ResourceBrowser, cachedproperty
 
 
-class ResourcePickleMiner(BaseMiner):
-    """
-    Class, which attempts to get data from resource
-    pickles (this is not guaranteed to succeed).
-    """
+class PickleMiner(BaseMiner):
+    """Class, which attempts to get data from resource pickles (which is not guaranteed to succeed)."""
 
     name = 'resource_pickle'
 

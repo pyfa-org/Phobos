@@ -19,6 +19,7 @@
 
 
 import contextlib
+import gc
 import importlib
 import os
 import shutil
@@ -37,7 +38,7 @@ def tempdir(prefix='tmp'):
     try:
         yield tmpdir
     finally:
-        # this doesn't actually work because the module is loaded within this phobos process,
+        # This doesn't actually work because the module is loaded within this phobos process,
         # and cannot be removed, hence ignore errors
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -93,11 +94,15 @@ class FsdBinaryMiner(BaseMiner):
                 loader_modname = os.path.splitext(loader_filename)[0]
                 loader_module = importlib.import_module(loader_modname)
                 fsd_data = loader_module.load(resource_dest)
+                normalized_data = EveNormalizer().run(fsd_data, loader_module=loader_module)
 
                 os.chdir(cwd)
                 sys.path.remove(temp_dir)
 
-            normalized_data = EveNormalizer().run(fsd_data, loader_module=loader_module)
+                del loader_module
+                del sys.modules[loader_modname]
+                gc.collect()
+
             self._translator.translate_container(normalized_data, language, verbose=verbose)
             return normalized_data
 

@@ -27,16 +27,16 @@ from translator import Translator
 from writer import *
 
 def run(path_eve, rvr, path_json, filter_string, language):
-    pickle_miner = ResourcePickleMiner(rvr=rvr)
+    pickle_miner = PickleMiner(rvr=rvr)
     trans = Translator(pickle_miner=pickle_miner)
     bulkdata_miner = BulkdataMiner(rvr=rvr, translator=trans)
-    staticcache_miner = ResourceStaticCacheMiner(rvr=rvr, translator=trans)
+    fsdlite_miner = FsdLiteMiner(rvr=rvr, translator=trans)
     miners = (
         MetadataMiner(path_eve=path_eve),
         bulkdata_miner,
-        staticcache_miner,
+        fsdlite_miner,
         FsdBinaryMiner(rvr=rvr, translator=trans),
-        TraitMiner(staticminer=staticcache_miner, bulkminer=bulkdata_miner, translator=trans),
+        TraitMiner(fsdlite_miner=fsdlite_miner, bulkdata_miner=bulkdata_miner, translator=trans),
         SqliteMiner(path_eve=path_eve, translator=trans),
         CachedCallsMiner(rvr=rvr, translator=trans),
         pickle_miner)
