@@ -22,6 +22,7 @@ import json
 import os.path
 import re
 import types
+from collections import OrderedDict
 
 from .base import BaseWriter
 
@@ -34,12 +35,12 @@ class CustomEncoder(json.JSONEncoder):
 
     def encode(self, obj, *args, **kwargs):
         if isinstance(obj, dict):
-            self._map_keys_to_str(obj)
+            obj = self._prepare_map(obj)
         return json.JSONEncoder.encode(self, obj, *args, **kwargs)
 
     def iterencode(self, obj, *args, **kwargs):
         # Traverse passed object, and do some modifications
-        self._route_object(obj)
+        obj = self._route_object(obj)
         # Pass it to usual encoder
         return json.JSONEncoder.iterencode(self, obj, *args, **kwargs)
 
@@ -47,40 +48,56 @@ class CustomEncoder(json.JSONEncoder):
         obj_type = type(obj)
         method = self._traversal_map.get(obj_type)
         if method is not None:
-            method(self, obj)
+            new_obj = method(self, obj)
+        else:
+            new_obj = obj
+        return new_obj
 
     def _traverse_map(self, obj):
         """
         Traverse through dict items first, then convert
         keys to strings.
         """
+        new_obj = {}
         for k, v in obj.items():
-            self._route_object(k)
-            self._route_object(v)
-        self._map_keys_to_str(obj)
+            new_obj[self._route_object(k)] = self._route_object(v)
+        new_obj = self._prepare_map(new_obj)
+        return new_obj
 
     def _traverse_iterable(self, obj):
+        new_obj = []
         for item in obj:
-            self._route_object(item)
+            new_obj.append(self._route_object(item))
+        return new_obj
 
     _traversal_map = {
         types.DictType: _traverse_map,
         types.TupleType: _traverse_iterable,
-        types.ListType: _traverse_iterable
-    }
+        types.ListType: _traverse_iterable}
 
-    def _map_keys_to_str(self, obj):
+    def _prepare_map(self, obj):
         """
-        Unconditionally convert dictionary keys to
-        strings. Default encoder doesn't do this for
-        cases when keys are python objects like tuple,
-        and encoding fails.
+        Sort keys the way we want and unconditionally convert dictionary keys
+        to strings. Default encoder doesn't do this for cases when keys are
+        python objects like tuple, and encoding fails.
         """
-        new_dict = {}
-        for k, v in obj.items():
-            new_dict[unicode(k)] = v
-        obj.clear()
-        obj.update(new_dict)
+        # If all keys are numbers - sort them before converting to string,
+        # otherwise sort after conversion
+        sorter = self.__sort_as_is
+        for k in obj:
+            if not isinstance(k, (int, long, float)):
+                sorter = self.__sort_as_string
+                break
+        new_obj = OrderedDict()
+        for k in sorted(obj.keys(), key=sorter):
+            new_obj[unicode(k)] = obj[k]
+        return new_obj
+
+    def __sort_as_is(self, i):
+        return i
+
+    def __sort_as_string(self, i):
+        return unicode(i)
 
 
 class JsonWriter(BaseWriter):
@@ -102,7 +119,9 @@ class JsonWriter(BaseWriter):
             container_data,
             ensure_ascii=False,
             cls=CustomEncoder,
-            indent=self.indent)
+            indent=self.indent,
+            # We're handling sorting in customized encoder
+            sort_keys=False)
         data_bytes = data_str.encode('utf8')
         filepath = os.path.join(folder, '{}.json'.format(self.__secure_name(container_name)))
         with open(filepath, 'wb') as f:
