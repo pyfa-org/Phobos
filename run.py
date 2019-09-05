@@ -26,25 +26,25 @@ from miner import *
 from translator import Translator
 from writer import *
 
-def run(rvr, path_json):
-    pickle_miner = ResourcePickleMiner(rvr)
-    trans = Translator(pickle_miner)
-    bulkdata_miner = BulkdataMiner(rvr, trans)
-    staticcache_miner = ResourceStaticCacheMiner(rvr, trans)
+def run(path_eve, rvr, path_json, filter_string, language):
+    pickle_miner = ResourcePickleMiner(rvr=rvr)
+    trans = Translator(pickle_miner=pickle_miner)
+    bulkdata_miner = BulkdataMiner(rvr=rvr, translator=trans)
+    staticcache_miner = ResourceStaticCacheMiner(rvr=rvr, translator=trans)
     miners = (
-        MetadataMiner(path_eve),
+        MetadataMiner(path_eve=path_eve),
         bulkdata_miner,
         staticcache_miner,
-        FsdBinaryMiner(rvr, trans),
-        TraitMiner(staticcache_miner, bulkdata_miner, trans),
-        SqliteMiner(rvr.paths.root, trans),
-        CachedCallsMiner(rvr, trans),
+        FsdBinaryMiner(rvr=rvr, translator=trans),
+        TraitMiner(staticminer=staticcache_miner, bulkminer=bulkdata_miner, translator=trans),
+        SqliteMiner(path_eve=path_eve, translator=trans),
+        CachedCallsMiner(rvr=rvr, translator=trans),
         pickle_miner)
 
     writers = (
         JsonWriter(path_json, indent=2),)
 
-    FlowManager(miners, writers).run(args.list, args.translate)
+    FlowManager(miners, writers).run(filter_string=filter_string, language=language)
 
 
 if __name__ == '__main__':
@@ -59,7 +59,6 @@ if __name__ == '__main__':
         sys.stderr.write('This application requires Python 2.7 to run, but {0}.{1} was used\n'.format(major, minor))
         sys.exit()
 
-
     import argparse
     import os.path
 
@@ -68,7 +67,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
     parser.add_argument('-r', '--res', help='Path to EVE SharedCache folder', required=True)
     parser.add_argument('-j', '--json', help='Output folder for the JSON files', required=True)
-    servers = {'tranquility': 'tq', 'singularity': 'sisi', 'duality': 'duality','serenity':'serenity'}
+    servers = {'tranquility': 'tq', 'singularity': 'sisi', 'duality': 'duality','serenity': 'serenity'}
     parser.add_argument('-s', '--server', default='tranquility', choices=servers.keys(), help='Server to pull data from. Defaults to tranquility.If Server is Serenity,must set --eve value')
     parser.add_argument('-e', '--eve', help='Path to EVE folder. Defaults to standard directory location under SharedCache')
     parser.add_argument('-c', '--cache', help='Path to EVE cache folder. Reverence will attempt to find cache by default if none is provided')
@@ -89,4 +88,4 @@ if __name__ == '__main__':
     rvr_language = args.translate if args.translate != 'multi' else 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, sharedcachepath=path_res, server=args.server, languageID=rvr_language)
 
-    run(rvr, path_json)
+    run(path_eve=path_eve, rvr=rvr, path_json=path_json, filter_string=args.list, language=args.translate)
