@@ -30,7 +30,7 @@ class BaseWriter(object):
 
     @abstractmethod
     def write(self, writer_resolved_name, container_data):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def secure_name(self, flow_name):
@@ -40,7 +40,7 @@ class BaseWriter(object):
         on filesystems, in database table names, etc). This method
         should make name which is safe to use with particular writer.
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def resolve_name_collisions(self, flow_writersafe_map):
@@ -49,4 +49,4 @@ class BaseWriter(object):
         collisions between safe names and return map between flow
         names and writer resolved names.
         """
-        pass
+        raise NotImplementedError
