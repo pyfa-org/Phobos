@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -199,14 +199,12 @@ class EveNormalizer(object):
         types.FloatType,
         types.IntType,
         types.LongType,
-        types.UnicodeType
-    )
+        types.UnicodeType)
 
     _class_match = {
         types.StringType: _pythonize_string,
         types.ListType: _pythonize_iterable,
-        types.TupleType: _pythonize_iterable,
-    }
+        types.TupleType: _pythonize_iterable}
 
     _name_match = {
         # Usually seen in cache
@@ -230,8 +228,7 @@ class EveNormalizer(object):
         '_VariableSizedList': _pythonize_iterable,
         # Misc
         'blue.DBRow': _pythonize_dbrow,
-        'universe.SolarSystemWrapper': _pythonize_pyobj,
-    }
+        'universe.SolarSystemWrapper': _pythonize_pyobj}
 
     _subclass_match = OrderedDict([
         # Row is handled through isinstance check because reverence
@@ -239,8 +236,7 @@ class EveNormalizer(object):
         # to specify them all
         (Row, _pythonize_row),
         # Includes dictionaries and FSDLiteStorage
-        (types.DictType, _pythonize_map)
-    ])
+        (types.DictType, _pythonize_map)])
 
 
 class UnknownContainerTypeError(Exception):

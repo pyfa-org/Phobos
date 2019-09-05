@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #

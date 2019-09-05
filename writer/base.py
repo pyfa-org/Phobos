@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -29,24 +29,5 @@ class BaseWriter(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def write(self, writer_resolved_name, container_data):
-        raise NotImplementedError
-
-    @abstractmethod
-    def secure_name(self, flow_name):
-        """
-        Writers might need to modify container names proposed by
-        flow (because names can have symbols not allowed to use
-        on filesystems, in database table names, etc). This method
-        should make name which is safe to use with particular writer.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def resolve_name_collisions(self, flow_writersafe_map):
-        """
-        Take map between flow names and writer safe names, resolve
-        collisions between safe names and return map between flow
-        names and writer resolved names.
-        """
+    def write(self, miner_name, container_name, container_data):
         raise NotImplementedError

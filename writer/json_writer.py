@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -90,25 +90,25 @@ class JsonWriter(BaseWriter):
     """
 
     def __init__(self, folder, indent=None):
-        self.folder = folder
+        self.base_folder = folder
         self.indent = indent
 
-    def write(self, writer_resolved_name, container_data):
+    def write(self, miner_name, container_name, container_data):
         # Create folder structure to path, if not created yet
-        if not os.path.exists(self.folder):
-            os.makedirs(self.folder, mode=0o755)
+        folder = os.path.join(self.base_folder, self.__secure_name(miner_name))
+        if not os.path.exists(folder):
+            os.makedirs(folder, mode=0o755)
         data_str = json.dumps(
             container_data,
             ensure_ascii=False,
             cls=CustomEncoder,
-            indent=self.indent
-        )
+            indent=self.indent)
         data_bytes = data_str.encode('utf8')
-        filepath = os.path.join(self.folder, '{}.json'.format(writer_resolved_name))
+        filepath = os.path.join(folder, '{}.json'.format(self.__secure_name(container_name)))
         with open(filepath, 'wb') as f:
             f.write(data_bytes)
 
-    def secure_name(self, flow_name):
+    def __secure_name(self, name):
         """
         As we're writing to disk, we should get rid of all
         filesystem-specific symbols.
@@ -116,36 +116,5 @@ class JsonWriter(BaseWriter):
         # Prefer safe way - replace any characters besides
         # alphanumeric and few special characters with
         # underscore
-        writer_safe_name = re.sub('[^\w\-\.,\(\) ]', '_', flow_name, flags=re.UNICODE)
+        writer_safe_name = re.sub('[^\w\-.,() ]', '_', name, flags=re.UNICODE)
         return writer_safe_name
-
-    def resolve_name_collisions(self, flow_writersafe_map):
-        # Intermediate map
-        # Format: {safe writer name in lower case: [flow names]}
-        writersafelow_flow_map = {}
-        for flow_name, writer_safe_name in flow_writersafe_map.items():
-            # We convert to lower case because 'file.json' and
-            # 'File.json' are same names on windows - thus we
-            # need to consider it as collision
-            writer_safe_name_low = writer_safe_name.lower()
-            flow_names = writersafelow_flow_map.setdefault(writer_safe_name_low, [])
-            flow_names.append(flow_name)
-        # Container for collision-free names
-        # Format: {flow name: resolved writer name}
-        flow_writerresolved_map = {}
-        for flow_names in writersafelow_flow_map.values():
-            # Resolve collisions by appending number suffix with 'writer'
-            # marker to safe writer name (not converted to lower case)
-            if len(flow_names) > 1:
-                sorted_flow_names = sorted(flow_names)
-                for i in range(len(sorted_flow_names)):
-                    flow_name = sorted_flow_names[i]
-                    writer_safe_name = flow_writersafe_map[flow_name]
-                    writer_resolved_name = u'{}_w{}'.format(writer_safe_name, i + 1)
-                    flow_writerresolved_map[flow_name] = writer_resolved_name
-            # Map source to originally used safe name if no collisions
-            else:
-                flow_name = flow_names[0]
-                writer_safe_name = flow_writersafe_map[flow_name]
-                flow_writerresolved_map[flow_name] = writer_safe_name
-        return flow_writerresolved_map

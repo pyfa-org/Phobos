@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -30,40 +30,23 @@ class BaseMiner(object):
 
     @abstractmethod
     def contname_iter(self):
-        """
-        Provide an iterator over containers provided by miner.
-        """
+        """Provide an iterator over containers provided by miner."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_data(self, resolved_name, **kwargs):
-        """
-        Fetch data from specified container.
-        """
+    def get_data(self, container_name, **kwargs):
+        """Fetch data from specified container."""
         raise NotImplementedError
 
-    def _secure_name(self, source_name, arg=False):
-        """
-        We rely on container/service/call/arguments names to not have
-        any parenthesis or commas, because these are special symbols -
-        they split up arguments from calls and arguments from each
-        other. Having these in names themselves would make it
-        impossible to parse list of names passed to phobos.
+    @property
+    def name(self):
+        """Return miner group name, which can be used as output affix."""
+        return self.raw_name
 
-        arg keyword argument defines if we're securing argument or not,
-        arguments and non-arguments have slightly different handling.
-        """
-        # Make sure to convert to unicode, just in case argument of
-        # non-string-type is passed
-        safe_name = unicode(source_name)
-        # We replace them with similar symbol instead of just removing
-        safe_name = safe_name.replace('(', '<')
-        safe_name = safe_name.replace(')', '>')
-        safe_name = safe_name.replace(',', '.')
-        # Table/service/call names should not have any whitespace characters
-        if not arg:
-            safe_name = safe_name.strip()
-        return safe_name
+    @property
+    def raw_name(self):
+        """Return miner class name."""
+        return type(self).__name__
 
     def _container_not_found(self, cont_name):
         msg = u'container "{}" is not available for miner {}'.format(cont_name, type(self).__name__)

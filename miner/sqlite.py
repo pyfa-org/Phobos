@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -30,62 +30,50 @@ class SqliteMiner(BaseMiner):
     Extract data from SQLite databases bundled with client.
     """
 
+    name = 'sqlite'
+
     def __init__(self, path_eve, translator):
-        # Format: {db alias: db connection}
+        # Format: {db alias: db path}
         self._databases = {
-            'mapbulk': sqlite3.connect(os.path.join(path_eve, 'bulkdata', 'mapbulk.db')),
-            'mapObjects': sqlite3.connect(os.path.join(path_eve, 'bin', 'staticdata', 'mapObjects.db'))
-        }
+            'mapbulk': os.path.join(path_eve, 'bulkdata', 'mapbulk.db'),
+            'mapObjects': os.path.join(path_eve, 'bin', 'staticdata', 'mapObjects.db')}
         self._translator = translator
 
     def contname_iter(self):
-        for resolved_name in sorted(self._resolved_source_map):
-            yield resolved_name
+        for container_name in sorted(self._contname_dbtable_map):
+            yield container_name
 
-    def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
+    def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            dbname, table_name = self._resolved_source_map[resolved_name]
+            dbname, table_name = self._contname_dbtable_map[container_name]
         except KeyError:
-            self._container_not_found(resolved_name)
+            self._container_not_found(container_name)
         else:
-            dbconn = self._databases[dbname]
-            c = dbconn.cursor()
+            dbpath = self._databases[dbname]
             rows = []
-            c.execute(u'select * from {}'.format(table_name))
-            headers = list(map(lambda x: x[0], c.description))
-            for sqlite_row in c:
-                row = dict(zip(headers, sqlite_row))
-                rows.append(row)
+            with sqlite3.connect(dbpath) as dbconn:
+                c = dbconn.cursor()
+                c.execute(u'select * from {}'.format(table_name))
+                headers = list(map(lambda x: x[0], c.description))
+                for sqlite_row in c:
+                    row = dict(zip(headers, sqlite_row))
+                    rows.append(row)
             self._translator.translate_container(rows, language, verbose=verbose)
             return rows
 
     @CachedProperty
-    def _resolved_source_map(self):
+    def _contname_dbtable_map(self):
         """
-        Map between secured/conflict-free names and the place where
-        data source is located.
-        Format: {resolved name: (db alias, table name)}
+        Map between container names and DB tables where data is stored.
+        Format: {container name: (db alias, table name)}
         """
-        # Format: {safe name: [(db alias, table name), ...]}
-        safe_source_map = {}
-        for dbname, dbconn in self._databases.items():
-            c = dbconn.cursor()
-            c.execute('select name from sqlite_master where type = \'table\'')
-            for row in c:
-                table_name = row[0]
-                source_name = u'{}_{}'.format(dbname, table_name)
-                safe_name = self._secure_name(source_name)
-                sources = safe_source_map.setdefault(safe_name, [])
-                sources.append((dbname, table_name))
-        resolved_source_map = {}
-        for safe_name, sources in safe_source_map.items():
-            # Use number suffix with 'miner' marker to resolve conflicts
-            if len(sources) > 1:
-                i = 1
-                for source in sorted(sources):
-                    resolved_name = u'{}_m{}'.format(safe_name, i)
-                    resolved_source_map[resolved_name] = source
-                    i += 1
-            else:
-                resolved_source_map[safe_name] = sources[0]
-        return resolved_source_map
+        contname_tbtable_map = {}
+        for dbname, dbpath in self._databases.items():
+            with sqlite3.connect(dbpath) as dbconn:
+                c = dbconn.cursor()
+                c.execute('select name from sqlite_master where type = \'table\'')
+                for row in c:
+                    table_name = row[0]
+                    container_name = u'{}_{}'.format(dbname, table_name)
+                    contname_tbtable_map[container_name] = (dbname, table_name)
+        return contname_tbtable_map

@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -34,83 +34,67 @@ class ResourceStaticCacheMiner(BaseMiner):
     static cache files.
     """
 
+    name = 'resource_static'
+
     def __init__(self, rvr, translator):
         self._rvr = rvr
         self._resbrowser = ResourceBrowser(rvr)
         self._translator = translator
 
     def contname_iter(self):
-        for resolved_name in sorted(self._resolved_source_map):
-            yield resolved_name
+        for container_name in sorted(self._contname_respath_map):
+            yield container_name
 
-    def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
+    def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            resfilepath = self._resolved_source_map[resolved_name]
+            resfilepath = self._contname_respath_map[container_name]
         except KeyError:
-            self._container_not_found(resolved_name)
+            self._container_not_found(container_name)
         else:
-            fs_path = self.__get_filesystem_path(resfilepath)
-            dbconn = sqlite3.connect(fs_path)
-            c = dbconn.cursor()
             rows = {}
-            c.execute(u'select key, value from cache')
-            for sqlite_row in c:
-                key = sqlite_row[0]
-                value = sqlite_row[1]
-                row = json.loads(value)
-                rows[key] = row
+            fs_path = self.__get_filesystem_path(resfilepath)
+            with sqlite3.connect(fs_path) as dbconn:
+                c = dbconn.cursor()
+                c.execute(u'select key, value from cache')
+                for sqlite_row in c:
+                    key = sqlite_row[0]
+                    value = sqlite_row[1]
+                    row = json.loads(value)
+                    rows[key] = row
             self._translator.translate_container(rows, language, verbose=verbose)
             return rows
 
     @CachedProperty
-    def _resolved_source_map(self):
+    def _contname_respath_map(self):
         """
-        Map between secure conflict-free paths w/o extensions
-        and original full resource paths.
-        Format: {resolved path: path to pickle}
+        Map between container names and resource path names to static cache files.
+        Format: {container path: resource path to static cache}
         """
-        # Format: {safe path: [source paths]}
-        safe_source_map = {}
-        for source_path in self._resbrowser.get_filelist():
+        contname_respath_map = {}
+        for resource_path in self._resbrowser.get_filelist():
             # Filter by resource file path first
-            source_name = self.__get_source_name(source_path)
-            if source_name is None:
+            container_name = self.__get_container_name(resource_path)
+            if container_name is None:
                 continue
             # Now, check if it's actually sqlite database and if it has cache table
-            if not self.__check_cache(source_path):
+            if not self.__check_cache(resource_path):
                 continue
-            safe_name = self._secure_name(source_name)
-            source_paths = safe_source_map.setdefault(safe_name, [])
-            source_paths.append(source_path)
-        resolved_source_map = {}
-        for safe_name, source_paths in safe_source_map.items():
-            # Use number suffix with 'miner' marker to resolve conflicts
-            if len(source_paths) > 1:
-                i = 1
-                for source_path in sorted(source_paths):
-                    resolved_name = u'{}_m{}'.format(safe_name, i)
-                    resolved_source_map[resolved_name] = source_path
-                    i += 1
-            else:
-                resolved_source_map[safe_name] = source_paths[0]
-        return resolved_source_map
+            contname_respath_map[container_name] = resource_path
+        return contname_respath_map
 
-    def __get_source_name(self, source_path):
+    def __get_container_name(self, resource_path):
         """
-        Validate source path and return stripped source
-        name if path is valid, return None instead.
+        Validate resource path and return stripped resource
+        name if path is valid, return None otherwise.
         """
-        m = re.match(r'^res:/staticdata/(?P<fname>.+).static$', source_path)
+        m = re.match(r'^res:/staticdata/(?P<fname>.+).static$', resource_path)
         if not m:
             return None
         return m.group('fname')
 
-    def __check_cache(self, source_path):
-        """
-        Check if file is actually SQLite database and has
-        cache table.
-        """
-        fs_path = self.__get_filesystem_path(source_path)
+    def __check_cache(self, resource_path):
+        """Check if file is actually SQLite database and has cache table."""
+        fs_path = self.__get_filesystem_path(resource_path)
         try:
             dbconn = sqlite3.connect(fs_path)
             c = dbconn.cursor()
@@ -125,6 +109,6 @@ class ResourceStaticCacheMiner(BaseMiner):
                 has_cache = bool(row[0])
         return has_cache
 
-    def __get_filesystem_path(self, source_path):
+    def __get_filesystem_path(self, resource_path):
         rc = self._rvr.rescache
-        return os.path.join(rc._sharedCachePath, 'ResFiles', rc._index[source_path][1])
+        return os.path.join(rc._sharedCachePath, 'ResFiles', rc._index[resource_path][1])

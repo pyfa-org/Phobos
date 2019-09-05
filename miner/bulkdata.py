@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -29,53 +29,18 @@ class BulkdataMiner(BaseMiner):
     with EVE client.
     """
 
+    name = 'bulkdata'
+
     def __init__(self, rvr, translator):
         self._cfg = rvr.getconfigmgr()
         self._translator = translator
 
     def contname_iter(self):
-        for resolved_name in sorted(self._resolved_source_map):
-            yield resolved_name
+        for container_name in sorted(self._cfg.tables):
+            yield container_name
 
-    def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
-        try:
-            source_name = self._resolved_source_map[resolved_name]
-        except KeyError:
-            self._container_not_found(resolved_name)
-        else:
-            container_data = getattr(self._cfg, source_name)
-            normalized_data = EveNormalizer().run(container_data)
-            self._translator.translate_container(normalized_data, language, verbose=verbose)
-            return normalized_data
-
-    @CachedProperty
-    def _resolved_source_map(self):
-        """
-        We have to 'secure' container names, thus conflicts are
-        possible; resolve them by appending suffix in case we have
-        2 or more overlapping 'safe' names, and use this map to
-        store relation between resolved name (which is exposed to
-        miner users) and source one.
-        Format: {resolved name: source name}
-        """
-        # Intermediate map
-        # Format: {safe name: [source names]}
-        safe_source_map = {}
-        for source_name in self._cfg.tables:
-            safe_name = self._secure_name(source_name)
-            source_names = safe_source_map.setdefault(safe_name, [])
-            source_names.append(source_name)
-        # Final map which will be exposed as value of this property
-        resolved_source_map = {}
-        for safe_name, source_names in safe_source_map.items():
-            # Use number suffix with 'miner' marker to resolve conflicts
-            if len(source_names) > 1:
-                i = 1
-                for source_name in sorted(source_names):
-                    resolved_name = u'{}_m{}'.format(safe_name, i)
-                    resolved_source_map[resolved_name] = source_name
-                    i += 1
-            # Else, conflict resolution is not needed - just use safe name
-            else:
-                resolved_source_map[safe_name] = source_names[0]
-        return resolved_source_map
+    def get_data(self, container_name, language=None, verbose=False, **kwargs):
+        container_data = getattr(self._cfg, container_name)
+        normalized_data = EveNormalizer().run(container_data)
+        self._translator.translate_container(normalized_data, language, verbose=verbose)
+        return normalized_data

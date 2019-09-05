@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -23,7 +23,7 @@ import re
 from .base import BaseMiner
 
 
-tags = re.compile('\<.+?\>')
+tags = re.compile('<.+?>')
 
 
 def striptags(text):
@@ -37,23 +37,24 @@ class TraitMiner(BaseMiner):
     convenience of phobos users anyway.
     """
 
+    name = 'phobos'
+
     def __init__(self, staticminer, bulkminer, translator):
-        self._container_name = self._secure_name('phbtraits')
         self._staticminer = staticminer
         self._bulkminer = bulkminer
         self._translator = translator
+        self._container_name = 'traits'
         # Format: {language: {type ID: type name}}
         self._type_name_map_all = {}
         # Format: {language: {unit ID: unit display name}}
         self._unit_display_map_all = {}
 
     def contname_iter(self):
-        for resolved_name in (self._container_name,):
-            yield resolved_name
+        yield self._container_name
 
-    def get_data(self, resolved_name, language='en-us', **kwargs):
-        if resolved_name != self._container_name:
-            self._container_not_found(resolved_name)
+    def get_data(self, container_name, language='en-us', **kwargs):
+        if container_name != self._container_name:
+            self._container_not_found(container_name)
         else:
             return self._all_traits(language)
 
@@ -158,8 +159,7 @@ class TraitMiner(BaseMiner):
                     color='',
                     value=bonus_amt,
                     unit=unit,
-                    bonusText=bonus_text
-                )
+                    bonusText=bonus_text)
                 number, text = (striptags(t) for t in bonus.split('<t>'))
                 bonus_row = {'number': number, 'text': text}
             else:
@@ -167,8 +167,7 @@ class TraitMiner(BaseMiner):
                     'UI/InfoWindow/TraitWithoutNumber',
                     language,
                     color='',
-                    bonusText=bonus_text
-                )
+                    bonusText=bonus_text)
                 text = striptags(bonus)
                 bonus_row = {'text': text}
             bonuses.append(bonus_row)

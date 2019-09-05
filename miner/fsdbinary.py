@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -36,11 +36,14 @@ def tempdir(prefix='tmp'):
     try:
         yield tmpdir
     finally:
-        # this doesn't actually work because the module is loaded within this pyfa process, and cannot be removed . Hence ignore errors
+        # this doesn't actually work because the module is loaded within this phobos process,
+        # and cannot be removed, hence ignore errors
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 class FsdBinaryMiner(BaseMiner):
+
+    name = 'fsdbinary'
 
     def __init__(self, rvr, translator):
         self._fsd_spec = {
@@ -56,14 +59,14 @@ class FsdBinaryMiner(BaseMiner):
             self.client_index = {x.split(',')[0]: x.split(',') for x in lines}
 
     def contname_iter(self):
-        for resolved_name in sorted(self._fsd_spec):
-            yield resolved_name
+        for container_name in sorted(self._fsd_spec):
+            yield container_name
 
-    def get_data(self, resolved_name, language=None, verbose=False, **kwargs):
+    def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            loader_location, resource_location = self._fsd_spec[resolved_name]
+            loader_location, resource_location = self._fsd_spec[container_name]
         except KeyError:
-            self._container_not_found(resolved_name)
+            self._container_not_found(container_name)
         else:
             res_cache_path = os.path.join(self._rvr.paths.sharedcache, "ResFiles")
             loader_filename = os.path.split(loader_location)[1]

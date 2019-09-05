@@ -1,5 +1,5 @@
 #===============================================================================
-# Copyright (C) 2014-2015 Anton Vorobyov
+# Copyright (C) 2014-2019 Anton Vorobyov
 #
 # This file is part of Phobos.
 #
@@ -31,17 +31,18 @@ class MetadataMiner(BaseMiner):
     and which data source has been used for that.
     """
 
+    name = 'phobos'
+
     def __init__(self, path_eve):
-        self._container_name = self._secure_name('phbmetadata')
         self._path_eve = path_eve
+        self._container_name = 'metadata'
 
     def contname_iter(self):
-        for resolved_name in (self._container_name,):
-            yield resolved_name
+        yield self._container_name
 
-    def get_data(self, resolved_name, **kwargs):
-        if resolved_name != self._container_name:
-            self._container_not_found(resolved_name)
+    def get_data(self, container_name, **kwargs):
+        if container_name != self._container_name:
+            self._container_not_found(container_name)
         else:
             field_names = ('field_name', 'field_value')
             container_data = []
