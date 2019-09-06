@@ -20,8 +20,6 @@
 
 import re
 
-from util import cachedproperty
-
 
 class FlowManager(object):
     """
