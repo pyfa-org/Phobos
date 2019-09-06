@@ -36,7 +36,7 @@ def run(path_eve, rvr, path_json, filter_string, language):
         MetadataMiner(path_eve=path_eve),
         bulkdata_miner,
         fsdlite_miner,
-        FsdBinaryMiner(rvr=rvr, translator=trans),
+        FsdBinaryMiner(resbrowser=resource_browser, translator=trans),
         TraitMiner(fsdlite_miner=fsdlite_miner, bulkdata_miner=bulkdata_miner, translator=trans),
         SqliteMiner(resbrowser=resource_browser, translator=trans),
         CachedCallsMiner(rvr=rvr, translator=trans),

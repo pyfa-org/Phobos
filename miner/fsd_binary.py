@@ -22,12 +22,13 @@ import contextlib
 import gc
 import importlib
 import os
+import re
 import shutil
 import struct
 import sys
 import tempfile
 
-from util import EveNormalizer
+from util import EveNormalizer, cachedproperty
 from .base import BaseMiner
 
 
@@ -47,56 +48,41 @@ class FsdBinaryMiner(BaseMiner):
 
     name = 'fsdbinary'
 
-    def __init__(self, rvr, translator):
-        self._fsd_spec = {
-            'dynamicattributes': ('app:/bin64/dynamicItemAttributesLoader.pyd', 'res:/staticdata/dynamicitemattributes.fsdbinary'),
-            'iconIDs': ('app:/bin64/iconIDsLoader.pyd', 'res:/staticdata/iconids.fsdbinary'),
-            'marketGroups': ('app:/bin64/marketGroupsLoader.pyd', 'res:/staticdata/marketgroups.fsdbinary'),
-            'metaGroups': ('app:/bin64/metaGroupsLoader.pyd', 'res:/staticdata/metagroups.fsdbinary')}
-        self._rvr = rvr
+    def __init__(self, resbrowser, translator):
+        self._resbrowser = resbrowser
         self._translator = translator
-        eve_path = os.path.join(rvr.paths.sharedcache, 'index_{}.txt'.format(os.path.basename(rvr.paths.root)))
-        with open(eve_path, 'r') as f:
-            lines = f.readlines()
-            self.client_index = {x.split(',')[0]: x.split(',') for x in lines}
 
     def contname_iter(self):
-        for container_name in sorted(self._fsd_spec):
+        for container_name in sorted(self._contname_fsdfiles_map):
             yield container_name
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
-        if os.name != 'nt' or struct.calcsize('P') * 8 != 64:
-            msg = 'need 64-bit python under Windows to fetch data'
-            raise PlatformError(msg)
         try:
-            loader_location, resource_location = self._fsd_spec[container_name]
+            loader_respath, data_respath = self._contname_fsdfiles_map[container_name]
         except KeyError:
             self._container_not_found(container_name)
         else:
-            res_cache_path = os.path.join(self._rvr.paths.sharedcache, "ResFiles")
-            loader_filename = os.path.split(loader_location)[1]
-            loader_relpath = self.client_index[loader_location][1]
-            loader_fullpath = os.path.join(res_cache_path, loader_relpath)
-            resource_filename = os.path.split(resource_location)[1]
-            resource_relpath = self._rvr.rescache._index[resource_location][1]
-            resource_fullpath = os.path.join(res_cache_path, resource_relpath)
+            if os.name != 'nt' or struct.calcsize('P') * 8 != 64:
+                msg = 'need 64-bit python under Windows to execute loader'
+                raise PlatformError(msg)
+            loader_filename = loader_respath.split('/')[-1]
+            loader_info = self._resbrowser.get_file_info(loader_respath)
+            data_info = self._resbrowser.get_file_info(data_respath)
 
             with tempdir('phobos-') as temp_dir:
-                cwd = os.getcwd()
+                stored_cwd = os.getcwd()
                 sys.path.insert(0, temp_dir)
                 os.chdir(temp_dir)
 
                 loader_dest = os.path.join(os.getcwd(), loader_filename)
-                shutil.copyfile(loader_fullpath, loader_dest)
-                resource_dest = os.path.join(os.getcwd(), resource_filename)
-                shutil.copyfile(resource_fullpath, resource_dest)
+                shutil.copyfile(loader_info.file_abspath, loader_dest)
 
                 loader_modname = os.path.splitext(loader_filename)[0]
                 loader_module = importlib.import_module(loader_modname)
-                fsd_data = loader_module.load(resource_dest)
+                fsd_data = loader_module.load(data_info.file_abspath)
                 normalized_data = EveNormalizer().run(fsd_data, loader_module=loader_module)
 
-                os.chdir(cwd)
+                os.chdir(stored_cwd)
                 sys.path.remove(temp_dir)
 
                 del loader_module
@@ -105,6 +91,28 @@ class FsdBinaryMiner(BaseMiner):
 
             self._translator.translate_container(normalized_data, language, verbose=verbose)
             return normalized_data
+
+    @cachedproperty
+    def _contname_fsdfiles_map(self):
+        """
+        Map between container names and locations of FSD loader/data.
+        Format: {container name: (fsd loader file path, fsd data file path)}
+        """
+        loaders = {}
+        datas = {}
+        for resource_path in self._resbrowser.respath_iter():
+            m = re.match('^app:/bin64/(\w+/)*(?P<name>\w+)Loader.pyd$', resource_path, flags=re.UNICODE)
+            if m:
+                loaders[m.group('name').lower()] = resource_path
+                continue
+            m = re.match('^res:/staticdata/(\w+/)*(?P<name>\w+).fsdbinary$', resource_path, flags=re.UNICODE)
+            if m:
+                datas[m.group('name').lower()] = resource_path
+                continue
+        contname_fsdfiles_map = {}
+        for container_name in set(loaders).intersection(datas):
+            contname_fsdfiles_map[container_name] = (loaders[container_name], datas[container_name])
+        return contname_fsdfiles_map
 
 
 class PlatformError(Exception):

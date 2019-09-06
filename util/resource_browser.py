@@ -43,7 +43,7 @@ class ResourceBrowser(object):
         Aggregate filepaths from all resource files and return
         them in the form of single list.
         """
-        for resource_path in self._resource_index.keys():
+        for resource_path in self._resource_index:
             yield resource_path
 
     def get_file_data(self, resource_path):

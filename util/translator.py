@@ -257,13 +257,13 @@ class Translator(object):
         """
         msg_map_phb = {}
         try:
-            lang_data_old = self._load_pickle('res:/localization/localization_{}'.format(language))
+            lang_data = self._load_pickle('res:/localization/localization_{}'.format(language))
             lang_data_fsd = self._load_pickle('res:/localizationfsd/localization_fsd_{}'.format(language))
         except ContainerNameError:
             msg = u'data for language "{}" cannot be loaded'.format(language)
             raise LanguageNotAvailable(msg)
         # Translations from FSD container have priority
-        for msg_map_eve in (lang_data_old[1], lang_data_fsd[1]):
+        for msg_map_eve in (lang_data[1], lang_data_fsd[1]):
             msg_map_phb.update(msg_map_eve)
         self._loaded_langs[language] = msg_map_phb
 
@@ -359,14 +359,14 @@ class Translator(object):
         """
         languages = set()
         lbl_map_phb = {}
-        main_old = self._load_pickle('res:/localization/localization_main')
+        main = self._load_pickle('res:/localization/localization_main')
         main_fsd = self._load_pickle('res:/localizationfsd/localization_fsd_main')
         # Load list of languages
-        languages.update(main_old['languages'].keys())
+        languages.update(main['languages'].keys())
         languages.update(main_fsd['languages'])
         self.__available_langs = tuple(sorted(languages))
         # Load label map
-        for lbl_map_eve in (main_old['labels'], main_fsd['labels']):
+        for lbl_map_eve in (main['labels'], main_fsd['labels']):
             for msgid in sorted(lbl_map_eve):
                 lbl_data = lbl_map_eve[msgid]
                 lbl_base = lbl_data.get('FullPath')
