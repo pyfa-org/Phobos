@@ -34,14 +34,11 @@ class CustomEncoder(json.JSONEncoder):
     """
 
     def encode(self, obj, *args, **kwargs):
-        if isinstance(obj, dict):
-            obj = self._prepare_map(obj)
+        obj = self._route_object(obj)
         return json.JSONEncoder.encode(self, obj, *args, **kwargs)
 
     def iterencode(self, obj, *args, **kwargs):
-        # Traverse passed object, and do some modifications
         obj = self._route_object(obj)
-        # Pass it to usual encoder
         return json.JSONEncoder.iterencode(self, obj, *args, **kwargs)
 
     def _route_object(self, obj):

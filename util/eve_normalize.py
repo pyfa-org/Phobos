@@ -76,10 +76,17 @@ class EveNormalizer(object):
             if isinstance(obj, candidate_cls):
                 method = self._subclass_match[candidate_cls]
                 return method(self, obj)
-        # Check if class is defined in passed loader, if it is, then
-        # we're dealing with FSD binary item
-        if self._loader_module is not None and inspect.getmodule(type(obj)) is self._loader_module:
-            return self.pythonize_fsdbinary_item(obj)
+        # Stuff specific to FSD binary format
+        if self._loader_module is not None:
+            # Check if class is defined in passed loader, if it is, then
+            # we're dealing with FSD binary item for certain
+            if inspect.getmodule(type(obj)) is self._loader_module:
+                return self.pythonize_fsdbinary_item(obj)
+            # FSD contains bunch of vector classes which are defined outside of
+            # loader (shown as defined in builtins), process them separately
+            if type(obj).__name__.endswith('_vector'):
+                return self.pythonize_fsdbinary_item(obj, ignore_attrs=(
+                    'n_fields', 'n_sequence_fields', 'n_unnamed_fields'))
         # If we got here, routing failed
         msg = 'unable to route {}'.format(type(obj))
         guid = getattr(obj, '__guid__', None)
@@ -202,10 +209,12 @@ class EveNormalizer(object):
         """
         return self._pythonize_dbrow(obj.line)
 
-    def pythonize_fsdbinary_item(self, obj):
+    def pythonize_fsdbinary_item(self, obj, ignore_attrs=()):
         item = {}
         for attr_name in dir(obj):
             if attr_name.startswith('__') and attr_name.endswith('__'):
+                continue
+            if attr_name in ignore_attrs:
                 continue
             item[attr_name] = self._route_object(getattr(obj, attr_name))
         return item
@@ -243,7 +252,7 @@ class EveNormalizer(object):
         'FSD_Object': _pythonize_fsd_object,
         '_FixedSizeList': _pythonize_iterable,
         '_VariableSizedList': _pythonize_iterable,
-        # FSD-binary-related classes
+        # FSD binary specific classes
         'dict': _pythonize_map,  # cfsd.dict
         'list': _pythonize_iterable,  # cfsd.list
         # Misc
