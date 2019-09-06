@@ -32,9 +32,9 @@ class FsdLiteMiner(BaseMiner):
 
     name = 'fsd_lite'
 
-    def __init__(self, rvr, translator):
+    def __init__(self, rvr, resbrowser, translator):
         self._rvr = rvr
-        self._resbrowser = ResourceBrowser(rvr)
+        self._resbrowser = resbrowser
         self._translator = translator
 
     def contname_iter(self):
@@ -67,7 +67,7 @@ class FsdLiteMiner(BaseMiner):
         Format: {container path: resource path to static cache}
         """
         contname_respath_map = {}
-        for resource_path in self._resbrowser.get_filelist():
+        for resource_path in self._resbrowser.respath_iter():
             # Filter by resource file path first
             container_name = self.__get_container_name(resource_path)
             if container_name is None:

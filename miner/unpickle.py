@@ -29,8 +29,8 @@ class PickleMiner(BaseMiner):
 
     name = 'resource_pickle'
 
-    def __init__(self, rvr):
-        self._resbrowser = ResourceBrowser(rvr)
+    def __init__(self, resbrowser):
+        self._resbrowser = resbrowser
 
     def contname_iter(self):
         for container_name in sorted(self._contname_respath_map):
@@ -42,7 +42,7 @@ class PickleMiner(BaseMiner):
         except KeyError:
             self._container_not_found(container_name)
         else:
-            resfiledata = self._resbrowser.get_file(resfilepath)
+            resfiledata = self._resbrowser.get_resource(resfilepath)
             data = pickle.loads(resfiledata)
             return data
 
@@ -54,7 +54,7 @@ class PickleMiner(BaseMiner):
         """
         pickle_ext = '.pickle'
         contname_respath_map = {}
-        for resource_path in self._resbrowser.get_filelist():
+        for resource_path in self._resbrowser.respath_iter():
             # We also strip .pickle extension from names
             if not resource_path.endswith(pickle_ext):
                 continue

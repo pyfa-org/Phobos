@@ -25,13 +25,15 @@ from flow import FlowManager
 from miner import *
 from translator import Translator
 from writer import *
+from util import ResourceBrowser
 
 def run(path_eve, rvr, path_json, filter_string, language):
-    pickle_miner = PickleMiner(rvr=rvr)
+    resource_browser = ResourceBrowser(eve_path='/home/av/.wine_eve/drive_c/EVE/', server_alias='tq')
+    pickle_miner = PickleMiner(resbrowser=resource_browser)
     trans = Translator(pickle_miner=pickle_miner)
     bulkdata_miner = BulkdataMiner(rvr=rvr, translator=trans)
-    fsdlite_miner = FsdLiteMiner(rvr=rvr, translator=trans)
-    miners = (
+    fsdlite_miner = FsdLiteMiner(rvr=rvr, resbrowser=resource_browser, translator=trans)
+    miners = [
         MetadataMiner(path_eve=path_eve),
         bulkdata_miner,
         fsdlite_miner,
@@ -39,10 +41,10 @@ def run(path_eve, rvr, path_json, filter_string, language):
         TraitMiner(fsdlite_miner=fsdlite_miner, bulkdata_miner=bulkdata_miner, translator=trans),
         SqliteMiner(path_eve=path_eve, translator=trans),
         CachedCallsMiner(rvr=rvr, translator=trans),
-        pickle_miner)
+        pickle_miner]
 
-    writers = (
-        JsonWriter(path_json, indent=2),)
+    writers = [
+        JsonWriter(path_json, indent=2)]
 
     FlowManager(miners, writers).run(filter_string=filter_string, language=language)
 
