@@ -33,8 +33,8 @@ class MetadataMiner(BaseMiner):
 
     name = 'phobos'
 
-    def __init__(self, path_eve):
-        self._path_eve = path_eve
+    def __init__(self, resbrowser):
+        self._resbrowser = resbrowser
         self._container_name = 'metadata'
 
     def contname_iter(self):
@@ -44,12 +44,13 @@ class MetadataMiner(BaseMiner):
         if container_name != self._container_name:
             self._container_not_found(container_name)
         else:
+            file_info = self._resbrowser.get_file_info('app:/start.ini')
             field_names = ('field_name', 'field_value')
             container_data = []
             # Read client version
             try:
                 config = ConfigParser()
-                config.read(os.path.join(self._path_eve, 'start.ini'))
+                config.read(file_info.file_abspath)
                 eve_version = config.getint('main', 'build')
             except KeyboardInterrupt:
                 raise
