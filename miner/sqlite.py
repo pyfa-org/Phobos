@@ -32,11 +32,9 @@ class SqliteMiner(BaseMiner):
 
     name = 'sqlite'
 
-    def __init__(self, path_eve, translator):
+    def __init__(self, resbrowser, translator):
         # Format: {db alias: db path}
-        self._databases = {
-            'mapbulk': os.path.join(path_eve, 'bulkdata', 'mapbulk.db'),
-            'mapObjects': os.path.join(path_eve, 'bin', 'staticdata', 'mapObjects.db')}
+        self._resbrowser = resbrowser
         self._translator = translator
 
     def contname_iter(self):
@@ -45,11 +43,10 @@ class SqliteMiner(BaseMiner):
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            dbname, table_name = self._contname_dbtable_map[container_name]
+            dbpath, table_name = self._contname_dbtable_map[container_name]
         except KeyError:
             self._container_not_found(container_name)
         else:
-            dbpath = self._databases[dbname]
             rows = []
             with sqlite3.connect(dbpath) as dbconn:
                 c = dbconn.cursor()
@@ -67,13 +64,17 @@ class SqliteMiner(BaseMiner):
         Map between container names and DB tables where data is stored.
         Format: {container name: (db alias, table name)}
         """
-        contname_tbtable_map = {}
-        for dbname, dbpath in self._databases.items():
-            with sqlite3.connect(dbpath) as dbconn:
+        sqlite_ext = '.db'
+        contname_dbtable_map = {}
+        for resource_path in self._resbrowser.respath_iter():
+            if not resource_path.endswith(sqlite_ext):
+                continue
+            resource_info = self._resbrowser.get_file_info(resource_path)
+            with sqlite3.connect(resource_info.file_abspath) as dbconn:
                 c = dbconn.cursor()
                 c.execute('select name from sqlite_master where type = \'table\'')
                 for row in c:
                     table_name = row[0]
-                    container_name = u'{}_{}'.format(dbname, table_name)
-                    contname_tbtable_map[container_name] = (dbname, table_name)
-        return contname_tbtable_map
+                    container_name = u'{}_{}'.format(resource_path[:-len(sqlite_ext)], table_name)
+                    contname_dbtable_map[container_name] = (resource_info.file_abspath, table_name)
+        return contname_dbtable_map

@@ -55,7 +55,6 @@ class PickleMiner(BaseMiner):
         pickle_ext = '.pickle'
         contname_respath_map = {}
         for resource_path in self._resbrowser.respath_iter():
-            # We also strip .pickle extension from names
             if not resource_path.endswith(pickle_ext):
                 continue
             container_name = resource_path[:-len(pickle_ext)]

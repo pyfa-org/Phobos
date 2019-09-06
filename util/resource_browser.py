@@ -38,8 +38,42 @@ class ResourceBrowser(object):
         self._eve_path = eve_path
         self._server_alias = server_alias
 
+    def respath_iter(self):
+        """
+        Aggregate filepaths from all resource files and return
+        them in the form of single list.
+        """
+        for resource_path in self._resource_index.keys():
+            yield resource_path
+
+    def get_file_data(self, resource_path):
+        """Return file contents for requested resource."""
+        file_info = self._resource_index[resource_path]
+        file_path = file_info.file_abspath
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        self.__verify_data(data=data, file_info=file_info)
+        return data
+
+    def get_file_info(self, resource_path):
+        """Return file info for requested resource."""
+        file_info = self._resource_index[resource_path]
+        file_path = file_info.file_abspath
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        self.__verify_data(data=data, file_info=file_info)
+        return file_info
+
+    def __verify_data(self, data, file_info):
+        if len(data) != file_info.file_size:
+            raise FileIntegrityError('file size mismatch when reading {}'.format(file_info.resource_path))
+        m = hashlib.md5()
+        m.update(data)
+        if m.hexdigest() != file_info.file_hash:
+            raise FileIntegrityError('file hash mismatch when reading {}'.format(file_info.resource_path))
+
     @cachedproperty
-    def resource_index(self):
+    def _resource_index(self):
         index = {}
         res_index_path = os.path.join(self._eve_path, 'SharedCache', self._server_alias, 'resfileindex.txt')
         with open(res_index_path) as f:
@@ -62,30 +96,6 @@ class ResourceBrowser(object):
                     file_size=int(file_size),
                     compressed_size=int(compressed_size))
         return index
-
-    def respath_iter(self):
-        """
-        Aggregate filepaths from all resource files and return
-        them in the form of single list.
-        """
-        for resource_path in self.resource_index.keys():
-            yield resource_path
-
-    def get_file_data(self, resource_path):
-        """
-        Return file contents for requested resource.
-        """
-        file_info = self.resource_index[resource_path]
-        file_path = file_info.file_abspath
-        with open(file_path, 'rb') as f:
-            data = f.read()
-        if len(data) != file_info.file_size:
-            raise FileIntegrityError('file size mismatch when reading {}'.format(file_info.resource_path))
-        m = hashlib.md5()
-        m.update(data)
-        if m.hexdigest() != file_info.file_hash:
-            raise FileIntegrityError('file hash mismatch when reading {}'.format(file_info.resource_path))
-        return data
 
 
 class FileIntegrityError(Exception):
