@@ -86,8 +86,8 @@ class CachedCallsMiner(BaseMiner):
                 svc_args = ()
             call_name = call_info[0]
             call_args = call_info[1:]
-            svc_args_line = u', '.join(svc_args)
-            call_args_line = u', '.join(call_args)
+            svc_args_line = u', '.join(unicode(a) for a in svc_args)
+            call_args_line = u', '.join(unicode(a) for a in call_args)
             # Finally, compose full service call in human-readable format and put it into dictionary
             container_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
             contname_filepath_map[container_name] = filepath

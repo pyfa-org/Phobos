@@ -50,7 +50,7 @@ class FlowManager(object):
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
-                    print(u'    failed to fetch data - {}: {}'.format(type(e).__name__, e))
+                    print(u'    unable to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
                     # Write data using passed writers
                     for writer in self._writers:
@@ -59,10 +59,10 @@ class FlowManager(object):
                         except KeyboardInterrupt:
                             raise
                         except Exception as e:
-                            print(u'    failed to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
+                            print(u'    unable to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
         # Print info messages about requested, but unavailable containers
         if missing_set:
-            print('Containers which were requested, but are not available:')
+            print(u'Containers which were requested, but are not available:')
             for flow_name in sorted(missing_set):
                 print(u'  {}'.format(flow_name))
 
