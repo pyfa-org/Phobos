@@ -26,9 +26,9 @@ from miner import *
 from writer import *
 from util import ResourceBrowser, Translator
 
+
 def run(path_eve, rvr, path_json, filter_string, language):
-    # /home/av/.wine_eve/drive_c/EVE/
-    resource_browser = ResourceBrowser(eve_path='E:\\eve\\client', server_alias='tq')
+    resource_browser = ResourceBrowser(eve_path=path_eve, server_alias='tq')
     pickle_miner = PickleMiner(resbrowser=resource_browser)
     trans = Translator(pickle_miner=pickle_miner)
     bulkdata_miner = BulkdataMiner(rvr=rvr, translator=trans)
@@ -90,4 +90,5 @@ if __name__ == '__main__':
     rvr_language = args.translate if args.translate != 'multi' else 'en-us'
     rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, sharedcachepath=path_res, server=args.server, languageID=rvr_language)
 
+    path_eve = os.path.abspath(os.path.join(path_eve, '..', '..'))
     run(path_eve=path_eve, rvr=rvr, path_json=path_json, filter_string=args.list, language=args.translate)
