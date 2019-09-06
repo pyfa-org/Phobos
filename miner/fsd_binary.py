@@ -34,7 +34,7 @@ from .base import BaseMiner
 
 class FsdBinaryMiner(BaseMiner):
 
-    name = 'fsdbinary'
+    name = 'fsd_binary'
 
     def __init__(self, resbrowser, translator):
         self._resbrowser = resbrowser
