@@ -21,7 +21,7 @@
 import pickle
 
 from miner.base import BaseMiner
-from util import ResourceBrowser, cachedproperty
+from util import cachedproperty
 
 
 class PickleMiner(BaseMiner):

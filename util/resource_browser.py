@@ -26,7 +26,7 @@ from collections import namedtuple
 from util import cachedproperty
 
 
-FileInfo = namedtuple('FileInfo', ('resource_path', 'file_path', 'file_hash', 'file_size', 'compressed_size'))
+FileInfo = namedtuple('FileInfo', ('resource_path', 'file_relpath', 'file_abspath', 'file_hash', 'file_size', 'compressed_size'))
 
 
 class ResourceBrowser(object):
@@ -39,23 +39,25 @@ class ResourceBrowser(object):
         self._server_alias = server_alias
 
     @cachedproperty
-    def _resource_index(self):
+    def resource_index(self):
         index = {}
         res_index_path = os.path.join(self._eve_path, 'SharedCache', self._server_alias, 'resfileindex.txt')
         with open(res_index_path) as f:
-            for resource_path, file_path, file_hash, file_size, compressed_size in csv.reader(f):
+            for resource_path, file_relpath, file_hash, file_size, compressed_size in csv.reader(f):
                 index[resource_path] = FileInfo(
                     resource_path=resource_path,
-                    file_path=file_path,
+                    file_relpath=os.path.join(*file_relpath.split('/')),
+                    file_abspath=os.path.join(self._eve_path, 'SharedCache', 'ResFiles', *file_relpath.split('/')),
                     file_hash=file_hash,
                     file_size=int(file_size),
                     compressed_size=int(compressed_size))
         app_index_path = os.path.join(self._eve_path, 'SharedCache', 'index_{}.txt'.format(self._server_alias))
         with open(app_index_path) as f:
-            for app_file_path, file_path, file_hash, file_size, compressed_size, version in csv.reader(f):
-                index[app_file_path] = FileInfo(
-                    resource_path=app_file_path,
-                    file_path=file_path,
+            for resource_path, file_relpath, file_hash, file_size, compressed_size, version in csv.reader(f):
+                index[resource_path] = FileInfo(
+                    resource_path=resource_path,
+                    file_relpath=os.path.join(*file_relpath.split('/')),
+                    file_abspath=os.path.join(self._eve_path, 'SharedCache', 'ResFiles', *file_relpath.split('/')),
                     file_hash=file_hash,
                     file_size=int(file_size),
                     compressed_size=int(compressed_size))
@@ -66,15 +68,15 @@ class ResourceBrowser(object):
         Aggregate filepaths from all resource files and return
         them in the form of single list.
         """
-        for resource_path in self._resource_index.keys():
+        for resource_path in self.resource_index.keys():
             yield resource_path
 
     def get_resource(self, resource_path):
         """
         Return file contents for requested resource.
         """
-        file_info = self._resource_index[resource_path]
-        file_path = os.path.join(self._eve_path, 'SharedCache', 'ResFiles', *file_info.file_path.split('/'))
+        file_info = self.resource_index[resource_path]
+        file_path = file_info.file_abspath
         with open(file_path, 'rb') as f:
             data = f.read()
         if len(data) != file_info.file_size:

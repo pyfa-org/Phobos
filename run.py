@@ -32,7 +32,7 @@ def run(path_eve, rvr, path_json, filter_string, language):
     pickle_miner = PickleMiner(resbrowser=resource_browser)
     trans = Translator(pickle_miner=pickle_miner)
     bulkdata_miner = BulkdataMiner(rvr=rvr, translator=trans)
-    fsdlite_miner = FsdLiteMiner(rvr=rvr, resbrowser=resource_browser, translator=trans)
+    fsdlite_miner = FsdLiteMiner(resbrowser=resource_browser, translator=trans)
     miners = [
         MetadataMiner(path_eve=path_eve),
         bulkdata_miner,

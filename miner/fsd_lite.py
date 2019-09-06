@@ -19,12 +19,11 @@
 
 
 import json
-import os
 import re
 import sqlite3
 
 from miner.base import BaseMiner
-from util import ResourceBrowser, cachedproperty
+from util import cachedproperty
 
 
 class FsdLiteMiner(BaseMiner):
@@ -32,8 +31,7 @@ class FsdLiteMiner(BaseMiner):
 
     name = 'fsd_lite'
 
-    def __init__(self, rvr, resbrowser, translator):
-        self._rvr = rvr
+    def __init__(self, resbrowser, translator):
         self._resbrowser = resbrowser
         self._translator = translator
 
@@ -43,13 +41,13 @@ class FsdLiteMiner(BaseMiner):
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            resfilepath = self._contname_respath_map[container_name]
+            resource_path = self._contname_respath_map[container_name]
         except KeyError:
             self._container_not_found(container_name)
         else:
             rows = {}
-            fs_path = self.__get_filesystem_path(resfilepath)
-            with sqlite3.connect(fs_path) as dbconn:
+            file_path = self._resbrowser.resource_index[resource_path].file_abspath
+            with sqlite3.connect(file_path) as dbconn:
                 c = dbconn.cursor()
                 c.execute(u'select key, value from cache')
                 for sqlite_row in c:
@@ -90,9 +88,9 @@ class FsdLiteMiner(BaseMiner):
 
     def __check_cache(self, resource_path):
         """Check if file is actually SQLite database and has cache table."""
-        fs_path = self.__get_filesystem_path(resource_path)
+        file_path = self._resbrowser.resource_index[resource_path].file_abspath
         try:
-            dbconn = sqlite3.connect(fs_path)
+            dbconn = sqlite3.connect(file_path)
             c = dbconn.cursor()
             c.execute('select count(*) from sqlite_master where type = \'table\' and name = \'cache\'')
         except KeyboardInterrupt:
@@ -104,7 +102,3 @@ class FsdLiteMiner(BaseMiner):
             for row in c:
                 has_cache = bool(row[0])
         return has_cache
-
-    def __get_filesystem_path(self, resource_path):
-        rc = self._rvr.rescache
-        return os.path.join(rc._sharedCachePath, 'ResFiles', rc._index[resource_path][1])
