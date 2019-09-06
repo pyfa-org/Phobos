@@ -38,12 +38,12 @@ class PickleMiner(BaseMiner):
 
     def get_data(self, container_name, **kwargs):
         try:
-            resfilepath = self._contname_respath_map[container_name]
+            resource_path = self._contname_respath_map[container_name]
         except KeyError:
             self._container_not_found(container_name)
         else:
-            resfiledata = self._resbrowser.get_resource(resfilepath)
-            data = pickle.loads(resfiledata)
+            resource_data = self._resbrowser.get_file_data(resource_path)
+            data = pickle.loads(resource_data)
             return data
 
     @cachedproperty

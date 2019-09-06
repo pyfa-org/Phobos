@@ -71,7 +71,7 @@ class ResourceBrowser(object):
         for resource_path in self.resource_index.keys():
             yield resource_path
 
-    def get_resource(self, resource_path):
+    def get_file_data(self, resource_path):
         """
         Return file contents for requested resource.
         """
@@ -79,13 +79,25 @@ class ResourceBrowser(object):
         file_path = file_info.file_abspath
         with open(file_path, 'rb') as f:
             data = f.read()
+        self.__verify_data(data=data, file_info=file_info)
+        return data
+
+    def get_file_pointer(self, resource_path):
+        file_info = self.resource_index[resource_path]
+        file_path = file_info.file_abspath
+        f = open(file_path, 'rb')
+        data = f.read()
+        self.__verify_data(data=data, file_info=file_info)
+        f.seek(0)
+        return f
+
+    def __verify_data(self, data, file_info):
         if len(data) != file_info.file_size:
-            raise FileIntegrityError('file size mismatch when reading {}'.format(resource_path))
+            raise FileIntegrityError('file size mismatch when reading {}'.format(file_info.resource_path))
         m = hashlib.md5()
         m.update(data)
         if m.hexdigest() != file_info.file_hash:
-            raise FileIntegrityError('file hash mismatch when reading {}'.format(resource_path))
-        return data
+            raise FileIntegrityError('file hash mismatch when reading {}'.format(file_info.resource_path))
 
 
 class FileIntegrityError(Exception):

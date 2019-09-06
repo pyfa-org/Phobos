@@ -247,7 +247,6 @@ class Translator(object):
             print(u'    field {}: {} entries, {} translations'.format(field_name, total, trans))
 
     # Related to loading language data
-
     def _load_pickle(self, name):
         return self._pickle_miner.get_data(name)
 
