@@ -9,7 +9,7 @@ Several data miners used in Phobos are doing potentially very dangerous thing se
 - ResourcePickleMiner: [unpickles](https://docs.python.org/2.7/library/pickle.html) serialized python files
 - FsdBinaryMiner: executes loaders provided by the EVE client to access data in FSD binary format
  
-It doesn't mean that you should not use these miners. Generally speaking, if you trust EVE client and Phobos - you should trust these loaders. Phobos runs simple validation on files which will be worked upon (checksum according to the client's file registry). Still, it is recommended to run Phobos in some sandboxed environment (e.g. separate Wine prefix for Linux).
+It doesn't mean that you should not use these miners. Generally speaking, if you trust EVE client and Phobos - you should have no issues with these miners. Phobos runs simple validation on files which will be worked upon (checksum according to the client's file registry). Still, it is recommended to run Phobos in some sandboxed environment (e.g. separate Wine prefix for Linux).
 
 ### Requirements
 
