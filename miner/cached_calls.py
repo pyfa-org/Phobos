@@ -35,8 +35,8 @@ class CachedCallsMiner(BaseMiner):
 
     name = 'cached_calls'
 
-    def __init__(self, rvr, translator):
-        self._path_cachedcalls = os.path.join(rvr.paths.machocache, 'CachedMethodCalls')
+    def __init__(self, path_cachedcalls, translator):
+        self._path_cachedcalls = path_cachedcalls
         self._translator = translator
 
     def contname_iter(self):
@@ -61,36 +61,38 @@ class CachedCallsMiner(BaseMiner):
         Format: {container name: path to file}
         """
         contname_filepath_map = {}
-        # Cycle through CachedMethodCalls and find all .cache files
-        for filepath in glob.glob(os.path.join(self._path_cachedcalls, '*.cache')):
-            # In case file cannot be loaded due to any reasons, skip it
-            try:
-                call_info, _ = self.__read_cache_file(filepath)
-            except KeyboardInterrupt:
-                raise
-            except:
-                filename = os.path.basename(filepath)
-                print(u'  unable to load cache file {}'.format(filename))
-                continue
-            # Info has one of 2 following formats:
-            # - ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
-            # - (service name, call name, call arg1, call arg2, ...)
-            # Here we parse info structure according to one of these formats
-            svc_info = call_info[0]
-            call_info = call_info[1:]
-            if isinstance(svc_info, (tuple, list)):
-                svc_name = svc_info[0]
-                svc_args = svc_info[1:]
-            else:
-                svc_name = svc_info
-                svc_args = ()
-            call_name = call_info[0]
-            call_args = call_info[1:]
-            svc_args_line = u', '.join(unicode(a) for a in svc_args)
-            call_args_line = u', '.join(unicode(a) for a in call_args)
-            # Finally, compose full service call in human-readable format and put it into dictionary
-            container_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
-            contname_filepath_map[container_name] = filepath
+        # Path might be not specified, in this case do not do anything
+        if self._path_cachedcalls:
+            # Cycle through CachedMethodCalls and find all .cache files
+            for file_path in glob.glob(os.path.join(self._path_cachedcalls, '*.cache')):
+                # In case file cannot be loaded due to any reasons, skip it
+                try:
+                    call_info, _ = self.__read_cache_file(file_path)
+                except KeyboardInterrupt:
+                    raise
+                except:
+                    file_name = os.path.basename(file_path)
+                    print(u'  unable to load cache file {}'.format(file_name))
+                    continue
+                # Info has one of 2 following formats:
+                # - ((service name, service arg1, service arg2, ...), call name, call arg1, call arg2, ...)
+                # - (service name, call name, call arg1, call arg2, ...)
+                # Here we parse info structure according to one of these formats
+                svc_info = call_info[0]
+                call_info = call_info[1:]
+                if isinstance(svc_info, (tuple, list)):
+                    svc_name = svc_info[0]
+                    svc_args = svc_info[1:]
+                else:
+                    svc_name = svc_info
+                    svc_args = ()
+                call_name = call_info[0]
+                call_args = call_info[1:]
+                svc_args_line = u', '.join(unicode(a) for a in svc_args)
+                call_args_line = u', '.join(unicode(a) for a in call_args)
+                # Finally, compose full service call in human-readable format and put it into dictionary
+                container_name = u'{}({})_{}({})'.format(svc_name, svc_args_line, call_name, call_args_line)
+                contname_filepath_map[container_name] = file_path
         return contname_filepath_map
 
     def __read_cache_file(self, filepath):

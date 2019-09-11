@@ -195,7 +195,7 @@ class TraitMiner(BaseMiner):
         try:
             unit_display_map = self._unit_display_map_all[language]
         except KeyError:
-            dgmunits = self._bulkdata_miner.get_data('dgmunits', language=language)
+            dgmunits = self._bulkdata_miner.get_data('dogmaunits', language=language)
             unit_display_map = {}
             for row in dgmunits:
                 unit_display_map[row['unitID']] = row.get('displayName')

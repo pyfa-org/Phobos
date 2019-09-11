@@ -27,11 +27,12 @@ from writer import *
 from util import ResourceBrowser, Translator
 
 
-def run(path_eve, rvr, path_json, filter_string, language):
-    resource_browser = ResourceBrowser(eve_path=path_eve, server_alias='tq')
+def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_json):
+    resource_browser = ResourceBrowser(eve_path=path_eve, server_alias=server_alias)
+
     pickle_miner = PickleMiner(resbrowser=resource_browser)
     trans = Translator(pickle_miner=pickle_miner)
-    bulkdata_miner = BulkdataMiner(rvr=rvr, translator=trans)
+    bulkdata_miner = BulkdataMiner(resbrowser=resource_browser, translator=trans)
     fsdlite_miner = FsdLiteMiner(resbrowser=resource_browser, translator=trans)
     miners = [
         MetadataMiner(resbrowser=resource_browser),
@@ -40,7 +41,7 @@ def run(path_eve, rvr, path_json, filter_string, language):
         FsdBinaryMiner(resbrowser=resource_browser, translator=trans),
         TraitMiner(fsdlite_miner=fsdlite_miner, bulkdata_miner=bulkdata_miner, translator=trans),
         SqliteMiner(resbrowser=resource_browser, translator=trans),
-        CachedCallsMiner(rvr=rvr, translator=trans),
+        CachedCallsMiner(path_cachedcalls=path_cachedcalls, translator=trans),
         pickle_miner]
 
     writers = [
@@ -61,34 +62,32 @@ if __name__ == '__main__':
         sys.stderr.write('This application requires Python 2.7 to run, but {0}.{1} was used\n'.format(major, minor))
         sys.exit()
 
+
     import argparse
     import os.path
 
-    import reverence
 
-    parser = argparse.ArgumentParser(description='This script pulls data out of EVE client and writes it in JSON format')
-    parser.add_argument('-r', '--res', help='Path to EVE SharedCache folder', required=True)
-    parser.add_argument('-j', '--json', help='Output folder for the JSON files', required=True)
-    servers = {'tranquility': 'tq', 'singularity': 'sisi', 'duality': 'duality','serenity': 'serenity'}
-    parser.add_argument('-s', '--server', default='tranquility', choices=servers.keys(), help='Server to pull data from. Defaults to tranquility.If Server is Serenity,must set --eve value')
-    parser.add_argument('-e', '--eve', help='Path to EVE folder. Defaults to standard directory location under SharedCache')
-    parser.add_argument('-c', '--cache', help='Path to EVE cache folder. Reverence will attempt to find cache by default if none is provided')
-    languages = ('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi')
-    parser.add_argument('-t', '--translate', default='multi', choices=languages, help='Attempt to translate strings into specified language. Defaults to multi')
-    parser.add_argument('-l', '--list', default='', help='Comma-separated list of container names to dump')
+    parser = argparse.ArgumentParser(description='This script extracts data from EVE client and writes it into JSON files')
+    parser.add_argument(
+        '-e', '--eve', required=True, help='Path to EVE client\'s folder')
+    parser.add_argument(
+        '-c', '--calls', default='', help='Path to CachedMethodCalls folder')
+    parser.add_argument(
+        '-s', '--server', default='tq', help='Server to pull data from. Default is "tq"',
+        choices=('tq', 'sisi', 'duality', 'thunderdome', 'serenity'))
+    parser.add_argument(
+        '-j', '--json', required=True, help='Output folder for the JSON files')
+    parser.add_argument(
+        '-t', '--translate', default='multi', help='Attempt to translate strings into specified language. Default is "multi"',
+        choices=('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi'))
+    parser.add_argument(
+        '-l', '--list', default='', help='Comma-separated list of container names to extract. If not specified, extracts everything')
     args = parser.parse_args()
 
     # Expand home directory
-    path_res = os.path.expanduser(args.res)
+    path_eve = os.path.expanduser(args.eve)
+    path_cachedcalls = os.path.expanduser(args.calls)
     path_json = os.path.expanduser(args.json)
-    path_eve = os.path.expanduser(args.eve) if args.eve else None
-    path_cache = os.path.expanduser(args.cache) if args.cache else None
 
-    if path_eve is None:
-        path_eve = os.path.join(path_res, servers[args.server])
-
-    rvr_language = args.translate if args.translate != 'multi' else 'en-us'
-    rvr = reverence.blue.EVE(path_eve, cachepath=path_cache, sharedcachepath=path_res, server=args.server, languageID=rvr_language)
-
-    path_eve = os.path.abspath(os.path.join(path_eve, '..', '..'))
-    run(path_eve=path_eve, rvr=rvr, path_json=path_json, filter_string=args.list, language=args.translate)
+    run(path_eve=path_eve, server_alias=args.server, path_cachedcalls=args.calls,
+        filter_string=args.list, language=args.translate, path_json=path_json)

@@ -19,29 +19,16 @@ It doesn't mean that you should not use these miners. Generally speaking, if you
 
 ### Arguments:
 
-* `--res`: Required.
-     * Path to SharedCache with resources. eg: `C:\EVE\SharedCache`.
-* `--json`: Required.
-    * Output folder for JSON files.
-* `--server`: Optional.
-    * Server to pull data from. Defaults to `tranquility`. If server is Serenity, must set --eve option (如果服务器选择为“晨曦”，必须设置--eve的值，否则可能会出错).
-* `--eve`: Optional.
-    * Path to EVE client (this is different for each server). If none is provided, Phobos will try to resolve it under the `SharedCache` directory based on server provided. eg: `C:\EVE\SharedCache\tq`.
-* `--cache`: Optional.
-    * Path to client-server specific data (which contains client cache and settings). If none is provided, reverence will attempt to resolve it automatically. eg: `C:\Users\<user>\AppData\Local\CCP\EVE\c_eve_sharedcache_tq_tranquility`
-* `--translate`: Optional.
-    * Specify language to which strings will be translated. You can choose either individual languages (for a list, invoke script with `--help` argument) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation, original text is not modified, but new text fields are added, named using `<field name>_<language code>` convention (eg: `typeName_en-us`). Multi-language translation mode is default.
-* `--list`: Optional.
-    * Specify list of comma-separated 'containers' to dump, it uses names script prints to stdout. For list of all available names you can launch script without specifying this option (by default it dumps everything it can find).
-
-### A note on paths
-When the new EVE launcher was introduced, it allowed the launching against test servers from within the launcher without having a separate installation of client per server. This was made possible by the Shared Resource Cache that the different client versions share between themselves.
-
-When CCP first released the beta, the Shared Cache was usually located at `C:\ProgramData\CCP\EVE\SharedCache` and the old client was still used (eg: `C:\Program Data (x86)\CCP\EVE`). However, with the release of the new launcher, the default install path is `C:\EVE\SharedCache`, and the separate eve clients are located in sub directories of the Shared Cache (eg: `C:\EVE\SharedCache\tq`). Please note that the old client may still be available wherever it was installed; be sure not to use that one as it is no longer updated. Double check your paths.
+* `--eve`: Required. Path to EVE client folder, e.g. `C:\EVE`.
+* `--json`: Required. Output folder for JSON files.
+* `--server`: Optional. Server to pull data from. Defaults to `tq`. Other options are `sisi`, `duality`, `thunderdome` and `serenity`.
+* `--calls`: Optional. Path to `CachedMethodCalls` folder, if you want to extract data from files contained within it.
+* `--translate`: Optional. Specifies language to which strings will be translated. You can choose either individual languages (run script with `--help` argument for a list) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation, original text is not modified, but new text fields are added, named using `<field name>_<language code>` convention (e.g. `typeName_en-us`). Multi-language translation mode is default.
+* `--list`: Optional. Specifies list of comma-separated 'containers' to extract. It uses names the script prints to stdout. For list of all available names you can launch script without specifying this option, as by default it extracts everything it can find.
 
 ### Example
 
-    $ python run.py --res=C:\EVE\SharedCache --json=~\Desktop\phobos_dump_tq --translate=en-us --list="invtypes, marketProxy()_GetMarketGroups(), phbmetadata"
+    $ python run.py --eve=E:\eve\client\ --json=~\Desktop\phobos_tq_en-us --list="evetypes, marketgroups, metadata"
 
 ### Phobos-specific data
 Besides raw data Phobos pulls from client, it provides two custom containers.
@@ -63,43 +50,26 @@ Traits for various ships. Data has following format:
 
 For example, Cambion traits in JSON format:
 
-    [
-      {
-        "typeID": 32788,
-        "traits": {
-          "skills": [
-            {
-              "header": "Assault Frigates bonuses (per skill level):",
-              "bonuses": [
-                {
-                  "text": "bonus to Light Missile and Rocket Launcher rate of fire",
-                  "number": "5%"
-                }
-              ]
-            },
-            {
-              "header": "Caldari Frigate bonuses (per skill level):",
-              "bonuses": [
-                {
-                  "text": "bonus to all shield resistances",
-                  "number": "4%"
-                }
-              ]
-            }
+    {
+      "traits": {
+        "role": {
+          "bonuses": [
+            {"number": "115%", "text": "bonus to kinetic Light Missile and Rocket damage"},
+            {"number": "50%", "text": "reduction in module heat damage amount taken"},
+            {"text": "·Can fit Assault Damage Controls"}
           ],
-          "role": {
-            "header": "Role Bonus:",
-            "bonuses": [
-              {
-                "text": "bonus to kinetic Light Missile and Rocket damage",
-                "number": "115%"
-              },
-              {
-                "text": "reduction in module heat damage amount taken",
-                "number": "50%"
-              }
-            ]
+          "header": "Role Bonus:"
+        }, 
+        "skills": [
+          {
+            "bonuses": [{"number": "5%", "text": "bonus to Light Missile and Rocket Launcher rate of fire"}],
+            "header": "Assault Frigates bonuses (per skill level):"
+          },
+          {
+            "bonuses": [{"number": "4%", "text": "bonus to all shield resistances"}],
+            "header": "Caldari Frigate bonuses (per skill level):"
           }
-        }
+        ]
       },
-    ]
+      "typeID": 32788
+    },

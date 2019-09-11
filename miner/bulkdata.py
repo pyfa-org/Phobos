@@ -18,7 +18,11 @@
 #===============================================================================
 
 
-from util import EveNormalizer
+import re
+
+from reverence import blue
+
+from util import EveNormalizer, cachedproperty
 from .base import BaseMiner
 
 
@@ -78,16 +82,37 @@ class BulkdataMiner(BaseMiner):
 
     name = 'bulkdata'
 
-    def __init__(self, rvr, translator):
-        self._cfg = rvr.getconfigmgr()
+    def __init__(self, resbrowser, translator):
+        self._resbrowser = resbrowser
         self._translator = translator
 
     def contname_iter(self):
-        for container_name in sorted(self._cfg.tables):
+        for container_name in sorted(self._contname_respath_map):
             yield container_name
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
-        container_data = getattr(self._cfg, container_name)
-        normalized_data = EveNormalizer().run(container_data)
-        self._translator.translate_container(normalized_data, language, verbose=verbose)
-        return normalized_data
+        try:
+            resource_path = self._contname_respath_map[container_name]
+        except KeyError:
+            self._container_not_found(container_name)
+        else:
+            file_data = self._resbrowser.get_file_data(resource_path)
+            container_data = blue.marshal.Load(file_data)
+            normalized_data = EveNormalizer().run(container_data)
+            self._translator.translate_container(normalized_data, language, verbose=verbose)
+            return normalized_data
+
+    @cachedproperty
+    def _contname_respath_map(self):
+        """
+        Map between container names and resource paths to files which hold actual data.
+        Format: {container name: (fsd loader file path, fsd data file path)}
+        """
+        contname_respath_map = {}
+        for resource_path in self._resbrowser.respath_iter():
+            m = re.match('^app:/(\w+/)*(?P<bulk_id>\d+).cache2$', resource_path, flags=re.UNICODE)
+            if m:
+                bulk_id = int(m.group('bulk_id'))
+                container_name = bulkdata_map.get(bulk_id, unicode(bulk_id))
+                contname_respath_map[container_name] = resource_path
+        return contname_respath_map
