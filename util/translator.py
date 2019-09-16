@@ -89,13 +89,6 @@ class Translator(object):
             self.__increment_stats(stats, text_fname, 0)
             orig_text = obj.get(text_fname, '')
             msgid = obj[msgid_fname]
-            # I didn't find a way to disable reverence localization engine
-            # altogether, thus 'original' text isn't always 'raw' value
-            # fetched from client - it might be translation. When reverence
-            # fails to translate message - it writes some dumb-looking stub
-            # there, and here we get rid of it
-            if orig_text is not None and re.match('<NO TEXT, messageID=[0-9]+, param={.*}>', orig_text):
-                orig_text = ''
             # Following are priorities when translating:
             # 1) Translation to target language
             # 2) Translation to english
