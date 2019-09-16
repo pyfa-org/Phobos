@@ -66,11 +66,11 @@ class ResourceBrowser(object):
 
     def __verify_data(self, data, file_info):
         if len(data) != file_info.file_size:
-            raise FileIntegrityError('file size mismatch when reading {}'.format(file_info.resource_path))
+            raise FileIntegrityError(u'file size mismatch when reading {}'.format(file_info.resource_path))
         m = hashlib.md5()
         m.update(data)
         if m.hexdigest() != file_info.file_hash:
-            raise FileIntegrityError('file hash mismatch when reading {}'.format(file_info.resource_path))
+            raise FileIntegrityError(u'file hash mismatch when reading {}'.format(file_info.resource_path))
 
     @cachedproperty
     def _resource_index(self):
@@ -85,7 +85,7 @@ class ResourceBrowser(object):
                     file_hash=file_hash,
                     file_size=int(file_size),
                     compressed_size=int(compressed_size))
-        app_index_path = os.path.join(self._eve_path, 'SharedCache', 'index_{}.txt'.format(self._server_alias))
+        app_index_path = os.path.join(self._eve_path, 'SharedCache', u'index_{}.txt'.format(self._server_alias))
         with open(app_index_path) as f:
             for resource_path, file_relpath, file_hash, file_size, compressed_size, version in csv.reader(f):
                 index[resource_path] = FileInfo(

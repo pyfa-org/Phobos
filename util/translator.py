@@ -250,8 +250,8 @@ class Translator(object):
         """
         msg_map_phb = {}
         try:
-            lang_data = self._load_pickle('res:/localization/localization_{}'.format(language))
-            lang_data_fsd = self._load_pickle('res:/localizationfsd/localization_fsd_{}'.format(language))
+            lang_data = self._load_pickle(u'res:/localization/localization_{}'.format(language))
+            lang_data_fsd = self._load_pickle(u'res:/localizationfsd/localization_fsd_{}'.format(language))
         except ContainerNameError:
             msg = u'data for language "{}" cannot be loaded'.format(language)
             raise LanguageNotAvailable(msg)

@@ -91,7 +91,7 @@ class FlowManager(object):
             elif symbol == ')' and inarg is True:
                 inarg = False
             else:
-                msg = 'unexpected character "{}" at position {}'.format(symbol, pos_start)
+                msg = u'unexpected character "{}" at position {}'.format(symbol, pos_start)
                 raise FilterParseError(msg)
         if inarg is True:
             msg = 'parenthesis is not closed'

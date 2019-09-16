@@ -120,7 +120,7 @@ class JsonWriter(BaseWriter):
             # We're handling sorting in customized encoder
             sort_keys=False)
         data_bytes = data_str.encode('utf8')
-        filepath = os.path.join(folder, '{}.json'.format(self.__secure_name(container_name)))
+        filepath = os.path.join(folder, u'{}.json'.format(self.__secure_name(container_name)))
         with open(filepath, 'wb') as f:
             f.write(data_bytes)
 
