@@ -39,9 +39,9 @@ class TraitMiner(BaseMiner):
 
     name = 'phobos'
 
-    def __init__(self, fsdlite_miner, bulkdata_miner, translator):
+    def __init__(self, fsdlite_miner, fsdbinary_miner, translator):
         self._fsdlite_miner = fsdlite_miner
-        self._bulkdata_miner = bulkdata_miner
+        self._fsdbinary_miner = fsdbinary_miner
         self._translator = translator
         self._container_name = 'traits'
         # Format: {language: {type ID: type name}}
@@ -195,9 +195,9 @@ class TraitMiner(BaseMiner):
         try:
             unit_display_map = self._unit_display_map_all[language]
         except KeyError:
-            dgmunits = self._bulkdata_miner.get_data('dogmaunits', language=language)
+            dgmunits = self._fsdbinary_miner.get_data('dogmaunits', language=language)
             unit_display_map = {}
-            for row in dgmunits:
-                unit_display_map[row['unitID']] = row.get('displayName')
+            for unit_id, unit_data in dgmunits.items():
+                unit_display_map[unit_id] = unit_data.get('displayName')
             self._unit_display_map_all[language] = unit_display_map
         return unit_display_map[unitid]

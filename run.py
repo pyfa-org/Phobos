@@ -32,14 +32,14 @@ def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_
 
     pickle_miner = PickleMiner(resbrowser=resource_browser)
     trans = Translator(pickle_miner=pickle_miner)
-    bulkdata_miner = BulkdataMiner(resbrowser=resource_browser, translator=trans)
     fsdlite_miner = FsdLiteMiner(resbrowser=resource_browser, translator=trans)
+    fsdbinary_miner = FsdBinaryMiner(resbrowser=resource_browser, translator=trans)
     miners = [
         MetadataMiner(resbrowser=resource_browser),
-        bulkdata_miner,
+        BulkdataMiner(resbrowser=resource_browser, translator=trans),
         fsdlite_miner,
-        FsdBinaryMiner(resbrowser=resource_browser, translator=trans),
-        TraitMiner(fsdlite_miner=fsdlite_miner, bulkdata_miner=bulkdata_miner, translator=trans),
+        fsdbinary_miner,
+        TraitMiner(fsdlite_miner=fsdlite_miner, fsdbinary_miner=fsdbinary_miner, translator=trans),
         SqliteMiner(resbrowser=resource_browser, translator=trans),
         CachedCallsMiner(path_cachedcalls=path_cachedcalls, translator=trans),
         pickle_miner]
