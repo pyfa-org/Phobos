@@ -62,7 +62,8 @@ class FsdBinaryMiner(BaseMiner):
                 sys.path.insert(0, temp_dir)
 
                 loader_dest = os.path.join(temp_dir, loader_filename)
-                shutil.copyfile(loader_info.file_abspath, loader_dest)
+                if not os.path.isfile(loader_dest) or not self._compare_files(loader_info.file_abspath, loader_dest):
+                    shutil.copyfile(loader_info.file_abspath, loader_dest)
 
                 loader_modname = os.path.splitext(loader_filename)[0]
                 loader_module = importlib.import_module(loader_modname)
@@ -118,6 +119,10 @@ class FsdBinaryMiner(BaseMiner):
             # Avoid creating new dirs in future if we haven't removed this one
             if not error_data:
                 self.__temp_dir = None
+
+    def _compare_files(self, file1_path, file2_path):
+        with open(file1_path, 'rb') as f1, open(file2_path, 'rb') as f2:
+            return f1.read() == f2.read()
 
 
 class PlatformError(Exception):
