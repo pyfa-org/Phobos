@@ -23,6 +23,7 @@ import os.path
 import re
 import types
 from collections import OrderedDict
+from itertools import izip_longest
 
 from .base import BaseWriter
 
@@ -103,24 +104,43 @@ class JsonWriter(BaseWriter):
     as JSON files.
     """
 
-    def __init__(self, folder, indent=None):
+    def __init__(self, folder, indent=None, group=None):
         self.base_folder = folder
         self.indent = indent
+        self.group = group
+
+    @staticmethod
+    def __grouper(iterable, n, fillvalue=None):
+        args = [iter(iterable)] * n
+        return izip_longest(fillvalue=fillvalue, *args)
 
     def write(self, miner_name, container_name, container_data):
         # Create folder structure to path, if not created yet
         folder = os.path.join(self.base_folder, self.__secure_name(miner_name))
         if not os.path.exists(folder):
             os.makedirs(folder, mode=0o755)
+
+        if self.group is None:
+            filepath = os.path.join(folder, u'{}.json'.format(self.__secure_name(container_name)))
+            self.__write_file(container_data, filepath)
+        else:
+            for i, group in enumerate(JsonWriter.__grouper(container_data, self.group)):
+                filepath = os.path.join(folder, u'{}.{}.json'.format(self.__secure_name(container_name), i))
+                if type(container_data) == dict:
+                    data = dict((k, container_data[k]) for k in group if k is not None)
+                else:
+                    data = list(group)
+                self.__write_file(data, filepath)
+
+    def __write_file(self, data, filepath):
         data_str = json.dumps(
-            container_data,
+            data,
             ensure_ascii=False,
             cls=CustomEncoder,
             indent=self.indent,
             # We're handling sorting in customized encoder
             sort_keys=False)
         data_bytes = data_str.encode('utf8')
-        filepath = os.path.join(folder, u'{}.json'.format(self.__secure_name(container_name)))
         with open(filepath, 'wb') as f:
             f.write(data_bytes)
 
