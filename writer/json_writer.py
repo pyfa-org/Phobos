@@ -129,7 +129,7 @@ class JsonWriter(BaseWriter):
                 if type(container_data) == dict:
                     data = dict((k, container_data[k]) for k in group if k is not None)
                 else:
-                    data = list(group)
+                    data = [k for k in group if k is not None]
                 self.__write_file(data, filepath)
 
     def __write_file(self, data, filepath):
