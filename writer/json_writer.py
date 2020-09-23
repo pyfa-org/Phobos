@@ -28,6 +28,12 @@ from itertools import izip_longest
 from .base import BaseWriter
 
 
+def natural_sort(i):
+    if isinstance(i, (str, unicode)):
+        return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', i)]
+    return i
+
+
 class CustomEncoder(json.JSONEncoder):
     """
     If we're not happy with default encoder - all modifications
@@ -80,12 +86,9 @@ class CustomEncoder(json.JSONEncoder):
         python objects like tuple, and encoding fails.
         """
         new_obj = OrderedDict()
-        for k in sorted(obj.keys(), key=self.__sort_natural):
+        for k in sorted(obj.keys(), key=natural_sort):
             new_obj[unicode(k)] = obj[k]
         return new_obj
-
-    def __sort_natural(self, i):
-        return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', i)]
 
 
 class JsonWriter(BaseWriter):
@@ -99,28 +102,46 @@ class JsonWriter(BaseWriter):
         self.indent = indent
         self.group = group
 
-    @staticmethod
-    def __grouper(iterable, n, fillvalue=None):
-        args = [iter(iterable)] * n
-        return izip_longest(fillvalue=fillvalue, *args)
-
     def write(self, miner_name, container_name, container_data):
         # Create folder structure to path, if not created yet
         folder = os.path.join(self.base_folder, self.__secure_name(miner_name))
         if not os.path.exists(folder):
             os.makedirs(folder, mode=0o755)
 
-        if self.group is None:
+        data_type = type(container_data)
+        grouping_method = self._grouping_map.get(data_type)
+        if self.group is None or grouping_method is None:
             filepath = os.path.join(folder, u'{}.json'.format(self.__secure_name(container_name)))
             self.__write_file(container_data, filepath)
         else:
-            for i, group in enumerate(JsonWriter.__grouper(container_data, self.group)):
+            for i, group_data in enumerate(grouping_method(self, container_data)):
                 filepath = os.path.join(folder, u'{}.{}.json'.format(self.__secure_name(container_name), i))
-                if type(container_data) == dict:
-                    data = dict((k, container_data[k]) for k in group if k is not None)
-                else:
-                    data = [k for k in group if k is not None]
-                self.__write_file(data, filepath)
+                self.__write_file(group_data, filepath)
+
+    def _group_dict(self, container_data):
+        group_data = {}
+        for k in sorted(container_data, key=natural_sort):
+            group_data[k] = container_data[k]
+            if len(group_data) >= self.group:
+                yield group_data
+                group_data = {}
+        if group_data:
+            yield group_data
+
+    def _group_list(self, container_data):
+        group_data = []
+        for i in container_data:
+            group_data.append(i)
+            if len(group_data) >= self.group:
+                yield group_data
+                group_data = []
+        if group_data:
+            yield group_data
+
+    _grouping_map = {
+        types.DictType: _group_dict,
+        types.TupleType: _group_list,
+        types.ListType: _group_list}
 
     def __write_file(self, data, filepath):
         data_str = json.dumps(
