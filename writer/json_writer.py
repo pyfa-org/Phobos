@@ -78,23 +78,13 @@ class CustomEncoder(json.JSONEncoder):
         to strings. Default encoder doesn't do this for cases when keys are
         python objects like tuple, and encoding fails.
         """
-        # If all keys are numbers - sort them before converting to string,
-        # otherwise sort after conversion
-        sorter = self.__sort_as_is
-        for k in obj:
-            if not isinstance(k, (int, long, float)):
-                sorter = self.__sort_as_string
-                break
         new_obj = OrderedDict()
-        for k in sorted(obj.keys(), key=sorter):
+        for k in sorted(obj.keys(), key=self.__sort_natural):
             new_obj[unicode(k)] = obj[k]
         return new_obj
 
-    def __sort_as_is(self, i):
-        return i
-
-    def __sort_as_string(self, i):
-        return unicode(i)
+    def __sort_natural(self, i):
+        return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', i)]
 
 
 class JsonWriter(BaseWriter):
