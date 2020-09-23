@@ -27,7 +27,7 @@ from writer import *
 from util import ResourceBrowser, Translator
 
 
-def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_json):
+def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_json, group=None):
     resource_browser = ResourceBrowser(eve_path=path_eve, server_alias=server_alias)
 
     pickle_miner = PickleMiner(resbrowser=resource_browser)
@@ -45,7 +45,7 @@ def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_
         pickle_miner]
 
     writers = [
-        JsonWriter(path_json, indent=2, group=5000)]
+        JsonWriter(path_json, indent=2, group=group)]
 
     FlowManager(miners, writers).run(filter_string=filter_string, language=language)
 
@@ -62,26 +62,26 @@ if __name__ == '__main__':
         sys.stderr.write('This application requires Python 2.7 to run, but {0}.{1} was used\n'.format(major, minor))
         sys.exit()
 
-
     import argparse
     import os.path
 
-
     parser = argparse.ArgumentParser(description='This script extracts data from EVE client and writes it into JSON files')
-    parser.add_argument(
-        '-e', '--eve', required=True, help='Path to EVE client\'s folder')
-    parser.add_argument(
-        '-c', '--calls', default='', help='Path to CachedMethodCalls folder')
-    parser.add_argument(
-        '-s', '--server', default='tq', help='Server to pull data from. Default is "tq"',
-        choices=('tq', 'sisi', 'duality', 'thunderdome', 'serenity'))
-    parser.add_argument(
-        '-j', '--json', required=True, help='Output folder for the JSON files')
-    parser.add_argument(
-        '-t', '--translate', default='multi', help='Attempt to translate strings into specified language. Default is "multi"',
-        choices=('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi'))
-    parser.add_argument(
-        '-l', '--list', default='', help='Comma-separated list of container names to extract. If not specified, extracts everything')
+    parser.add_argument('-e', '--eve', required=True,
+                        help='Path to EVE client\'s folder')
+    parser.add_argument('-c', '--calls', default='',
+                        help='Path to CachedMethodCalls folder')
+    parser.add_argument('-s', '--server', default='tq',
+                        help='Server to pull data from. Default is "tq"',
+                        choices=('tq', 'sisi', 'duality', 'thunderdome', 'serenity'))
+    parser.add_argument('-j', '--json', required=True,
+                        help='Output folder for the JSON files')
+    parser.add_argument('-t', '--translate', default='multi',
+                        help='Attempt to translate strings into specified language. Default is "multi"',
+                        choices=('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi'))
+    parser.add_argument('-l', '--list', default='',
+                        help='Comma-separated list of container names to extract. If not specified, extracts everything')
+    parser.add_argument('-g', '--group', type=int, default=None,
+                        help='Split output into several files, containing this amount of top-level entities at most')
     args = parser.parse_args()
 
     # Expand home directory
@@ -89,5 +89,5 @@ if __name__ == '__main__':
     path_cachedcalls = os.path.expanduser(args.calls)
     path_json = os.path.expanduser(args.json)
 
-    run(path_eve=path_eve, server_alias=args.server, path_cachedcalls=args.calls,
-        filter_string=args.list, language=args.translate, path_json=path_json)
+    run(path_eve=path_eve, server_alias=args.server, path_cachedcalls=args.calls, filter_string=args.list,
+        language=args.translate, path_json=path_json, group=args.group)
