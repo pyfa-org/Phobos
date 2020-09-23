@@ -45,7 +45,7 @@ def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_
         pickle_miner]
 
     writers = [
-        JsonWriter(path_json, indent=2)]
+        JsonWriter(path_json, indent=2, group=5000)]
 
     FlowManager(miners, writers).run(filter_string=filter_string, language=language)
 
