@@ -248,16 +248,12 @@ class Translator(object):
         Compose map between message IDs and message texts
         and put it into loaded languages map.
         """
-        msg_map_phb = {}
         try:
-            lang_data = self._load_pickle(u'res:/localization/localization_{}'.format(language))
-            lang_data_fsd = self._load_pickle(u'res:/localizationfsd/localization_fsd_{}'.format(language))
+            lang_data_eve = self._load_pickle(u'res:/localizationfsd/localization_fsd_{}'.format(language))
         except ContainerNameError:
             msg = u'data for language "{}" cannot be loaded'.format(language)
             raise LanguageNotAvailable(msg)
-        # Translations from FSD container have priority
-        for msg_map_eve in (lang_data[1], lang_data_fsd[1]):
-            msg_map_phb.update(msg_map_eve)
+        msg_map_phb = lang_data_eve[1]
         self._loaded_langs[language] = msg_map_phb
 
     def _get_language_data(self, lang):
@@ -350,27 +346,23 @@ class Translator(object):
         from them here and assign to proper attributes. This method
         is intended to be called when any of shared data is requested.
         """
-        languages = set()
         lbl_map_phb = {}
-        main = self._load_pickle('res:/localization/localization_main')
-        main_fsd = self._load_pickle('res:/localizationfsd/localization_fsd_main')
+        main_eve = self._load_pickle('res:/localizationfsd/localization_fsd_main')
         # Load list of languages
-        languages.update(main['languages'].keys())
-        languages.update(main_fsd['languages'])
+        languages = set(main_eve['languages'])
         self.__available_langs = tuple(sorted(languages))
         # Load label map
-        for lbl_map_eve in (main['labels'], main_fsd['labels']):
-            for msgid in sorted(lbl_map_eve):
-                lbl_data = lbl_map_eve[msgid]
-                lbl_base = lbl_data.get('FullPath')
-                lbl_name = lbl_data.get('label')
-                lbl_components = []
-                if lbl_base:
-                    lbl_components.append(lbl_base)
-                if lbl_name:
-                    lbl_components.append(lbl_name)
-                lbl_path = u'/'.join(lbl_components)
-                lbl_map_phb[lbl_path] = msgid
+        for msgid in sorted(main_eve['labels']):
+            lbl_data = main_eve['labels'][msgid]
+            lbl_base = lbl_data.get('FullPath')
+            lbl_name = lbl_data.get('label')
+            lbl_components = []
+            if lbl_base:
+                lbl_components.append(lbl_base)
+            if lbl_name:
+                lbl_components.append(lbl_name)
+            lbl_path = u'/'.join(lbl_components)
+            lbl_map_phb[lbl_path] = msgid
         self.__label_map = lbl_map_phb
 
 
