@@ -180,9 +180,9 @@ class TraitMiner(BaseMiner):
         try:
             type_name_map = self._type_name_map_all[language]
         except KeyError:
-            evetypes = self._fsdlite_miner.get_data('evetypes', language=language)
+            types = self._fsdbinary_miner.get_data('types', language=language)
             type_name_map = {}
-            for type_id, type_row in evetypes.items():
+            for type_id, type_row in types.items():
                 type_id = int(type_id)
                 type_name_map[type_id] = type_row.get('typeName')
             self._type_name_map_all[language] = type_name_map
