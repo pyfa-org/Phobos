@@ -19,7 +19,7 @@ It doesn't mean that you should not use these miners. Generally speaking, if you
 
 ### Arguments:
 
-* `--eve`: Required. Path to EVE client folder, e.g. `C:\EVE`.
+* `--eve`: Required. Path to EVE client folder, e.g. `C:\CCP\EVE Online`.
 * `--json`: Required. Output folder for JSON files.
 * `--server`: Optional. Server to pull data from. Defaults to `tq`. Other options are `sisi`, `duality`, `thunderdome` and `serenity`.
 * `--calls`: Optional. Path to `CachedMethodCalls` folder, if you want to extract data from files contained within it.

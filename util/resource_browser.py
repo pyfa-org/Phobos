@@ -29,6 +29,13 @@ from util import cachedproperty
 FileInfo = namedtuple('FileInfo', ('resource_path', 'file_relpath', 'file_abspath', 'file_hash', 'file_size', 'compressed_size'))
 
 
+def get_full_alias(short_alias):
+    full_aliases = {
+        'tq': 'tranquility',
+        'sisi': 'singularity'}
+    return full_aliases.get(short_alias, short_alias)
+
+
 class ResourceBrowser(object):
     """
     Class, responsible for browsing/retrieval of resources.
@@ -75,23 +82,23 @@ class ResourceBrowser(object):
     @cachedproperty
     def _resource_index(self):
         index = {}
-        res_index_path = os.path.join(self._eve_path, 'SharedCache', self._server_alias, 'resfileindex.txt')
+        res_index_path = os.path.join(self._eve_path, self._server_alias, 'resfileindex.txt')
         with open(res_index_path) as f:
             for resource_path, file_relpath, file_hash, file_size, compressed_size in csv.reader(f):
                 index[resource_path] = FileInfo(
                     resource_path=resource_path,
                     file_relpath=os.path.join(*file_relpath.split('/')),
-                    file_abspath=os.path.join(self._eve_path, 'SharedCache', 'ResFiles', *file_relpath.split('/')),
+                    file_abspath=os.path.join(self._eve_path, 'ResFiles', *file_relpath.split('/')),
                     file_hash=file_hash,
                     file_size=int(file_size),
                     compressed_size=int(compressed_size))
-        app_index_path = os.path.join(self._eve_path, 'SharedCache', u'index_{}.txt'.format(self._server_alias))
+        app_index_path = os.path.join(self._eve_path, u'index_{}.txt'.format(get_full_alias(self._server_alias)))
         with open(app_index_path) as f:
             for resource_path, file_relpath, file_hash, file_size, compressed_size, version in csv.reader(f):
                 index[resource_path] = FileInfo(
                     resource_path=resource_path,
                     file_relpath=os.path.join(*file_relpath.split('/')),
-                    file_abspath=os.path.join(self._eve_path, 'SharedCache', 'ResFiles', *file_relpath.split('/')),
+                    file_abspath=os.path.join(self._eve_path, 'ResFiles', *file_relpath.split('/')),
                     file_hash=file_hash,
                     file_size=int(file_size),
                     compressed_size=int(compressed_size))
