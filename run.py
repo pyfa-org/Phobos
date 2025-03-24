@@ -89,5 +89,5 @@ if __name__ == '__main__':
     path_cachedcalls = os.path.expanduser(args.calls)
     path_json = os.path.expanduser(args.json)
 
-    run(path_eve=path_eve, server_alias=args.server, path_cachedcalls=args.calls, filter_string=args.list,
+    run(path_eve=path_eve, server_alias=args.server, path_cachedcalls=path_cachedcalls, filter_string=args.list,
         language=args.translate, path_json=path_json, group=args.group)
