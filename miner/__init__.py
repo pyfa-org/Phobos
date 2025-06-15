@@ -19,8 +19,6 @@
 
 
 from .base import ContainerNameError
-from .bulkdata import BulkdataMiner
-from .cached_calls import CachedCallsMiner
 from .fsd_binary import FsdBinaryMiner
 from .fsd_lite import FsdLiteMiner
 from .metadata import MetadataMiner
@@ -30,8 +28,6 @@ from .unpickle import PickleMiner
 
 
 __all__ = (
-    'BulkdataMiner',
-    'CachedCallsMiner',
     'FsdBinaryMiner',
     'FsdLiteMiner',
     'MetadataMiner',

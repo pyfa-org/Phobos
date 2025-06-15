@@ -110,9 +110,9 @@ class Translator(object):
             self._route_object(item, language, spec, stats)
 
     _translation_map = {
-        types.DictType: _translate_map,
-        types.TupleType: _translate_iterable,
-        types.ListType: _translate_iterable
+        dict: _translate_map,
+        tuple: _translate_iterable,
+        list: _translate_iterable
     }
 
     def __translation_multimode(self, row, text_fname, msgid, orig_text, stats):

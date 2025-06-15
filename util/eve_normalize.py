@@ -20,10 +20,8 @@
 
 import inspect
 import types
-from collections import OrderedDict
+from collections import OrderedDict, abc
 from itertools import chain
-
-from reverence.carbon.common.script.sys.row import Row
 
 
 class EveNormalizer(object):
@@ -113,30 +111,6 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
-    def _pythonize_string(self, obj):
-        """
-        Sometimes EVE has non-ASCII symbols in non-unicode strings,
-        default encoding for these is cp1252, here we ensure they are
-        converted to unicode so we don't have to run any additional
-        processing on them elsewhere.
-        """
-        return obj.decode('cp1252')
-
-    def _pythonize_dbrow(self, obj):
-        """
-        DBRow can be converted into dictionary - its keys are
-        accessed via hidden '__keys__' attribute (implementation
-        detail, ideally we should fetch it from container's
-        .header attribute).
-        """
-        container = {}
-        for key in obj.__keys__:
-            value = obj[key]
-            proc_key = self._route_object(key)
-            proc_value = self._route_object(value)
-            container[proc_key] = proc_value
-        return container
-
     def _pythonize_list_of_iterables(self, obj):
         """
         Here we suppose that passed object is list of iterables of
@@ -173,41 +147,12 @@ class EveNormalizer(object):
             container[proc_key] = proc_value
         return container
 
-    def _pythonize_indexed_lists(self, obj):
-        """
-        Indexed lists are represented as dictionary, where keys are some
-        indices and values are lists of rows. This is very similar to list
-        of iterables, thus we're reusing its conversion method.
-        """
-        return self._pythonize_list_of_iterables(obj.values())
-
-    def _pythonize_indexed_rows(self, obj):
-        """
-        Regular map, where values are data rows, and keys are some
-        values taken from the rows they correspond to.
-        """
-        return self._pythonize_iterable(obj.values())
-
     def _pythonize_pyobj(self, obj):
         """
         KeyVal is a python-like object, where attributes/values are stored
         as object attributes.
         """
         return self._pythonize_map(obj.__dict__)
-
-    def _pythonize_row(self, obj):
-        """
-        Row objects are tricky part for phobos - they expose convenient
-        interface to user, which is 'improved' by reverence to provide things
-        like out-of-the-box string localization, or object references (e.g.
-        group row provides reference to actual category row, not just
-        categoryID). Reverence is known to break on some of these 'improvements'
-        (e.g. RamDetail class). This can be worked around in quite a dirty
-        way, but as we do not really need any of these improvements - we
-        take 'raw' row (DBRow) from Row (and its subclasses) and use it,
-        ignoring everything built on top of it.
-        """
-        return self._pythonize_dbrow(obj.line)
 
     def pythonize_fsdbinary_item(self, obj, ignore_attrs=()):
         item = {}
@@ -221,30 +166,16 @@ class EveNormalizer(object):
 
     _primitives = (
         types.NoneType,
-        types.BooleanType,
-        types.FloatType,
-        types.IntType,
-        types.LongType,
-        types.UnicodeType)
+        bool,
+        float,
+        int,
+        str)
 
     _class_match = {
-        types.StringType: _pythonize_string,
-        types.ListType: _pythonize_iterable,
-        types.TupleType: _pythonize_iterable}
+        list: _pythonize_iterable,
+        tuple: _pythonize_iterable}
 
     _name_match = {
-        # Usually seen in cache
-        'dbutil.CFilterRowset': _pythonize_indexed_lists,
-        'dbutil.CIndexedRowset': _pythonize_indexed_rows,
-        'dbutil.CRowset': _pythonize_iterable,
-        'dbutil.RowDict': _pythonize_indexed_rows,
-        'dbutil.RowList': _pythonize_iterable,
-        # Conventional bulkdata classes
-        'util.FilterRowset': _pythonize_list_of_iterables,
-        'util.IndexedRowLists': _pythonize_indexed_lists,
-        'util.IndexRowset': _pythonize_iterable,
-        'util.KeyVal': _pythonize_pyobj,
-        'util.Rowset': _pythonize_iterable,
         # FSD-related classes, usually seen in bulkdata
         'FSD_Dict': _pythonize_map,
         'FSD_MultiIndex': _pythonize_map,
@@ -256,16 +187,11 @@ class EveNormalizer(object):
         'dict': _pythonize_map,  # cfsd.dict
         'list': _pythonize_iterable,  # cfsd.list
         # Misc
-        'blue.DBRow': _pythonize_dbrow,
         'universe.SolarSystemWrapper': _pythonize_pyobj}
 
     _subclass_match = OrderedDict([
-        # Row is handled through isinstance check because reverence
-        # actually provides its subclasses, but it doesn't make sense
-        # to specify them all
-        (Row, _pythonize_row),
         # Includes dictionaries and FSDLiteStorage
-        (types.DictType, _pythonize_map)])
+        (abc.Mapping, _pythonize_map)])
 
 
 class UnknownContainerTypeError(Exception):

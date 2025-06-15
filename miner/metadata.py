@@ -18,8 +18,7 @@
 #===============================================================================
 
 
-import os.path
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 from time import time
 
 from .base import BaseMiner

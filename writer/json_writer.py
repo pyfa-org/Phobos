@@ -21,15 +21,13 @@
 import json
 import os.path
 import re
-import types
 from collections import OrderedDict
-from itertools import izip_longest
 
 from .base import BaseWriter
 
 
 def natural_sort(i):
-    if isinstance(i, (str, unicode)):
+    if isinstance(i, str):
         return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', i)]
     return i
 
@@ -75,9 +73,9 @@ class CustomEncoder(json.JSONEncoder):
         return new_obj
 
     _traversal_map = {
-        types.DictType: _traverse_map,
-        types.TupleType: _traverse_iterable,
-        types.ListType: _traverse_iterable}
+        dict: _traverse_map,
+        tuple: _traverse_iterable,
+        list: _traverse_iterable}
 
     def _prepare_map(self, obj):
         """
@@ -87,7 +85,7 @@ class CustomEncoder(json.JSONEncoder):
         """
         new_obj = OrderedDict()
         for k in sorted(obj.keys(), key=natural_sort):
-            new_obj[unicode(k)] = obj[k]
+            new_obj[str(k)] = obj[k]
         return new_obj
 
 
@@ -139,9 +137,9 @@ class JsonWriter(BaseWriter):
             yield group_data
 
     _grouping_map = {
-        types.DictType: _group_dict,
-        types.TupleType: _group_list,
-        types.ListType: _group_list}
+        dict: _group_dict,
+        tuple: _group_list,
+        list: _group_list}
 
     def __write_file(self, data, filepath):
         data_str = json.dumps(
