@@ -109,11 +109,11 @@ class JsonWriter(BaseWriter):
         data_type = type(container_data)
         grouping_method = self._grouping_map.get(data_type)
         if self.group is None or grouping_method is None:
-            filepath = os.path.join(folder, u'{}.json'.format(self.__secure_name(container_name)))
+            filepath = os.path.join(folder, '{}.json'.format(self.__secure_name(container_name)))
             self.__write_file(container_data, filepath)
         else:
             for i, group_data in enumerate(grouping_method(self, container_data)):
-                filepath = os.path.join(folder, u'{}.{}.json'.format(self.__secure_name(container_name), i))
+                filepath = os.path.join(folder, '{}.{}.json'.format(self.__secure_name(container_name), i))
                 self.__write_file(group_data, filepath)
 
     def _group_dict(self, container_data):

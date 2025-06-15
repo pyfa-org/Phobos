@@ -63,7 +63,7 @@ class TraitMiner(BaseMiner):
         Compose list of traits. Format:
         Returned value:
         For single language: ({'typeID': int, 'traits': traits}, ...)
-        For multi-language: ({'typeID': int, 'traits_en-us': traits, 'traits_ru': traits, ...}, ...)
+        For multi-language: ({'typeID': int, 'traits_en-us': traits, 'traits_r': traits, ...}, ...)
         Traits: {'skills': (skill section, ...), 'role': role section, 'misc': misc section}
           skills, role and misc fields are optional
         Section: {'header': string, 'bonuses': (bonus, ...)}
@@ -79,7 +79,7 @@ class TraitMiner(BaseMiner):
             # all languages in fields named like traits_en-us
             if language == 'multi':
                 for mlanguage in self._translator.available_langs:
-                    traits_header = u'traits_{}'.format(mlanguage)
+                    traits_header = 'traits_{}'.format(mlanguage)
                     traits = self._type_traits(trait_data, mlanguage)
                     trait_row[traits_header] = traits
             # For single language, we will have just single field named
@@ -103,7 +103,7 @@ class TraitMiner(BaseMiner):
                 for skill_typeid in skill_ids:
                     skill_name = self._get_type_name(skill_typeid, language)
                     section_header = self._translator.get_by_label('UI/ShipTree/SkillNameCaption', language, skillName=skill_name)
-                    section_data = trait_data[u"types"][unicode(skill_typeid)]
+                    section_data = trait_data['types'][str(skill_typeid)]
                     bonuses = self._section_bonuses(section_data, language)
                     skill_row = {'header': section_header, 'bonuses': bonuses}
                     skill_rows.append(skill_row)
@@ -138,7 +138,7 @@ class TraitMiner(BaseMiner):
         # for anything apart from this)
         sorted_bonuses = sorted(section_data, key=lambda k: k['importance'])
         for bonus_data in sorted_bonuses:
-            #bonus_data = section_data[unicode(bonus_index)]
+            #bonus_data = section_data[str(bonus_index)]
             bonus_msgid = bonus_data['nameID']
             bonus_text = self._translator.get_by_message(bonus_msgid, language)
             bonus_amt = bonus_data.get('bonus')

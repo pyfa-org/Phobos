@@ -40,17 +40,17 @@ class FlowManager(object):
                 if not filter_set or cn in filter_set]
             if not container_names:
                 continue
-            print(u'Miner {}:'.format(miner.raw_name))
+            print('Miner {}:'.format(miner.raw_name))
             for container_name in sorted(container_names):
-                print(u'  processing {}'.format(container_name))
+                print('  processing {}'.format(container_name))
                 missing_set.discard(container_name)
                 # Fetch data from client
                 try:
                     container_data = miner.get_data(container_name=container_name, language=language, verbose=True)
                 except KeyboardInterrupt:
                     raise
-                except Exception as e:
-                    print(u'    unable to fetch data - {}: {}'.format(type(e).__name__, e))
+                except KeyboardInterrupt as e:
+                    print('    unable to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
                     # Write data using passed writers
                     for writer in self._writers:
@@ -59,12 +59,12 @@ class FlowManager(object):
                         except KeyboardInterrupt:
                             raise
                         except Exception as e:
-                            print(u'    unable to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
+                            print('    unable to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))
         # Print info messages about requested, but unavailable containers
         if missing_set:
-            print(u'Containers which were requested, but are not available:')
+            print('Containers which were requested, but are not available:')
             for flow_name in sorted(missing_set):
-                print(u'  {}'.format(flow_name))
+                print('  {}'.format(flow_name))
 
     def _parse_filter(self, name_filter):
         """
@@ -91,7 +91,7 @@ class FlowManager(object):
             elif symbol == ')' and inarg is True:
                 inarg = False
             else:
-                msg = u'unexpected character "{}" at position {}'.format(symbol, pos_start)
+                msg = 'unexpected character "{}" at position {}'.format(symbol, pos_start)
                 raise FilterParseError(msg)
         if inarg is True:
             msg = 'parenthesis is not closed'

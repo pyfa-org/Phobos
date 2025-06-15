@@ -49,7 +49,7 @@ class BaseMiner(object):
         return type(self).__name__
 
     def _container_not_found(self, cont_name):
-        msg = u'container "{}" is not available for miner {}'.format(cont_name, type(self).__name__)
+        msg = 'container "{}" is not available for miner {}'.format(cont_name, type(self).__name__)
         raise ContainerNameError(msg)
 
 

@@ -49,7 +49,7 @@ class SqliteMiner(BaseMiner):
             rows = []
             with sqlite3.connect(dbpath) as dbconn:
                 c = dbconn.cursor()
-                c.execute(u'select * from {}'.format(table_name))
+                c.execute('select * from {}'.format(table_name))
                 headers = list(map(lambda x: x[0], c.description))
                 for sqlite_row in c:
                     row = dict(zip(headers, sqlite_row))
@@ -74,6 +74,6 @@ class SqliteMiner(BaseMiner):
                 c.execute('select name from sqlite_master where type = \'table\'')
                 for row in c:
                     table_name = row[0]
-                    container_name = u'{}_{}'.format(resource_path[:-len(sqlite_ext)], table_name)
+                    container_name = '{}_{}'.format(resource_path[:-len(sqlite_ext)], table_name)
                     contname_dbtable_map[container_name] = (resource_info.file_abspath, table_name)
         return contname_dbtable_map

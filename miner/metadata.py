@@ -54,7 +54,7 @@ class MetadataMiner(BaseMiner):
             except KeyboardInterrupt:
                 raise
             except:
-                print(u'    failed to detect client version')
+                print('    failed to detect client version')
                 eve_version = None
             container_data.append({field_names[0]: 'client_build', field_names[1]: eve_version})
             # Generate UNIX-style timestamp of current UTC time

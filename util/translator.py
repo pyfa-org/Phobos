@@ -122,7 +122,7 @@ class Translator(object):
         original field untouched.
         """
         for language in self.available_langs:
-            new_text_fname = u'{}_{}'.format(text_fname, language)
+            new_text_fname = '{}_{}'.format(text_fname, language)
             if msgid is not None:
                 trans_text = (
                     self.get_by_message(msgid, language) or
@@ -169,17 +169,17 @@ class Translator(object):
             # whose value contains message ID, and after that
             # we do few verification steps to confirm/deny this
             # claim
-            for msgid_fname in row.keys():
+            for msgid_fname in list(row.keys()):
                 # It must be string in '<field name>ID' format, skip current
                 # field name if it's not the case
-                if isinstance(msgid_fname, types.StringTypes) is False:
+                if isinstance(msgid_fname, str) is False:
                     continue
                 tail = msgid_fname[-len(suffix):]
                 if tail != suffix:
                     continue
                 # Message ID can None or integer
                 msgid = row[msgid_fname]
-                if msgid is not None and isinstance(msgid, (types.IntType, types.LongType)) is False:
+                if msgid is not None and isinstance(msgid, int) is False:
                     continue
                 # There're 2 conventions which CCP use for text and message fields:
                 # 1) There're pair of fields named like fieldName / fieldNameID pair
@@ -190,7 +190,7 @@ class Translator(object):
                 if text_fname in row:
                     # Text can be string or None
                     text = row[text_fname]
-                    if text is not None and isinstance(text, types.StringTypes) is False:
+                    if text is not None and isinstance(text, str) is False:
                         continue
                     # If both text and message ID are None, skip them to avoid
                     # unnecessary translations (which can convert None to empty
@@ -207,7 +207,7 @@ class Translator(object):
                 yield (text_fname, msgid_fname)
         else:
             for text_fname in spec:
-                msgid_fname = u'{}{}'.format(text_fname, suffix)
+                msgid_fname = '{}{}'.format(text_fname, suffix)
                 # Skip all message ID fields which are not present in row
                 if msgid_fname not in row:
                     continue
@@ -237,7 +237,7 @@ class Translator(object):
             # do not print stats about it
             if not trans:
                 continue
-            print(u'    field {}: {} entries, {} translations'.format(field_name, total, trans))
+            print('    field {}: {} entries, {} translations'.format(field_name, total, trans))
 
     # Related to loading language data
     def _load_pickle(self, name):
@@ -249,9 +249,9 @@ class Translator(object):
         and put it into loaded languages map.
         """
         try:
-            lang_data_eve = self._load_pickle(u'res:/localizationfsd/localization_fsd_{}'.format(language))
+            lang_data_eve = self._load_pickle('res:/localizationfsd/localization_fsd_{}'.format(language))
         except ContainerNameError:
-            msg = u'data for language "{}" cannot be loaded'.format(language)
+            msg = 'data for language "{}" cannot be loaded'.format(language)
             raise LanguageNotAvailable(msg)
         msg_map_phb = lang_data_eve[1]
         self._loaded_langs[language] = msg_map_phb
@@ -299,7 +299,7 @@ class Translator(object):
         try:
             msgid = self._label_map[label]
         except KeyError:
-            msg = u'label {} does not exist'.format(label)
+            msg = 'label {} does not exist'.format(label)
             raise LabelError(msg)
         return self.get_by_message(msgid, *args, **kwargs)
 
@@ -318,7 +318,7 @@ class Translator(object):
                 substitution = kwargs[arg_name]
             except KeyError:
                 continue
-            text = text.replace(tok_name, unicode(substitution))
+            text = text.replace(tok_name, str(substitution))
         return text
 
     @property
@@ -361,7 +361,7 @@ class Translator(object):
                 lbl_components.append(lbl_base)
             if lbl_name:
                 lbl_components.append(lbl_name)
-            lbl_path = u'/'.join(lbl_components)
+            lbl_path = '/'.join(lbl_components)
             lbl_map_phb[lbl_path] = msgid
         self.__label_map = lbl_map_phb
 

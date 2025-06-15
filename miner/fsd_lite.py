@@ -49,7 +49,7 @@ class FsdLiteMiner(BaseMiner):
             file_path = self._resbrowser.get_file_info(resource_path).file_abspath
             with sqlite3.connect(file_path) as dbconn:
                 c = dbconn.cursor()
-                c.execute(u'select key, value from cache')
+                c.execute('select key, value from cache')
                 for sqlite_row in c:
                     key = sqlite_row[0]
                     value = sqlite_row[1]

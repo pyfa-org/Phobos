@@ -20,6 +20,7 @@
 
 import inspect
 import types
+import typing
 from collections import OrderedDict, abc
 from itertools import chain
 
@@ -71,9 +72,16 @@ class EveNormalizer(object):
         # Try to find parent class for passed object, and if we
         # have any in our records - run handler for it
         for candidate_cls in self._subclass_match:
-            if isinstance(obj, candidate_cls):
-                method = self._subclass_match[candidate_cls]
-                return method(self, obj)
+            try:
+                parent_match = isinstance(obj, candidate_cls)
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except:
+                continue
+            else:
+                if parent_match:
+                    method = self._subclass_match[candidate_cls]
+                    return method(self, obj)
         # Stuff specific to FSD binary format
         if self._loader_module is not None:
             # Check if class is defined in passed loader, if it is, then
@@ -161,7 +169,10 @@ class EveNormalizer(object):
                 continue
             if attr_name in ignore_attrs:
                 continue
-            item[attr_name] = self._route_object(getattr(obj, attr_name))
+            sub_obj = getattr(obj, attr_name)
+            if isinstance(sub_obj, typing.Callable):
+                continue
+            item[attr_name] = self._route_object(sub_obj)
         return item
 
     _primitives = (
