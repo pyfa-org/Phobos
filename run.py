@@ -58,8 +58,8 @@ if __name__ == '__main__':
     except AttributeError:
         major = sys.version_info[0]
         minor = sys.version_info[1]
-    if major != 2 or minor < 7:
-        sys.stderr.write('This application requires Python 2.7 to run, but {0}.{1} was used\n'.format(major, minor))
+    if major != 3 or minor != 12:
+        sys.stderr.write('This application requires Python 3.12 to run, but {0}.{1} was used\n'.format(major, minor))
         sys.exit()
 
     import argparse
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                         help='Path to CachedMethodCalls folder')
     parser.add_argument('-s', '--server', default='tq',
                         help='Server to pull data from. Default is "tq"',
-                        choices=('tq', 'sisi', 'duality', 'thunderdome', 'serenity'))
+                        choices=('stillness',))
     parser.add_argument('-j', '--json', required=True,
                         help='Output folder for the JSON files')
     parser.add_argument('-t', '--translate', default='multi',
