@@ -49,7 +49,7 @@ class FlowManager(object):
                     container_data = miner.get_data(container_name=container_name, language=language, verbose=True)
                 except KeyboardInterrupt:
                     raise
-                except KeyboardInterrupt as e:
+                except Exception as e:
                     print('    unable to fetch data - {}: {}'.format(type(e).__name__, e))
                 else:
                     # Write data using passed writers
