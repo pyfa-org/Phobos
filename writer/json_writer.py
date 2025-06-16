@@ -18,6 +18,7 @@
 #===============================================================================
 
 
+import codecs
 import json
 import os.path
 import re
@@ -144,16 +145,15 @@ class JsonWriter(BaseWriter):
         types.ListType: _group_list}
 
     def __write_file(self, data, filepath):
-        data_str = json.dumps(
-            data,
-            ensure_ascii=False,
-            cls=CustomEncoder,
-            indent=self.indent,
-            # We're handling sorting in customized encoder
-            sort_keys=False)
-        data_bytes = data_str.encode('utf8')
-        with open(filepath, 'wb') as f:
-            f.write(data_bytes)
+        with codecs.open(filepath, 'wb', encoding='utf-8') as f:
+            json.dump(
+                data,
+                f,
+                ensure_ascii=False,
+                cls=CustomEncoder,
+                indent=self.indent,
+                # We're handling sorting in customized encoder
+                sort_keys=False)
 
     def __secure_name(self, name):
         """
