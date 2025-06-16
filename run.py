@@ -66,10 +66,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script extracts data from EVE client and writes it into JSON files')
     parser.add_argument('-e', '--eve', required=True,
                         help='Path to EVE client\'s folder')
-    parser.add_argument('-c', '--calls', default='',
-                        help='Path to CachedMethodCalls folder')
-    parser.add_argument('-s', '--server', default='tq',
-                        help='Server to pull data from. Default is "tq"',
+    parser.add_argument('-s', '--server', default='stillness',
+                        help='Server to pull data from. Default is "stillness"',
                         choices=('stillness',))
     parser.add_argument('-j', '--json', required=True,
                         help='Output folder for the JSON files')
