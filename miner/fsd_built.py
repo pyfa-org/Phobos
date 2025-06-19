@@ -32,9 +32,9 @@ from util import EveNormalizer, cachedproperty
 from .base import BaseMiner
 
 
-class FsdBinaryMiner(BaseMiner):
+class FsdBuiltMiner(BaseMiner):
 
-    name = 'fsd_binary'
+    name = 'fsd_built'
 
     def __init__(self, resbrowser, translator):
         self._resbrowser = resbrowser
