@@ -87,11 +87,11 @@ class EveNormalizer(object):
             # Check if class is defined in passed loader, if it is, then
             # we're dealing with FSD binary item for certain
             if inspect.getmodule(type(obj)) is self._loader_module:
-                return self.pythonize_fsdbinary_item(obj)
+                return self.pythonize_fsdbuilt_item(obj)
             # FSD contains bunch of vector classes which are defined outside of
             # loader (shown as defined in builtins), process them separately
             if type(obj).__name__.endswith('_vector'):
-                return self.pythonize_fsdbinary_item(obj, ignore_attrs=(
+                return self.pythonize_fsdbuilt_item(obj, ignore_attrs=(
                     'n_fields', 'n_sequence_fields', 'n_unnamed_fields'))
         # If we got here, routing failed
         msg = 'unable to route {}'.format(type(obj))
@@ -162,7 +162,7 @@ class EveNormalizer(object):
         """
         return self._pythonize_map(obj.__dict__)
 
-    def pythonize_fsdbinary_item(self, obj, ignore_attrs=()):
+    def pythonize_fsdbuilt_item(self, obj, ignore_attrs=()):
         item = {}
         for attr_name in dir(obj):
             if attr_name.startswith('__') and attr_name.endswith('__'):
