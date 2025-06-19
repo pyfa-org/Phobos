@@ -87,11 +87,11 @@ class FsdBinaryMiner(BaseMiner):
         loaders = {}
         datas = {}
         for resource_path in self._resbrowser.respath_iter():
-            m = re.match('^app:/bin64/(\w+/)*(?P<name>\w+)Loader.pyd$', resource_path, flags=re.UNICODE)
+            m = re.match(r'^app:/bin64/(\w+/)*(?P<name>\w+)Loader.pyd$', resource_path, flags=re.UNICODE)
             if m:
                 loaders[m.group('name').lower()] = resource_path
                 continue
-            m = re.match('^res:/staticdata/(\w+/)*(?P<name>\w+).fsdbinary$', resource_path, flags=re.UNICODE)
+            m = re.match(r'^res:/staticdata/(\w+/)*(?P<name>\w+).fsdbinary$', resource_path, flags=re.UNICODE)
             if m:
                 datas[m.group('name').lower()] = resource_path
                 continue

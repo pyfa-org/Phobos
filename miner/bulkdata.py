@@ -110,7 +110,7 @@ class BulkdataMiner(BaseMiner):
         """
         contname_respath_map = {}
         for resource_path in self._resbrowser.respath_iter():
-            m = re.match('^app:/(\w+/)*(?P<bulk_id>\d+).cache2$', resource_path, flags=re.UNICODE)
+            m = re.match(r'^app:/(\w+/)*(?P<bulk_id>\d+).cache2$', resource_path, flags=re.UNICODE)
             if m:
                 bulk_id = int(m.group('bulk_id'))
                 container_name = bulkdata_map.get(bulk_id, unicode(bulk_id))
