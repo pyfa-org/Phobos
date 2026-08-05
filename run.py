@@ -27,7 +27,7 @@ from writer import *
 from util import ResourceBrowser, Translator
 
 
-def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_json, group=None):
+def run(path_eve, server_alias, filter_string, language, path_json, group=None):
     resource_browser = ResourceBrowser(eve_path=path_eve, server_alias=server_alias)
 
     pickle_miner = PickleMiner(resbrowser=resource_browser)
@@ -36,12 +36,10 @@ def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_
     fsdbuilt_miner = FsdBuiltMiner(resbrowser=resource_browser, translator=trans)
     miners = [
         MetadataMiner(resbrowser=resource_browser),
-        BulkdataMiner(resbrowser=resource_browser, translator=trans),
         fsdlite_miner,
         fsdbuilt_miner,
         TraitMiner(fsdlite_miner=fsdlite_miner, fsdbuilt_miner=fsdbuilt_miner, translator=trans),
         SqliteMiner(resbrowser=resource_browser, translator=trans),
-        CachedCallsMiner(path_cachedcalls=path_cachedcalls, translator=trans),
         pickle_miner]
 
     writers = [
@@ -68,11 +66,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script extracts data from EVE client and writes it into JSON files')
     parser.add_argument('-e', '--eve', required=True,
                         help='Path to EVE client\'s folder')
-    parser.add_argument('-c', '--calls', default='',
-                        help='Path to CachedMethodCalls folder')
     parser.add_argument('-s', '--server', default='tq',
                         help='Server to pull data from. Default is "tq"',
-                        choices=('tq', 'sisi', 'duality', 'thunderdome', 'serenity'))
+                        choices=('tq', 'sisi', 'thunderdome', 'serenity'))
     parser.add_argument('-j', '--json', required=True,
                         help='Output folder for the JSON files')
     parser.add_argument('-t', '--translate', default='multi',
@@ -86,8 +82,7 @@ if __name__ == '__main__':
 
     # Expand home directory
     path_eve = os.path.expanduser(args.eve)
-    path_cachedcalls = os.path.expanduser(args.calls)
     path_json = os.path.expanduser(args.json)
 
-    run(path_eve=path_eve, server_alias=args.server, path_cachedcalls=path_cachedcalls, filter_string=args.list,
+    run(path_eve=path_eve, server_alias=args.server, filter_string=args.list,
         language=args.translate, path_json=path_json, group=args.group)

@@ -14,15 +14,13 @@ It doesn't mean that you should not use these miners. Generally speaking, if you
 ### Requirements
 
 * Python 2.7
-* [Reverence](https://github.com/ntt/reverence)
 * 64-bit python built for Windows is needed to access data in FSD binary format
 
 ### Arguments:
 
 * `--eve`: Required. Path to EVE client folder, e.g. `C:\CCP\EVE Online`.
 * `--json`: Required. Output folder for JSON files.
-* `--server`: Optional. Server to pull data from. Defaults to `tq`. Other options are `sisi`, `duality`, `thunderdome` and `serenity`.
-* `--calls`: Optional. Path to `CachedMethodCalls` folder, if you want to extract data from files contained within it.
+* `--server`: Optional. Server to pull data from. Defaults to `tq`. Other options are `sisi`, `thunderdome` and `serenity`.
 * `--translate`: Optional. Specifies language to which strings will be translated. You can choose either individual languages (run script with `--help` argument for a list) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation, original text is not modified, but new text fields are added, named using `<field name>_<language code>` convention (e.g. `typeName_en-us`). Multi-language translation mode is default.
 * `--list`: Optional. Specifies list of comma-separated 'containers' to extract. It uses names the script prints to stdout. For list of all available names you can launch script without specifying this option, as by default it extracts everything it can find.
 
@@ -37,7 +35,7 @@ Besides raw data Phobos pulls from client, it provides two custom containers.
 Contains just two parameters: client version and UNIX timestamp of the time script was invoked.
 
 #### phobos/traits
-Traits for various ships. Data has following format:
+Traits for various ships. Data has the following format:
 
     Returned value:
       For single language: ({'typeID': int, 'traits': traits}, ...)
