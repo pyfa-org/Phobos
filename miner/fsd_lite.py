@@ -88,7 +88,10 @@ class FsdLiteMiner(BaseMiner):
 
     def __check_cache(self, resource_path):
         """Check if file is actually SQLite database and has cache table."""
-        file_path = self._resbrowser.get_file_info(resource_path).file_abspath
+        # Discovery only needs the path.  Integrity is checked by get_data()
+        # for containers which are actually selected for extraction.
+        file_path = self._resbrowser.get_file_info(
+            resource_path, verify=False).file_abspath
         try:
             dbconn = sqlite3.connect(file_path)
             c = dbconn.cursor()

@@ -4,17 +4,22 @@ Phobos is script for dumping EVE client data into JSON format.
 It uses collection of data miners which extract data from files of various formats. It does not provide stable "API" by design: if CCP changes data scheme within EVE client, output files will also change.
 
 ### A note on safety
-Several data miners used in Phobos are doing potentially very dangerous thing security-wise, they are loading external code:
+Some data miners process executable or serialized client data and should be
+treated carefully:
  
 - ResourcePickleMiner: [unpickles](https://docs.python.org/2.7/library/pickle.html) serialized python files
-- FsdBinaryMiner: executes loaders provided by the EVE client to access data in FSD binary format
+- FsdBinaryMiner: parses schema-driven `.static` FSD binary files without loading client code
+- FsdBuiltMiner: executes native loaders provided by the EVE client for `.fsdbinary` files
  
 It doesn't mean that you should not use these miners. Generally speaking, if you trust EVE client and Phobos - you should have no issues with these miners. Phobos runs simple validation on files which will be worked upon (checksum according to the client's file registry). Still, it is recommended to run Phobos in some sandboxed environment (e.g. separate Wine prefix for Linux).
 
 ### Requirements
 
 * Python 2.7
-* 64-bit python built for Windows is needed to access data in FSD binary format
+* 64-bit Python built for Windows is needed for FSD Built `.fsdbinary` loaders
+* Dependencies from `requirements.txt` (`PyYAML` is used for external `.schema` files)
+
+Install dependencies with `pip install -r requirements.txt`.
 
 ### Arguments:
 
