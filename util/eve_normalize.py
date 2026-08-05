@@ -22,7 +22,6 @@ import inspect
 import types
 import typing
 from collections import OrderedDict, abc
-from itertools import chain
 
 
 class EveNormalizer(object):
@@ -60,7 +59,7 @@ class EveNormalizer(object):
             pass
         else:
             return method(self, obj)
-        # __guid__ is available for many objects exposed by reverence,
+        # __guid__ is available for many objects exposed by the client,
         # use class name as fallback only when it's not available
         cls_name = getattr(obj, '__guid__', type(obj).__name__)
         try:
@@ -118,14 +117,6 @@ class EveNormalizer(object):
             proc_value = self._route_object(value)
             container[proc_key] = proc_value
         return container
-
-    def _pythonize_list_of_iterables(self, obj):
-        """
-        Here we suppose that passed object is list of iterables of
-        any type; we process all of these iterables, and then
-        concatenate them to form a single tuple.
-        """
-        return tuple(chain(*(self._route_object(l) for l in obj)))
 
     def _pythonize_fsd_named_vector(self, obj):
         """
@@ -187,7 +178,7 @@ class EveNormalizer(object):
         tuple: _pythonize_iterable}
 
     _name_match = {
-        # FSD-related classes, usually seen in bulkdata
+        # FSD-related classes
         'FSD_Dict': _pythonize_map,
         'FSD_MultiIndex': _pythonize_map,
         'FSD_NamedVector': _pythonize_fsd_named_vector,

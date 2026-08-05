@@ -35,7 +35,7 @@ Besides raw data Phobos pulls from client, it provides two custom containers.
 Contains just two parameters: client version and UNIX timestamp of the time script was invoked.
 
 #### phobos/traits
-Traits for various ships. Data has following format:
+Traits for various ships. Data has the following format:
 
     Returned value:
       For single language: ({'typeID': int, 'traits': traits}, ...)
