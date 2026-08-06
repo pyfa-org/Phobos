@@ -152,8 +152,8 @@ def _validate_schema_graph(root):
             continue
         seen.add(identity)
         if isinstance(value, (dict, collections.OrderedDict)):
-            stack.extend(value.keys())
-            stack.extend(value.values())
+            stack.extend(value.iterkeys())
+            stack.extend(value.itervalues())
         else:
             stack.extend(value)
     if not isinstance(root, (dict, collections.OrderedDict)):
@@ -282,7 +282,7 @@ def _load_enum(data, offset, schema, path, state):
         max_value = schema['maxEnumValue']
     except KeyError:
         values = schema.get('values', {})
-        max_value = max(values.values()) if values else 0
+        max_value = max(values.itervalues()) if values else 0
     if max_value <= 255:
         unpacker = _U8
     elif max_value <= 65536:
@@ -292,7 +292,7 @@ def _load_enum(data, offset, schema, path, state):
     value = _unpack(unpacker, data, offset, path)[0]
     if schema.get('readEnumValue', False):
         return value
-    for name, candidate in schema.get('values', {}).items():
+    for name, candidate in schema.get('values', {}).iteritems():
         if candidate == value:
             return name
     return None
@@ -398,7 +398,7 @@ class _FsdObject(object):
             raise AttributeError(str(error))
 
     def present_items(self):
-        for name, attribute_schema in self._schema['attributes'].items():
+        for name, attribute_schema in self._schema['attributes'].iteritems():
             try:
                 yield name, self[name]
             except KeyError:
@@ -738,15 +738,15 @@ class _SubIndexValue(_MappingValue):
             return False
 
     def __len__(self):
-        return sum(len(footer) for footer in self._footers.values())
+        return sum(len(footer) for footer in self._footers.itervalues())
 
     def iterkeys(self):
-        for footer in self._footers.values():
+        for footer in self._footers.itervalues():
             for key, unused in footer.iteritems():
                 yield key
 
     def iteritems(self):
-        for index_id, footer in self._footers.items():
+        for index_id, footer in self._footers.iteritems():
             for key, unused in footer.iteritems():
                 yield key, self._value_from_index(key, index_id)
 
@@ -782,7 +782,7 @@ class _MultiIndexValue(_IndexValue):
             nested_footers[index_id] = _create_footer(
                 nested_schema, nested_data, path, state)
 
-        for index_name, index_ids in schema.get('indexNameToIds', {}).items():
+        for index_name, index_ids in schema.get('indexNameToIds', {}).iteritems():
             footers = {}
             schemas = {}
             for index_id in index_ids:
@@ -842,7 +842,7 @@ def _materialize(value):
         aliases = value.schema.get('aliases')
         if aliases:
             result = {}
-            for name, index in aliases.items():
+            for name, index in aliases.iteritems():
                 result[_materialize(name)] = _materialize(value.values[index])
             return result
         return tuple(_materialize(item) for item in value.values)
@@ -858,7 +858,7 @@ def _materialize(value):
         return result
     if isinstance(value, (dict, collections.OrderedDict)):
         result = {}
-        for key, item in value.items():
+        for key, item in value.iteritems():
             result[_materialize(key)] = _materialize(item)
         return result
     if isinstance(value, (list, tuple)):
@@ -903,7 +903,7 @@ def _load_with_schema(stream, schema, data_offset, data_path, cache_size):
         mapping.close()
 
 
-def load_fsd_file(data_path, schema_path=None, cache_size=100):
+def load_fsd_file(data_abspath, schema_abspath=None, cache_size=100):
     """Parse one FSD ``.static`` file into Python built-in values.
 
     ``schema_path`` should name an already optimized YAML schema.  If it is
@@ -913,8 +913,6 @@ def load_fsd_file(data_path, schema_path=None, cache_size=100):
         cache_size = 100
     if cache_size < 0:
         raise ValueError('cache_size must not be negative')
-    with open(data_path, 'rb') as stream:
-        schema, data_offset = _read_schema_and_offset(
-            stream, schema_path, data_path)
-        return _load_with_schema(
-            stream, schema, data_offset, data_path, cache_size)
+    with open(data_abspath, 'rb') as stream:
+        schema, data_offset = _read_schema_and_offset(stream, schema_abspath, data_abspath)
+        return _load_with_schema(stream, schema, data_offset, data_abspath, cache_size)

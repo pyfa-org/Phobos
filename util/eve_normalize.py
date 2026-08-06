@@ -106,7 +106,7 @@ class EveNormalizer(object):
         """
         container = {}
         name_data = obj.schema['aliases']
-        for name, index in name_data.items():
+        for name, index in name_data.iteritems():
             value = obj.data[index]
             proc_name = self._route_object(name)
             proc_value = self._route_object(value)

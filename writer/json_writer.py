@@ -44,7 +44,7 @@ class CustomEncoder(json.JSONEncoder):
         keys to strings.
         """
         new_obj = {}
-        for k, v in obj.items():
+        for k, v in obj.iteritems():
             new_obj[self._route_object(k)] = self._route_object(v)
         new_obj = self._prepare_map(new_obj)
         return new_obj
@@ -67,7 +67,7 @@ class CustomEncoder(json.JSONEncoder):
         python objects like tuple, and encoding fails.
         """
         new_obj = OrderedDict()
-        for k in sorted(obj.keys(), key=natural_sort):
+        for k in sorted(obj.iterkeys(), key=natural_sort):
             new_obj[unicode(k)] = obj[k]
         return new_obj
 

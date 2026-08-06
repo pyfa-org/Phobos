@@ -61,7 +61,7 @@ class Translator(object):
         """
         # First, attempt to do a pass over map key/values
         # (they are not always text)
-        for key, value in obj.items():
+        for key, value in obj.iteritems():
             self._route_object(key, language, spec, stats)
             self._route_object(value, language, spec, stats)
         # Now, try to actually translate stuff
@@ -149,7 +149,7 @@ class Translator(object):
             # whose value contains message ID, and after that
             # we do few verification steps to confirm/deny this
             # claim
-            for msgid_fname in row.keys():
+            for msgid_fname in list(row.iterkeys()):
                 # It must be string in '<field name>ID' format, skip current
                 # field name if it's not the case
                 if isinstance(msgid_fname, types.StringTypes) is False:
@@ -292,7 +292,7 @@ class Translator(object):
         # Tokens may be None
         if not tokens:
             return text
-        for tok_name, tok_data in tokens.items():
+        for tok_name, tok_data in tokens.iteritems():
             arg_name = tok_data['variableName']
             try:
                 substitution = kwargs[arg_name]

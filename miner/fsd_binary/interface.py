@@ -16,46 +16,45 @@ class FsdBinaryMiner(BaseMiner):
         self._translator = translator
 
     def contname_iter(self):
-        for container_name in sorted(self._contname_respath_map):
+        for container_name in sorted(self._contname_fsdfiles_map):
             yield container_name
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            data_resource = self._contname_respath_map[container_name]
+            schema_respath, data_respath = self._contname_fsdfiles_map[container_name]
         except KeyError:
             self._container_not_found(container_name)
             return
-
-        data_info = self._resbrowser.get_file_info(data_resource, verify_content=True)
-        schema_resource = self._schemaname_respath_map.get(container_name)
-        schema_path = None
+        data_info = self._resbrowser.get_file_info(data_respath, verify_content=True)
+        schema_abspath = None
         if schema_resource is not None:
-            schema_path = self._resbrowser.get_file_info(schema_resource, verify_content=True).file_abspath
-
-        data = load_fsd_file(data_info.file_abspath, schema_path=schema_path, cache_size=100)
+            schema_abspath = self._resbrowser.get_file_info(schema_respath, verify_content=True).file_abspath
+        data = load_fsd_file(data_info.file_abspath, schema_abspath=schema_abspath, cache_size=100)
         self._translator.translate_container(data, language, verbose=verbose)
         return data
 
     @cachedproperty
-    def _schemaname_respath_map(self):
+    def _contname_fsdfiles_map(self):
+        """
+        Map between container names and locations of FSD schema/data.
+        Format: {container name: (fsd schema file path or None, fsd data file path)}
+        """
         schemas = {}
-        pattern = re.compile(r'^res:/staticdata/(?P<name>.+)\.schema$', re.UNICODE)
+        datas = {}
+        pattern_schema = re.compile(r'^res:/staticdata/(?P<name>.+)\.schema$', re.UNICODE)
+        pattern_data = re.compile(r'^res:/staticdata/(?P<name>.+)\.static$', re.UNICODE)
         for resource_path in self._resbrowser.respath_iter():
-            match = pattern.match(resource_path)
-            if match:
-                schemas[match.group('name').lower()] = resource_path
-        return schemas
-
-    @cachedproperty
-    def _contname_respath_map(self):
-        containers = {}
-        pattern = re.compile(r'^res:/staticdata/(?P<name>.+)\.static$', re.UNICODE)
-        for resource_path in self._resbrowser.respath_iter():
-            m = pattern.match(resource_path)
-            if m is None:
+            m = pattern_schema.match(resource_path)
+            if m:
+                schemas[m.group('name').lower()] = resource_path
                 continue
-            file_info = self._resbrowser.get_file_info(resource_path, verify_content=False)
-            if has_sqlite_header(file_info.file_abspath):
+            m = pattern_data.match(resource_path)
+            if m:
+                file_info = self._resbrowser.get_file_info(resource_path, verify_content=False)
+                if not has_sqlite_header(file_info.file_abspath):
+                    datas[m.group('name').lower()] = resource_path
                 continue
-            containers[m.group('name').lower()] = resource_path
-        return containers
+        contname_fsdfiles_map = {}
+        for container_name, data_respath in datas.iteritems():
+            contname_fsdfiles_map[container_name] = (schemas.get(container_name), data_respath)
+        return contname_fsdfiles_map
