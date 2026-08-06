@@ -92,7 +92,7 @@ class EveNormalizer(object):
         dictionaries - convert keys and values and return as dict.
         """
         container = {}
-        for key, value in obj.iteritems():
+        for key, value in obj.items():
             proc_key = self._route_object(key)
             proc_value = self._route_object(value)
             container[proc_key] = proc_value
@@ -105,7 +105,7 @@ class EveNormalizer(object):
         """
         container = {}
         name_data = obj.schema['aliases']
-        for name, index in name_data.iteritems():
+        for name, index in name_data.items():
             value = obj.data[index]
             proc_name = self._route_object(name)
             proc_value = self._route_object(value)

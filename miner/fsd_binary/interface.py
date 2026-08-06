@@ -55,6 +55,6 @@ class FsdBinaryMiner(BaseMiner):
                     datas[m.group('name').lower()] = resource_path
                 continue
         contname_fsdfiles_map = {}
-        for container_name, data_respath in datas.iteritems():
+        for container_name, data_respath in datas.items():
             contname_fsdfiles_map[container_name] = (schemas.get(container_name), data_respath)
         return contname_fsdfiles_map

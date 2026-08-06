@@ -52,7 +52,7 @@ class TraitMiner(BaseMiner):
         """
         trait_rows = []
         bubble_data = self._fsdlite_miner.get_data('infobubbles')
-        for type_id, trait_data in bubble_data['infoBubbleTypeBonuses'].iteritems():
+        for type_id, trait_data in bubble_data['infoBubbleTypeBonuses'].items():
             type_id = int(type_id)
             trait_row = {'typeID': type_id}
             # For multi-language, each trait row will contain traits for
@@ -77,7 +77,7 @@ class TraitMiner(BaseMiner):
         traits = {}
         # Go through skill-based traits first
         if "types" in trait_data:
-            skill_ids = [int(k) for k in trait_data["types"].iterkeys()]
+            skill_ids = [int(k) for k in trait_data["types"].keys()]
             if skill_ids:
                 skill_rows = []
                 for skill_typeid in skill_ids:
@@ -162,7 +162,7 @@ class TraitMiner(BaseMiner):
         except KeyError:
             types = self._fsdbuilt_miner.get_data('types', language=language)
             type_name_map = {}
-            for type_id, type_row in types.iteritems():
+            for type_id, type_row in types.items():
                 type_id = int(type_id)
                 type_name_map[type_id] = type_row.get('typeName')
             self._type_name_map_all[language] = type_name_map
@@ -177,7 +177,7 @@ class TraitMiner(BaseMiner):
         except KeyError:
             dgmunits = self._fsdbuilt_miner.get_data('dogmaunits', language=language)
             unit_display_map = {}
-            for unit_id, unit_data in dgmunits.iteritems():
+            for unit_id, unit_data in dgmunits.items():
                 unit_display_map[unit_id] = unit_data.get('displayName')
             self._unit_display_map_all[language] = unit_display_map
         return unit_display_map[unitid]
