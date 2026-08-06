@@ -27,7 +27,7 @@ class FsdBinaryMiner(BaseMiner):
             return
         data_info = self._resbrowser.get_file_info(data_respath, verify_content=True)
         schema_abspath = None
-        if schema_resource is not None:
+        if schema_respath is not None:
             schema_abspath = self._resbrowser.get_file_info(schema_respath, verify_content=True).file_abspath
         data = load_fsd_file(data_info.file_abspath, schema_abspath=schema_abspath, cache_size=100)
         self._translator.translate_container(data, language, verbose=verbose)
