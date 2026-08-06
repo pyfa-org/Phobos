@@ -1,16 +1,10 @@
-"""
-Two schema arrangements are supported:
-
-* an optimized schema embedded as a length-prefixed Python 2 pickle
-* an optimized YAML schema in a sibling .schema resource
-"""
-
 import pickle
 from collections import OrderedDict
 from io import BytesIO
+from os import SEEK_END
 
 from .exception import FsdDependencyError, FsdFormatError, FsdSchemaError
-from .shared import U32, get_stream_size, read_exact_at, read_u32_at
+from .shared import U32
 
 MAX_SCHEMA_SIZE = 64 * 1024 * 1024
 
@@ -32,6 +26,9 @@ def read_schema_and_offset(stream, schema_path, data_path):
     return load_embedded_schema(schema_data), U32.size + schema_size
 
 
+####################################################################################################
+# YAML schema
+####################################################################################################
 def load_yaml_schema(schema_path):
     try:
         import yaml
@@ -49,6 +46,9 @@ def load_yaml_schema(schema_path):
     return validate_schema_graph(schema)
 
 
+####################################################################################################
+# Pickle schema
+####################################################################################################
 class RestrictedSchemaUnpickler(pickle.Unpickler):
 
     def find_class(self, module, name):
@@ -69,6 +69,9 @@ def load_embedded_schema(schema_data):
     return validate_schema_graph(schema)
 
 
+####################################################################################################
+# Validation
+####################################################################################################
 def validate_schema_graph(root):
     """Ensure a decoded schema contains data containers and primitives only."""
     primitive_types = (type(None), bool, int, long, float, str, unicode)
@@ -96,3 +99,27 @@ def validate_schema_graph(root):
     if 'type' not in root:
         raise FsdSchemaError('FSD schema root does not declare a type')
     return root
+
+####################################################################################################
+# Utility
+####################################################################################################
+def get_stream_size(stream):
+    current = stream.tell()
+    stream.seek(0, SEEK_END)
+    size = stream.tell()
+    stream.seek(current)
+    return size
+
+
+def read_u32_at(stream, offset, path):
+    return U32.unpack(read_exact_at(stream, offset, U32.size, path))[0]
+
+
+def read_exact_at(stream, offset, size, path):
+    if offset < 0 or size < 0:
+        raise FsdFormatError('invalid file read at {} offset {} for {} bytes'.format(path, offset, size))
+    stream.seek(offset)
+    data = stream.read(size)
+    if len(data) != size:
+        raise FsdFormatError('short file read at {} offset {}: expected {}, received {}'.format(path, offset, size, len(data)))
+    return data
