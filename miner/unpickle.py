@@ -1,7 +1,7 @@
 import pickle
 
-from miner.base import BaseMiner
 from util import cachedproperty
+from .base import BaseMiner
 
 
 class PickleMiner(BaseMiner):

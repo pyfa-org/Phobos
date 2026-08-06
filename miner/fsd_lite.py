@@ -2,8 +2,9 @@ import json
 import re
 import sqlite3
 
-from miner.base import BaseMiner
 from util import cachedproperty
+from .base import BaseMiner
+from .shared import has_sqlite_header
 
 
 class FsdLiteMiner(BaseMiner):
@@ -50,8 +51,8 @@ class FsdLiteMiner(BaseMiner):
             container_name = self.__get_container_name(resource_path)
             if container_name is None:
                 continue
-            # Now, check if it's actually sqlite database and if it has cache table
-            if not self.__check_cache(resource_path):
+            # Now, check if it's actually sqlite database
+            if not self.__check_sqlite(resource_path):
                 continue
             contname_respath_map[container_name] = resource_path
         return contname_respath_map
@@ -66,21 +67,14 @@ class FsdLiteMiner(BaseMiner):
             return None
         return m.group('fname')
 
-    def __check_cache(self, resource_path):
-        """Check if file is actually SQLite database and has cache table."""
-        # Discovery only needs the path.  Integrity is checked by get_data()
-        # for containers which are actually selected for extraction.
+    def __check_sqlite(self, resource_path):
+        """Check if file is actually SQLite database."""
+        # The check used to connect to DB and check if it has a cache table, but this is not needed
+        # to see if file is FSD Lite or FSD Binary
         file_path = self._resbrowser.get_file_info(resource_path, verify_content=False).file_abspath
         try:
-            dbconn = sqlite3.connect(file_path)
-            c = dbconn.cursor()
-            c.execute('select count(*) from sqlite_master where type = \'table\' and name = \'cache\'')
+            return has_sqlite_header(file_path)
         except KeyboardInterrupt:
             raise
         except:
-            has_cache = False
-        else:
-            has_cache = False
-            for row in c:
-                has_cache = bool(row[0])
-        return has_cache
+            return False

@@ -25,17 +25,7 @@ import struct
 
 from util import cachedproperty
 from .base import BaseMiner
-
-
-try:
-    long
-except NameError:  # pragma: no cover - Python 3 compatibility for tests
-    long = int
-
-try:
-    unicode
-except NameError:  # pragma: no cover - Python 3 compatibility for tests
-    unicode = str
+from .shared import has_sqlite_header
 
 
 _U8 = struct.Struct('<B')
@@ -54,7 +44,6 @@ _V4D = struct.Struct('<dddd')
 _KEY_OFFSET = struct.Struct('<ii')
 _KEY_OFFSET_SIZE = struct.Struct('<iii')
 
-_SQLITE_HEADER = b'SQLite format 3\x00'
 _MAX_SCHEMA_SIZE = 64 * 1024 * 1024
 
 
@@ -1000,9 +989,7 @@ class FsdBinaryMiner(BaseMiner):
             if match is None:
                 continue
             file_info = self._resbrowser.get_file_info(resource_path, verify_content=False)
-            with open(file_info.file_abspath, 'rb') as resource_file:
-                header = resource_file.read(len(_SQLITE_HEADER))
-            if header == _SQLITE_HEADER:
+            if has_sqlite_header(file_info.file_abspath):
                 continue
             containers[match.group('name').lower()] = resource_path
         return containers

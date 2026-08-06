@@ -1,5 +1,5 @@
 # Phobos
-Phobos is script for dumping EVE client data into JSON format.
+Phobos is script for extracting EVE client static data into JSON format.
 
 It uses collection of data miners which extract data from files of various formats. It does not provide stable "API" by design: if CCP changes data scheme within EVE client, output files will also change.
 
