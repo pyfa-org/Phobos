@@ -27,7 +27,7 @@ class PickleMiner(BaseMiner):
             self._container_not_found(container_name)
         else:
             resource_data = self._resbrowser.get_file_data(resource_path)
-            data = pickle.loads(resource_data)
+            data = pickle.loads(resource_data, encoding='latin-1')
             return data
 
     @cachedproperty

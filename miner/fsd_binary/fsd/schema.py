@@ -59,7 +59,7 @@ class RestrictedSchemaUnpickler(pickle.Unpickler):
 
 def load_embedded_schema(schema_data):
     stream = BytesIO(schema_data)
-    loader = RestrictedSchemaUnpickler(stream)
+    loader = RestrictedSchemaUnpickler(stream, encoding='latin-1')
     try:
         schema = loader.load()
     except (KeyboardInterrupt, SystemExit):
@@ -74,7 +74,7 @@ def load_embedded_schema(schema_data):
 ####################################################################################################
 def validate_schema_graph(root):
     """Ensure a decoded schema contains data containers and primitives only."""
-    primitive_types = (type(None), bool, int, long, float, str, unicode)
+    primitive_types = (type(None), bool, int, float, str, bytes)
     containers = (dict, OrderedDict, list, tuple)
     stack = [root]
     seen = set()
@@ -90,8 +90,8 @@ def validate_schema_graph(root):
             continue
         seen.add(identity)
         if isinstance(value, (dict, OrderedDict)):
-            stack.extend(value.iterkeys())
-            stack.extend(value.itervalues())
+            stack.extend(value.keys())
+            stack.extend(value.values())
         else:
             stack.extend(value)
     if not isinstance(root, (dict, OrderedDict)):

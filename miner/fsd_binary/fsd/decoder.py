@@ -96,12 +96,12 @@ def load_enum(data, offset, schema, path):
     try:
         max_value = schema['maxEnumValue']
     except KeyError:
-        max_value = max(values.itervalues()) if values else 0
+        max_value = max(values.values()) if values else 0
     unpacker = U8 if max_value <= 255 else (U16 if max_value <= 65536 else U32)
     value = unpack(unpacker, data, offset, path)[0]
     if schema.get('readEnumValue', False):
         return value
-    for name, candidate in values.iteritems():
+    for name, candidate in values.items():
         if candidate == value:
             return name
     return None
@@ -112,7 +112,7 @@ def load_vector(data, offset, schema, path):
     values = unpack(VECTOR_UNPACKERS[(schema['type'], double)], data, offset, path)
     aliases = schema.get('aliases')
     if aliases:
-        return dict((name, values[index]) for name, index in aliases.iteritems())
+        return dict((name, values[index]) for name, index in aliases.items())
     return values
 
 
@@ -153,7 +153,7 @@ def load_object(data, offset, schema, path):
             variable_offsets[name] = u32(data, table_start + index * U32.size, path)
 
     result = {}
-    for name, attribute_schema in schema['attributes'].iteritems():
+    for name, attribute_schema in schema['attributes'].items():
         child_path = path.child('.{}'.format(name))
         if name in fixed_offsets:
             result[name] = decode(data, offset + fixed_offsets[name], attribute_schema, child_path)
@@ -205,12 +205,12 @@ def read_footer(footer_data, schema, path):
     count = u32(footer_data, 0, path)
     check_range(footer_data, 0, U32.size + count * stride, path)
     fields = array.array('i')
-    fields.fromstring(footer_data[U32.size:U32.size + count * stride])
+    fields.frombytes(footer_data[U32.size:U32.size + count * stride])
     if sys.byteorder != 'little':
         fields.byteswap()
     if sized:
-        return zip(fields[0::3], fields[1::3], fields[2::3])
-    return zip(fields[0::2], fields[1::2], [0] * count)
+        return list(zip(fields[0::3], fields[1::3], fields[2::3]))
+    return list(zip(fields[0::2], fields[1::2], [0] * count))
 
 
 def load_dict(data, offset, schema, path):
