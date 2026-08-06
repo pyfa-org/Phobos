@@ -31,7 +31,7 @@ class MetadataMiner(BaseMiner):
                 config = ConfigParser()
                 config.read(file_info.file_abspath)
                 eve_version = config.getint('main', 'build')
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, SystemExit):
                 raise
             except:
                 print(u'    failed to detect client version')
