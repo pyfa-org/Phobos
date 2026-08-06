@@ -49,11 +49,18 @@ class SqliteMiner(BaseMiner):
             if not resource_path.endswith(sqlite_ext):
                 continue
             resource_info = self._resbrowser.get_file_info(resource_path, verify_content=True)
-            with sqlite3.connect(resource_info.file_abspath) as dbconn:
+            for table_name in self.__get_table_names(resource_info.file_abspath):
+                container_name = u'{}_{}'.format(resource_path[:-len(sqlite_ext)], table_name)
+                contname_dbtable_map[container_name] = (resource_info.file_abspath, table_name)
+        return contname_dbtable_map
+
+    def __get_table_names(self, file_path):
+        try:
+            with sqlite3.connect(file_path) as dbconn:
                 c = dbconn.cursor()
                 c.execute('select name from sqlite_master where type = \'table\'')
-                for row in c:
-                    table_name = row[0]
-                    container_name = u'{}_{}'.format(resource_path[:-len(sqlite_ext)], table_name)
-                    contname_dbtable_map[container_name] = (resource_info.file_abspath, table_name)
-        return contname_dbtable_map
+                return [row[0] for row in c]
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except sqlite3.DatabaseError:
+            return []
