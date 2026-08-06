@@ -130,13 +130,10 @@ class _RestrictedSchemaUnpickler(pickle.Unpickler):
         raise pickle.UnpicklingError(
             'embedded FSD schema requested forbidden global {}.{}'.format(module, name))
 
-    # Python 2's pure-Python pickle implementation uses find_global.
-    find_global = find_class
-
 
 def _validate_schema_graph(root):
     """Ensure a decoded schema contains data containers and primitives only."""
-    primitive_types = (type(None), bool, int, long, float, str, unicode)
+    primitive_types = (type(None), bool, int, float, str, bytes)
     containers = (dict, collections.OrderedDict, list, tuple)
     stack = [root]
     seen = set()
@@ -152,8 +149,8 @@ def _validate_schema_graph(root):
             continue
         seen.add(identity)
         if isinstance(value, (dict, collections.OrderedDict)):
-            stack.extend(value.iterkeys())
-            stack.extend(value.itervalues())
+            stack.extend(value.keys())
+            stack.extend(value.values())
         else:
             stack.extend(value)
     if not isinstance(root, (dict, collections.OrderedDict)):
@@ -166,11 +163,7 @@ def _validate_schema_graph(root):
 def _load_embedded_schema(raw_schema):
     stream = io.BytesIO(raw_schema)
     try:
-        try:
-            loader = _RestrictedSchemaUnpickler(stream, encoding='latin-1')
-        except TypeError:  # Python 2 Unpickler has no encoding argument
-            stream.seek(0)
-            loader = _RestrictedSchemaUnpickler(stream)
+        loader = _RestrictedSchemaUnpickler(stream, encoding='latin-1')
         schema = loader.load()
     except FsdSchemaError:
         raise
@@ -282,7 +275,7 @@ def _load_enum(data, offset, schema, path, state):
         max_value = schema['maxEnumValue']
     except KeyError:
         values = schema.get('values', {})
-        max_value = max(values.itervalues()) if values else 0
+        max_value = max(values.values()) if values else 0
     if max_value <= 255:
         unpacker = _U8
     elif max_value <= 65536:
@@ -292,7 +285,7 @@ def _load_enum(data, offset, schema, path, state):
     value = _unpack(unpacker, data, offset, path)[0]
     if schema.get('readEnumValue', False):
         return value
-    for name, candidate in schema.get('values', {}).iteritems():
+    for name, candidate in schema.get('values', {}).items():
         if candidate == value:
             return name
     return None
@@ -398,7 +391,7 @@ class _FsdObject(object):
             raise AttributeError(str(error))
 
     def present_items(self):
-        for name, attribute_schema in self._schema['attributes'].iteritems():
+        for name, attribute_schema in self._schema['attributes'].items():
             try:
                 yield name, self[name]
             except KeyError:
@@ -738,15 +731,15 @@ class _SubIndexValue(_MappingValue):
             return False
 
     def __len__(self):
-        return sum(len(footer) for footer in self._footers.itervalues())
+        return sum(len(footer) for footer in self._footers.values())
 
     def iterkeys(self):
-        for footer in self._footers.itervalues():
+        for footer in self._footers.values():
             for key, unused in footer.iteritems():
                 yield key
 
     def iteritems(self):
-        for index_id, footer in self._footers.iteritems():
+        for index_id, footer in self._footers.items():
             for key, unused in footer.iteritems():
                 yield key, self._value_from_index(key, index_id)
 
@@ -782,7 +775,7 @@ class _MultiIndexValue(_IndexValue):
             nested_footers[index_id] = _create_footer(
                 nested_schema, nested_data, path, state)
 
-        for index_name, index_ids in schema.get('indexNameToIds', {}).iteritems():
+        for index_name, index_ids in schema.get('indexNameToIds', {}).items():
             footers = {}
             schemas = {}
             for index_id in index_ids:
@@ -831,18 +824,17 @@ for _integer_schema_type in _INTEGER_SCHEMA_TYPES:
 
 
 def _materialize(value):
-    if value is None or isinstance(value, (bool, int, long, float, unicode)):
+    if value is None or isinstance(value, (bool, int, float, str)):
         return value
-    # On Python 2, binary strings are distinct from unicode.  FSD string
-    # loaders normally decode them before this point, but schema defaults may
-    # still be byte strings.
+    # FSD string loaders normally decode binary strings before this point, but
+    # schema defaults may still be byte strings.
     if isinstance(value, bytes):
         return _decode_cp1252(value, '<schema default>')
     if isinstance(value, _VectorValue):
         aliases = value.schema.get('aliases')
         if aliases:
             result = {}
-            for name, index in aliases.iteritems():
+            for name, index in aliases.items():
                 result[_materialize(name)] = _materialize(value.values[index])
             return result
         return tuple(_materialize(item) for item in value.values)
@@ -858,7 +850,7 @@ def _materialize(value):
         return result
     if isinstance(value, (dict, collections.OrderedDict)):
         result = {}
-        for key, item in value.iteritems():
+        for key, item in value.items():
             result[_materialize(key)] = _materialize(item)
         return result
     if isinstance(value, (list, tuple)):
