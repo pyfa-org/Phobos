@@ -13,10 +13,12 @@ def run(path_eve, server_alias, filter_string, language, path_json, group=None):
 
     pickle_miner = PickleMiner(resbrowser=resource_browser)
     trans = Translator(pickle_miner=pickle_miner)
+    fsdbinary_miner = FsdBinaryMiner(resbrowser=resource_browser, translator=trans)
     fsdlite_miner = FsdLiteMiner(resbrowser=resource_browser, translator=trans)
     fsdbuilt_miner = FsdBuiltMiner(resbrowser=resource_browser, translator=trans)
     miners = [
         MetadataMiner(resbrowser=resource_browser),
+        fsdbinary_miner,
         fsdlite_miner,
         fsdbuilt_miner,
         TraitMiner(fsdlite_miner=fsdlite_miner, fsdbuilt_miner=fsdbuilt_miner, translator=trans),
