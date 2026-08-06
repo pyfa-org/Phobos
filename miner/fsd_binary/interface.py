@@ -3,7 +3,7 @@ import re
 from util import cachedproperty
 from miner.base import BaseMiner
 from miner.shared import has_sqlite_header
-from .decoder import load_fsd_file
+from .fsd import load_fsd_file
 
 
 class FsdBinaryMiner(BaseMiner):
@@ -29,7 +29,7 @@ class FsdBinaryMiner(BaseMiner):
         schema_abspath = None
         if schema_respath is not None:
             schema_abspath = self._resbrowser.get_file_info(schema_respath, verify_content=True).file_abspath
-        data = load_fsd_file(data_info.file_abspath, schema_abspath=schema_abspath, cache_size=100)
+        data = load_fsd_file(data_info.file_abspath, schema_abspath=schema_abspath)
         self._translator.translate_container(data, language, verbose=verbose)
         return data
 
