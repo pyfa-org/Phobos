@@ -1,1 +1,1 @@
-from .miner import FsdBinaryMiner
+from .interface import FsdBinaryMiner
