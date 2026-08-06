@@ -11,10 +11,9 @@ class FsdBinaryMiner(BaseMiner):
 
     name = 'fsd_binary'
 
-    def __init__(self, resbrowser, translator, cache_size=100):
+    def __init__(self, resbrowser, translator):
         self._resbrowser = resbrowser
         self._translator = translator
-        self._cache_size = cache_size
 
     def contname_iter(self):
         for container_name in sorted(self._contname_respath_map):
@@ -33,17 +32,14 @@ class FsdBinaryMiner(BaseMiner):
         if schema_resource is not None:
             schema_path = self._resbrowser.get_file_info(schema_resource, verify_content=True).file_abspath
 
-        data = load_fsd_file(
-            data_info.file_abspath, schema_path=schema_path,
-            cache_size=self._cache_size)
+        data = load_fsd_file(data_info.file_abspath, schema_path=schema_path, cache_size=100)
         self._translator.translate_container(data, language, verbose=verbose)
         return data
 
     @cachedproperty
     def _schemaname_respath_map(self):
         schemas = {}
-        pattern = re.compile(
-            r'^res:/staticdata/(?P<name>.+)\.schema$', re.IGNORECASE)
+        pattern = re.compile(r'^res:/staticdata/(?P<name>.+)\.schema$', re.UNICODE)
         for resource_path in self._resbrowser.respath_iter():
             match = pattern.match(resource_path)
             if match:
@@ -53,14 +49,13 @@ class FsdBinaryMiner(BaseMiner):
     @cachedproperty
     def _contname_respath_map(self):
         containers = {}
-        pattern = re.compile(
-            r'^res:/staticdata/(?P<name>.+)\.static$', re.IGNORECASE)
+        pattern = re.compile(r'^res:/staticdata/(?P<name>.+)\.static$', re.UNICODE)
         for resource_path in self._resbrowser.respath_iter():
-            match = pattern.match(resource_path)
-            if match is None:
+            m = pattern.match(resource_path)
+            if m is None:
                 continue
             file_info = self._resbrowser.get_file_info(resource_path, verify_content=False)
             if has_sqlite_header(file_info.file_abspath):
                 continue
-            containers[match.group('name').lower()] = resource_path
+            containers[m.group('name').lower()] = resource_path
         return containers
