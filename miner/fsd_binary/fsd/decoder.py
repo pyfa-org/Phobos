@@ -1,61 +1,51 @@
-"""
-Two schema arrangements are supported:
-
-* an optimized schema embedded as a length-prefixed Python 2 pickle
-* an optimized YAML schema in a sibling .schema resource
-"""
-
 import collections
-import io
 import mmap
-import os
-import pickle
 import struct
 
-
-_U8 = struct.Struct('<B')
-_U16 = struct.Struct('<H')
-_U32 = struct.Struct('<I')
-_I32 = struct.Struct('<i')
-_U64 = struct.Struct('<Q')
-_F32 = struct.Struct('<f')
-_F64 = struct.Struct('<d')
-_V2F = struct.Struct('<ff')
-_V2D = struct.Struct('<dd')
-_V3F = struct.Struct('<fff')
-_V3D = struct.Struct('<ddd')
-_V4F = struct.Struct('<ffff')
-_V4D = struct.Struct('<dddd')
-_KEY_OFFSET = struct.Struct('<ii')
-_KEY_OFFSET_SIZE = struct.Struct('<iii')
-
-_MAX_SCHEMA_SIZE = 64 * 1024 * 1024
+from .exception import FsdBinaryError, FsdFormatError, FsdSchemaError
+from .schema import read_schema_and_offset
+from .shared import (
+    F32, F64, I32, KEY_OFFSET, KEY_OFFSET_SIZE, U8, U16, U32, U64,
+    V2F32, V2F64, V3F32, V3F64, V4F32, V4F64,
+    get_stream_size, read_exact_at, read_u32_at)
 
 
-class FsdBinaryError(Exception):
-    """Base exception for schema-driven FSD parsing errors."""
+def load_fsd_file(data_abspath, schema_abspath=None):
+    """
+    Parse a file in binary FSD format. Schema either has be embedded into file, or path to it has to
+    be provided.
+    """
+    with open(data_abspath, 'rb') as stream:
+        schema, data_offset = read_schema_and_offset(stream, schema_abspath, data_abspath)
+        return load_with_schema(stream, schema, data_offset, data_abspath)
 
 
-class FsdFormatError(FsdBinaryError):
-    """Raised when an FSD file is truncated or contains invalid offsets."""
+def load_with_schema(stream, schema, data_offset, data_path):
+    cache_size = 100
+    path = FsdPath('<{}>'.format(data_path))
+    if schema.get('type') == 'dict' and schema.get('buildIndex', False):
+        index_class = MultiIndexValue if schema.get('multiIndex', False) else IndexValue
+        root = index_class(
+            stream, cache_size, schema, path, STATE,
+            offset_to_data=data_offset)
+        return materialize(root)
+
+    mapping = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
+    try:
+        root = STATE.represent(mapping, data_offset, schema, path)
+        return materialize(root)
+    finally:
+        mapping.close()
 
 
-class FsdSchemaError(FsdBinaryError):
-    """Raised when an embedded or external schema cannot be used safely."""
-
-
-class FsdDependencyError(FsdBinaryError):
-    """Raised when support for an external schema dependency is unavailable."""
-
-
-class _FsdPath(object):
+class FsdPath(object):
 
     def __init__(self, value, parent=None):
         self.value = value
         self.parent = parent
 
     def child(self, value):
-        return _FsdPath(value, self)
+        return FsdPath(value, self)
 
     def __str__(self):
         if self.parent is None:
@@ -63,23 +53,23 @@ class _FsdPath(object):
         return '{}{}'.format(self.parent, self.value)
 
 
-def _data_length(data):
+def data_length(data):
     try:
         return len(data)
     except TypeError:
         raise FsdFormatError('binary input does not expose a length')
 
 
-def _check_range(data, offset, size, path):
-    length = _data_length(data)
+def check_range(data, offset, size, path):
+    length = data_length(data)
     if offset < 0 or size < 0 or offset > length or size > length - offset:
         raise FsdFormatError(
             'read outside {} at offset {} for {} bytes (buffer size {})'.format(
                 path, offset, size, length))
 
 
-def _unpack(unpacker, data, offset, path):
-    _check_range(data, offset, unpacker.size, path)
+def unpack(unpacker, data, offset, path):
+    check_range(data, offset, unpacker.size, path)
     try:
         return unpacker.unpack_from(data, offset)
     except (struct.error, TypeError, ValueError) as error:
@@ -88,123 +78,23 @@ def _unpack(unpacker, data, offset, path):
                 unpacker.size, path, offset, error))
 
 
-def _u32(data, offset, path):
-    return _unpack(_U32, data, offset, path)[0]
+def u32(data, offset, path):
+    return unpack(U32, data, offset, path)[0]
 
 
-def _slice(data, offset, size, path):
-    _check_range(data, offset, size, path)
+def slice(data, offset, size, path):
+    check_range(data, offset, size, path)
     return data[offset:offset + size]
 
 
-def _read_exact_at(stream, offset, size, path):
-    if offset < 0 or size < 0:
-        raise FsdFormatError(
-            'invalid file read at {} offset {} for {} bytes'.format(path, offset, size))
-    stream.seek(offset)
-    data = stream.read(size)
-    if len(data) != size:
-        raise FsdFormatError(
-            'short file read at {} offset {}: expected {}, received {}'.format(
-                path, offset, size, len(data)))
-    return data
-
-
-def _read_u32_at(stream, offset, path):
-    return _U32.unpack(_read_exact_at(stream, offset, _U32.size, path))[0]
-
-
-def _stream_size(stream):
-    current = stream.tell()
-    stream.seek(0, os.SEEK_END)
-    size = stream.tell()
-    stream.seek(current)
-    return size
-
-
-class _RestrictedSchemaUnpickler(pickle.Unpickler):
-
-    def find_class(self, module, name):
-        if module == 'collections' and name == 'OrderedDict':
-            return collections.OrderedDict
-        raise pickle.UnpicklingError(
-            'embedded FSD schema requested forbidden global {}.{}'.format(module, name))
-
-    # Python 2's pure-Python pickle implementation uses find_global.
-    find_global = find_class
-
-
-def _validate_schema_graph(root):
-    """Ensure a decoded schema contains data containers and primitives only."""
-    primitive_types = (type(None), bool, int, long, float, str, unicode)
-    containers = (dict, collections.OrderedDict, list, tuple)
-    stack = [root]
-    seen = set()
-    while stack:
-        value = stack.pop()
-        if isinstance(value, primitive_types):
-            continue
-        if not isinstance(value, containers):
-            raise FsdSchemaError(
-                'unsupported object {} in FSD schema'.format(type(value).__name__))
-        identity = id(value)
-        if identity in seen:
-            continue
-        seen.add(identity)
-        if isinstance(value, (dict, collections.OrderedDict)):
-            stack.extend(value.iterkeys())
-            stack.extend(value.itervalues())
-        else:
-            stack.extend(value)
-    if not isinstance(root, (dict, collections.OrderedDict)):
-        raise FsdSchemaError('FSD schema root must be a mapping')
-    if 'type' not in root:
-        raise FsdSchemaError('FSD schema root does not declare a type')
-    return root
-
-
-def _load_embedded_schema(raw_schema):
-    stream = io.BytesIO(raw_schema)
-    try:
-        try:
-            loader = _RestrictedSchemaUnpickler(stream, encoding='latin-1')
-        except TypeError:  # Python 2 Unpickler has no encoding argument
-            stream.seek(0)
-            loader = _RestrictedSchemaUnpickler(stream)
-        schema = loader.load()
-    except FsdSchemaError:
-        raise
-    except Exception as error:
-        raise FsdSchemaError('unable to decode embedded FSD schema: {}'.format(error))
-    return _validate_schema_graph(schema)
-
-
-def _load_yaml_schema(schema_path):
-    try:
-        import yaml
-    except ImportError:
-        raise FsdDependencyError(
-            'PyYAML is required to read external FSD .schema files; '
-            'install the version listed in requirements.txt')
-    try:
-        with open(schema_path, 'rb') as schema_file:
-            schema = yaml.safe_load(schema_file.read())
-    except FsdBinaryError:
-        raise
-    except Exception as error:
-        raise FsdSchemaError(
-            'unable to load FSD schema {}: {}'.format(schema_path, error))
-    return _validate_schema_graph(schema)
-
-
-def _decode_cp1252(raw, path):
+def decode_cp1252(raw, path):
     try:
         return raw.decode('cp1252')
     except UnicodeDecodeError as error:
         raise FsdFormatError('invalid cp1252 string at {}: {}'.format(path, error))
 
 
-class _VectorValue(object):
+class VectorValue(object):
 
     def __init__(self, schema, values):
         self.schema = schema
@@ -223,7 +113,7 @@ class _VectorValue(object):
             raise AttributeError(str(error))
 
 
-class _LoaderState(object):
+class LoaderState(object):
 
     def __init__(self):
         self.factories = {}
@@ -245,51 +135,51 @@ class _LoaderState(object):
                     schema_type, path, offset, error))
 
 
-def _load_vector(item_count):
-    single_unpackers = {2: _V2F, 3: _V3F, 4: _V4F}
-    double_unpackers = {2: _V2D, 3: _V3D, 4: _V4D}
+def load_vector(item_count):
+    single_unpackers = {2: V2F32, 3: V3F32, 4: V4F32}
+    double_unpackers = {2: V2F64, 3: V3F64, 4: V4F64}
 
     def load(data, offset, schema, path, state):
         if schema.get('precision', 'single') == 'double':
             unpacker = double_unpackers[item_count]
         else:
             unpacker = single_unpackers[item_count]
-        values = _unpack(unpacker, data, offset, path)
+        values = unpack(unpacker, data, offset, path)
         if 'aliases' in schema:
-            return _VectorValue(schema, values)
+            return VectorValue(schema, values)
         return values
 
     return load
 
 
-def _load_string(data, offset, schema, path, state):
-    size = _u32(data, offset, path)
-    raw = _slice(data, offset + _U32.size, size, path)
-    return _decode_cp1252(raw, path)
+def load_string(data, offset, schema, path, state):
+    size = u32(data, offset, path)
+    raw = slice(data, offset + U32.size, size, path)
+    return decode_cp1252(raw, path)
 
 
-def _load_unicode(data, offset, schema, path, state):
-    size = _u32(data, offset, path)
-    raw = _slice(data, offset + _U32.size, size, path)
+def load_unicode(data, offset, schema, path, state):
+    size = u32(data, offset, path)
+    raw = slice(data, offset + U32.size, size, path)
     try:
         return raw.decode('utf-8')
     except UnicodeDecodeError as error:
         raise FsdFormatError('invalid UTF-8 string at {}: {}'.format(path, error))
 
 
-def _load_enum(data, offset, schema, path, state):
+def load_enum(data, offset, schema, path, state):
     try:
         max_value = schema['maxEnumValue']
     except KeyError:
         values = schema.get('values', {})
         max_value = max(values.itervalues()) if values else 0
     if max_value <= 255:
-        unpacker = _U8
+        unpacker = U8
     elif max_value <= 65536:
-        unpacker = _U16
+        unpacker = U16
     else:
-        unpacker = _U32
-    value = _unpack(unpacker, data, offset, path)[0]
+        unpacker = U32
+    value = unpack(unpacker, data, offset, path)[0]
     if schema.get('readEnumValue', False):
         return value
     for name, candidate in schema.get('values', {}).iteritems():
@@ -298,24 +188,24 @@ def _load_enum(data, offset, schema, path, state):
     return None
 
 
-def _load_bool(data, offset, schema, path, state):
-    return _unpack(_U8, data, offset, path)[0] == 255
+def load_bool(data, offset, schema, path, state):
+    return unpack(U8, data, offset, path)[0] == 255
 
 
-def _load_int(data, offset, schema, path, state):
+def load_int(data, offset, schema, path, state):
     unsigned = (
         ('min' in schema and schema['min'] >= 0) or
         ('exclusiveMin' in schema and schema['exclusiveMin'] >= -1))
-    return _unpack(_U32 if unsigned else _I32, data, offset, path)[0]
+    return unpack(U32 if unsigned else I32, data, offset, path)[0]
 
 
-def _load_float(data, offset, schema, path, state):
-    unpacker = _F64 if schema.get('precision', 'single') == 'double' else _F32
-    return _unpack(unpacker, data, offset, path)[0]
+def load_float(data, offset, schema, path, state):
+    unpacker = F64 if schema.get('precision', 'single') == 'double' else F32
+    return unpack(unpacker, data, offset, path)[0]
 
 
-def _load_union(data, offset, schema, path, state):
-    type_index = _u32(data, offset, path)
+def load_union(data, offset, schema, path, state):
+    type_index = u32(data, offset, path)
     options = schema.get('optionTypes', ())
     if type_index >= len(options):
         raise FsdFormatError(
@@ -323,11 +213,11 @@ def _load_union(data, offset, schema, path, state):
                 type_index, len(options), path))
     option = options[type_index]
     return state.represent(
-        data, offset + _U32.size, option,
+        data, offset + U32.size, option,
         path.child('<{}>'.format(option.get('type'))))
 
 
-class _FsdObject(object):
+class FsdObject(object):
 
     def __init__(self, data, offset, schema, path, state):
         self._data = data
@@ -339,16 +229,16 @@ class _FsdObject(object):
         self._variable_base = None
 
         if 'size' in schema:
-            _check_range(data, offset, schema['size'], path)
+            check_range(data, offset, schema['size'], path)
             return
 
         end_of_fixed = schema.get('endOfFixedSizeData', 0)
-        _check_range(data, offset, end_of_fixed, path)
+        check_range(data, offset, end_of_fixed, path)
         optional_lookups = schema.get('optionalValueLookups', {})
         variable_attributes = []
         if optional_lookups:
-            optional_mask = _unpack(
-                _U64, data, offset + end_of_fixed, path)[0]
+            optional_mask = unpack(
+                U64, data, offset + end_of_fixed, path)[0]
             for name in schema.get('attributesWithVariableOffsets', ()):
                 mask = optional_lookups.get(name)
                 if mask is None or optional_mask & mask:
@@ -357,13 +247,13 @@ class _FsdObject(object):
             variable_attributes = list(
                 schema.get('attributesWithVariableOffsets', ()))
 
-        table_start = offset + end_of_fixed + _U64.size
-        table_size = _U32.size * len(variable_attributes)
-        _check_range(data, table_start, table_size, path)
+        table_start = offset + end_of_fixed + U64.size
+        table_size = U32.size * len(variable_attributes)
+        check_range(data, table_start, table_size, path)
         self._variable_base = table_start + table_size
         for index, name in enumerate(variable_attributes):
-            relative_offset = _u32(
-                data, table_start + index * _U32.size, path)
+            relative_offset = u32(
+                data, table_start + index * U32.size, path)
             self._variable_offsets[name] = relative_offset
 
     def __getitem__(self, name):
@@ -406,19 +296,19 @@ class _FsdObject(object):
                     raise
 
 
-def _load_object(data, offset, schema, path, state):
-    return _FsdObject(data, offset, schema, path, state)
+def load_object(data, offset, schema, path, state):
+    return FsdObject(data, offset, schema, path, state)
 
 
-def _load_list(data, offset, schema, path, state, known_length=None):
+def load_list(data, offset, schema, path, state, known_length=None):
     known_length = schema.get('length', known_length)
     fixed_length = known_length is not None
     if fixed_length:
         count = known_length
         count_offset = 0
     else:
-        count = _u32(data, offset, path)
-        count_offset = _U32.size
+        count = u32(data, offset, path)
+        count_offset = U32.size
     if count < 0:
         raise FsdFormatError('negative list size at {}'.format(path))
 
@@ -427,40 +317,40 @@ def _load_list(data, offset, schema, path, state, known_length=None):
     if 'fixedItemSize' in schema:
         item_size = item_schema.get('size', schema['fixedItemSize'])
         start = offset + count_offset
-        _check_range(data, start, count * item_size, path)
+        check_range(data, start, count * item_size, path)
         for index in range(count):
             result.append(state.represent(
                 data, start + item_size * index, item_schema,
                 path.child('[{}]'.format(index))))
     else:
         table_start = offset + count_offset
-        _check_range(data, table_start, count * _U32.size, path)
+        check_range(data, table_start, count * U32.size, path)
         for index in range(count):
-            relative_offset = _u32(
-                data, table_start + index * _U32.size, path)
+            relative_offset = u32(
+                data, table_start + index * U32.size, path)
             result.append(state.represent(
                 data, offset + relative_offset, item_schema,
                 path.child('[{}]'.format(index))))
     return result
 
 
-class _OptimizedFooter(object):
+class OptimizedFooter(object):
 
     def __init__(self, data, schema, path):
         attributes = schema['keyFooter']['itemTypes']['attributes']
-        self._unpacker = _KEY_OFFSET_SIZE if 'size' in attributes else _KEY_OFFSET
-        self._has_size = self._unpacker is _KEY_OFFSET_SIZE
+        self._unpacker = KEY_OFFSET_SIZE if 'size' in attributes else KEY_OFFSET
+        self._has_size = self._unpacker is KEY_OFFSET_SIZE
         self._data = data
         self._path = path
-        self._count = _u32(data, 0, path)
-        required = _U32.size + self._count * self._unpacker.size
-        _check_range(data, 0, required, path)
+        self._count = u32(data, 0, path)
+        required = U32.size + self._count * self._unpacker.size
+        check_range(data, 0, required, path)
 
     def _unpack_item(self, index):
         if index < 0 or index >= self._count:
             raise IndexError(index)
-        offset = _U32.size + index * self._unpacker.size
-        values = _unpack(self._unpacker, self._data, offset, self._path)
+        offset = U32.size + index * self._unpacker.size
+        values = unpack(self._unpacker, self._data, offset, self._path)
         if self._has_size:
             return values
         return values[0], values[1], 0
@@ -488,10 +378,10 @@ class _OptimizedFooter(object):
         return self._count
 
 
-class _GenericFooter(object):
+class GenericFooter(object):
 
     def __init__(self, data, schema, path, state):
-        self._items = _load_list(
+        self._items = load_list(
             data, 0, schema['keyFooter'], path.child('<keyFooter>'), state)
 
     def get(self, key):
@@ -525,13 +415,13 @@ class _GenericFooter(object):
         return len(self._items)
 
 
-def _create_footer(schema, footer_data, path, state):
+def create_footer(schema, footer_data, path, state):
     if schema['keyTypes']['type'] == 'int':
-        return _OptimizedFooter(footer_data, schema, path)
-    return _GenericFooter(footer_data, schema, path, state)
+        return OptimizedFooter(footer_data, schema, path)
+    return GenericFooter(footer_data, schema, path, state)
 
 
-class _MappingValue(object):
+class MappingValue(object):
 
     def iterkeys(self):
         for key, unused in self._footer.iteritems():
@@ -565,7 +455,7 @@ class _MappingValue(object):
         return list(self.iteritems())
 
 
-class _DictValue(_MappingValue):
+class DictValue(MappingValue):
 
     def __init__(self, data, offset, schema, path, state):
         self._data = data
@@ -574,19 +464,19 @@ class _DictValue(_MappingValue):
         self._path = path
         self._state = state
 
-        size_of_data = _u32(data, offset, path)
+        size_of_data = u32(data, offset, path)
         footer_size_offset = offset + size_of_data
-        footer_size = _u32(data, footer_size_offset, path)
+        footer_size = u32(data, footer_size_offset, path)
         if footer_size > size_of_data:
             raise FsdFormatError(
                 'dictionary footer at {} exceeds dictionary size'.format(path))
         footer_start = footer_size_offset - footer_size
-        footer_data = _slice(data, footer_start, footer_size, path)
-        self._footer = _create_footer(schema, footer_data, path, state)
+        footer_data = slice(data, footer_start, footer_size, path)
+        self._footer = create_footer(schema, footer_data, path, state)
 
     def _value_at(self, key, relative_offset):
         return self._state.represent(
-            self._data, self._offset + _U32.size + relative_offset,
+            self._data, self._offset + U32.size + relative_offset,
             self._schema['valueTypes'],
             self._path.child('[{}]'.format(key)))
 
@@ -601,11 +491,11 @@ class _DictValue(_MappingValue):
             yield key, self._value_at(key, offset_and_size[0])
 
 
-def _load_dict(data, offset, schema, path, state):
-    return _DictValue(data, offset, schema, path, state)
+def load_dict(data, offset, schema, path, state):
+    return DictValue(data, offset, schema, path, state)
 
 
-class _IndexValue(_MappingValue):
+class IndexValue(MappingValue):
 
     def __init__(self, stream, cache_size, schema, path, state,
                  offset_to_data=0, offset_to_footer=0):
@@ -618,23 +508,23 @@ class _IndexValue(_MappingValue):
         self._cache = collections.OrderedDict()
         self._search_cache = {}
 
-        file_size = _stream_size(stream)
-        object_size = _read_u32_at(stream, offset_to_data, path)
+        file_size = get_stream_size(stream)
+        object_size = read_u32_at(stream, offset_to_data, path)
         footer_size_offset = offset_to_data + object_size
         if offset_to_footer:
-            footer_size_offset = offset_to_footer - _U32.size
-        if footer_size_offset < 0 or footer_size_offset + _U32.size > file_size:
+            footer_size_offset = offset_to_footer - U32.size
+        if footer_size_offset < 0 or footer_size_offset + U32.size > file_size:
             raise FsdFormatError(
                 'index footer size offset {} is outside {} at {}'.format(
                     footer_size_offset, file_size, path))
         self._footer_size_offset = footer_size_offset
-        self._footer_size = _read_u32_at(stream, footer_size_offset, path)
+        self._footer_size = read_u32_at(stream, footer_size_offset, path)
         footer_start = footer_size_offset - self._footer_size
-        if footer_start < offset_to_data + _U32.size:
+        if footer_start < offset_to_data + U32.size:
             raise FsdFormatError('invalid index footer bounds at {}'.format(path))
-        footer_data = _read_exact_at(
+        footer_data = read_exact_at(
             stream, footer_start, self._footer_size, path)
-        self._footer = _create_footer(schema, footer_data, path, state)
+        self._footer = create_footer(schema, footer_data, path, state)
         self._object_size = object_size
 
     def _search(self, key):
@@ -646,14 +536,14 @@ class _IndexValue(_MappingValue):
             return found
 
     def _value_at(self, key, item_offset, item_size):
-        absolute_offset = self._offset_to_data + _U32.size + item_offset
+        absolute_offset = self._offset_to_data + U32.size + item_offset
         value_schema = self._schema['valueTypes']
         child_path = self._path.child('[{}]'.format(key))
         if value_schema.get('buildIndex', False):
             index_class = (
-                _MultiIndexValue
+                MultiIndexValue
                 if value_schema.get('multiIndex', False)
-                else _IndexValue)
+                else IndexValue)
             return index_class(
                 self._stream, self._cache_size, value_schema, child_path,
                 self._state, offset_to_data=absolute_offset,
@@ -662,7 +552,7 @@ class _IndexValue(_MappingValue):
             raise FsdFormatError(
                 'indexed item {!r} at {} does not declare a size'.format(
                     key, self._path))
-        item_data = _read_exact_at(
+        item_data = read_exact_at(
             self._stream, absolute_offset, item_size, child_path)
         return self._state.represent(item_data, 0, value_schema, child_path)
 
@@ -687,7 +577,7 @@ class _IndexValue(_MappingValue):
                 key, offset_and_size[0], offset_and_size[1])
 
 
-class _SubIndexValue(_MappingValue):
+class SubIndexValue(MappingValue):
 
     def __init__(self, stream, cache_size, footers, schemas,
                  offset_to_data, state, path):
@@ -698,7 +588,7 @@ class _SubIndexValue(_MappingValue):
         self._offset_to_data = offset_to_data
         self._state = state
         self._path = path
-        # _MappingValue expects a footer only for simple mappings.  Sub-index
+        # MappingValue expects a footer only for simple mappings.  Sub-index
         # methods below operate over multiple nested footers instead.
 
     def _value_from_index(self, key, index_id):
@@ -707,18 +597,18 @@ class _SubIndexValue(_MappingValue):
             raise KeyError(key)
         item_offset, item_size = found
         value_schema = self._schemas[index_id]['valueTypes']
-        absolute_offset = self._offset_to_data + _U32.size + item_offset
+        absolute_offset = self._offset_to_data + U32.size + item_offset
         child_path = self._path.child('[{}]'.format(key))
         if value_schema.get('buildIndex', False):
             index_class = (
-                _MultiIndexValue
+                MultiIndexValue
                 if value_schema.get('multiIndex', False)
-                else _IndexValue)
+                else IndexValue)
             return index_class(
                 self._stream, self._cache_size, value_schema, child_path,
                 self._state, offset_to_data=absolute_offset,
                 offset_to_footer=absolute_offset + item_size)
-        item_data = _read_exact_at(
+        item_data = read_exact_at(
             self._stream, absolute_offset, item_size, child_path)
         return self._state.represent(item_data, 0, value_schema, child_path)
 
@@ -751,11 +641,11 @@ class _SubIndexValue(_MappingValue):
                 yield key, self._value_from_index(key, index_id)
 
 
-class _MultiIndexValue(_IndexValue):
+class MultiIndexValue(IndexValue):
 
     def __init__(self, stream, cache_size, schema, path, state,
                  offset_to_data=0, offset_to_footer=0):
-        _IndexValue.__init__(
+        IndexValue.__init__(
             self, stream, cache_size, schema, path, state,
             offset_to_data=offset_to_data,
             offset_to_footer=offset_to_footer)
@@ -763,10 +653,10 @@ class _MultiIndexValue(_IndexValue):
 
         lookup_size_offset = (
             self._footer_size_offset - self._footer_size -
-            _U32.size)
-        lookup_size = _read_u32_at(stream, lookup_size_offset, path)
+            U32.size)
+        lookup_size = read_u32_at(stream, lookup_size_offset, path)
         lookup_start = lookup_size_offset - lookup_size
-        lookup_data = _read_exact_at(stream, lookup_start, lookup_size, path)
+        lookup_data = read_exact_at(stream, lookup_start, lookup_size, path)
         lookup = state.represent(
             lookup_data, 0, schema['subIndexOffsetLookup'],
             path.child('<MultiIndexAttributes>'))
@@ -775,11 +665,11 @@ class _MultiIndexValue(_IndexValue):
         for index_id, offset_info in lookup.iteritems():
             nested_offset = offset_to_data + offset_info['offset']
             nested_size = offset_info['size']
-            nested_data = _read_exact_at(
+            nested_data = read_exact_at(
                 stream, nested_offset, nested_size,
                 path.child('<MultiIndexFooter[{}]>'.format(index_id)))
             nested_schema = schema['indexableSchemas'][index_id]
-            nested_footers[index_id] = _create_footer(
+            nested_footers[index_id] = create_footer(
                 nested_schema, nested_data, path, state)
 
         for index_name, index_ids in schema.get('indexNameToIds', {}).iteritems():
@@ -788,7 +678,7 @@ class _MultiIndexValue(_IndexValue):
             for index_id in index_ids:
                 footers[index_id] = nested_footers[index_id]
                 schemas[index_id] = schema['indexableSchemas'][index_id]
-            self._subindexes[index_name] = _SubIndexValue(
+            self._subindexes[index_name] = SubIndexValue(
                 stream, cache_size, footers, schemas, offset_to_data,
                 state, path.child('<MultiIndexAttributes>.{}'.format(index_name)))
 
@@ -803,116 +693,65 @@ class _MultiIndexValue(_IndexValue):
             "multi-index dictionary has no index named {!r}".format(name))
 
 
-_INTEGER_SCHEMA_TYPES = (
+INTEGER_SCHEMA_TYPES = (
     'int', 'typeID', 'localizationID', 'npcTag', 'deploymentType',
     'npcEnemyFleetTypeID', 'groupBehaviorTreeID', 'npcCorporationID',
     'spawnTableID', 'npcFleetCounterTableID', 'dungeonID', 'typeListID',
     'npcFleetTypeID', 'metaGroupID', 'fsdReference', 'raceID',
     'marketGroupID', 'ShipGroupID', 'certificateTemplateID', 'factionID')
 
-_STATE = _LoaderState()
-_STATE.factories.update({
-    'float': _load_float,
-    'vector4': _load_vector(4),
-    'color': _load_vector(4),
-    'vector3': _load_vector(3),
-    'vector2': _load_vector(2),
-    'string': _load_string,
-    'resPath': _load_string,
-    'unicode': _load_unicode,
-    'enum': _load_enum,
-    'bool': _load_bool,
-    'union': _load_union,
-    'list': _load_list,
-    'object': _load_object,
-    'dict': _load_dict})
-for _integer_schema_type in _INTEGER_SCHEMA_TYPES:
-    _STATE.factories[_integer_schema_type] = _load_int
+STATE = LoaderState()
+STATE.factories.update({
+    'float': load_float,
+    'vector4': load_vector(4),
+    'color': load_vector(4),
+    'vector3': load_vector(3),
+    'vector2': load_vector(2),
+    'string': load_string,
+    'resPath': load_string,
+    'unicode': load_unicode,
+    'enum': load_enum,
+    'bool': load_bool,
+    'union': load_union,
+    'list': load_list,
+    'object': load_object,
+    'dict': load_dict})
+for integer_schema_type in INTEGER_SCHEMA_TYPES:
+    STATE.factories[integer_schema_type] = load_int
 
 
-def _materialize(value):
+def materialize(value):
     if value is None or isinstance(value, (bool, int, long, float, unicode)):
         return value
     # On Python 2, binary strings are distinct from unicode.  FSD string
     # loaders normally decode them before this point, but schema defaults may
     # still be byte strings.
     if isinstance(value, bytes):
-        return _decode_cp1252(value, '<schema default>')
-    if isinstance(value, _VectorValue):
+        return decode_cp1252(value, '<schema default>')
+    if isinstance(value, VectorValue):
         aliases = value.schema.get('aliases')
         if aliases:
             result = {}
             for name, index in aliases.iteritems():
-                result[_materialize(name)] = _materialize(value.values[index])
+                result[materialize(name)] = materialize(value.values[index])
             return result
-        return tuple(_materialize(item) for item in value.values)
-    if isinstance(value, _FsdObject):
+        return tuple(materialize(item) for item in value.values)
+    if isinstance(value, FsdObject):
         result = {}
         for name, item in value.present_items():
-            result[_materialize(name)] = _materialize(item)
+            result[materialize(name)] = materialize(item)
         return result
-    if isinstance(value, (_DictValue, _IndexValue, _MultiIndexValue, _SubIndexValue)):
+    if isinstance(value, (DictValue, IndexValue, MultiIndexValue, SubIndexValue)):
         result = {}
         for key, item in value.iteritems():
-            result[_materialize(key)] = _materialize(item)
+            result[materialize(key)] = materialize(item)
         return result
     if isinstance(value, (dict, collections.OrderedDict)):
         result = {}
         for key, item in value.iteritems():
-            result[_materialize(key)] = _materialize(item)
+            result[materialize(key)] = materialize(item)
         return result
     if isinstance(value, (list, tuple)):
-        return tuple(_materialize(item) for item in value)
+        return tuple(materialize(item) for item in value)
     raise FsdFormatError(
         'unable to materialize FSD value of type {}'.format(type(value).__name__))
-
-
-def _read_schema_and_offset(stream, schema_path, data_path):
-    if schema_path is not None:
-        return _load_yaml_schema(schema_path), 0
-
-    file_size = _stream_size(stream)
-    if file_size < _U32.size:
-        raise FsdFormatError('{} is too short to contain an FSD schema'.format(data_path))
-    schema_size = _read_u32_at(stream, 0, data_path)
-    if schema_size <= 0 or schema_size > _MAX_SCHEMA_SIZE:
-        raise FsdSchemaError(
-            'invalid embedded schema size {} in {}'.format(schema_size, data_path))
-    if schema_size > file_size - _U32.size:
-        raise FsdFormatError(
-            'embedded schema in {} extends beyond the file'.format(data_path))
-    raw_schema = _read_exact_at(
-        stream, _U32.size, schema_size, '<embedded schema>')
-    return _load_embedded_schema(raw_schema), _U32.size + schema_size
-
-
-def _load_with_schema(stream, schema, data_offset, data_path, cache_size):
-    path = _FsdPath('<{}>'.format(data_path))
-    if schema.get('type') == 'dict' and schema.get('buildIndex', False):
-        index_class = _MultiIndexValue if schema.get('multiIndex', False) else _IndexValue
-        root = index_class(
-            stream, cache_size, schema, path, _STATE,
-            offset_to_data=data_offset)
-        return _materialize(root)
-
-    mapping = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
-    try:
-        root = _STATE.represent(mapping, data_offset, schema, path)
-        return _materialize(root)
-    finally:
-        mapping.close()
-
-
-def load_fsd_file(data_abspath, schema_abspath=None, cache_size=100):
-    """Parse one FSD ``.static`` file into Python built-in values.
-
-    ``schema_path`` should name an already optimized YAML schema.  If it is
-    omitted, the optimized schema is read from the data file's prefix.
-    """
-    if cache_size is None:
-        cache_size = 100
-    if cache_size < 0:
-        raise ValueError('cache_size must not be negative')
-    with open(data_abspath, 'rb') as stream:
-        schema, data_offset = _read_schema_and_offset(stream, schema_abspath, data_abspath)
-        return _load_with_schema(stream, schema, data_offset, data_abspath, cache_size)
