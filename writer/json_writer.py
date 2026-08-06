@@ -42,7 +42,7 @@ class CustomEncoder(json.JSONEncoder):
         keys to strings.
         """
         new_obj = {}
-        for k, v in obj.items():
+        for k, v in obj.iteritems():
             new_obj[self._route_object(k)] = self._route_object(v)
         new_obj = self._prepare_map(new_obj)
         return new_obj

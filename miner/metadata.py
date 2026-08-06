@@ -23,7 +23,7 @@ class MetadataMiner(BaseMiner):
         if container_name != self._container_name:
             self._container_not_found(container_name)
         else:
-            file_info = self._resbrowser.get_file_info('app:/start.ini')
+            file_info = self._resbrowser.get_file_info('app:/start.ini', verify_content=True)
             field_names = ('field_name', 'field_value')
             container_data = []
             # Read client version
@@ -31,7 +31,7 @@ class MetadataMiner(BaseMiner):
                 config = ConfigParser()
                 config.read(file_info.file_abspath)
                 eve_version = config.getint('main', 'build')
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, SystemExit):
                 raise
             except:
                 print('    failed to detect client version')

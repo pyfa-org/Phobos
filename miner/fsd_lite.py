@@ -2,8 +2,9 @@ import json
 import re
 import sqlite3
 
-from miner.base import BaseMiner
 from util import cachedproperty
+from .base import BaseMiner
+from .shared import has_sqlite_header
 
 
 class FsdLiteMiner(BaseMiner):
@@ -26,7 +27,7 @@ class FsdLiteMiner(BaseMiner):
             self._container_not_found(container_name)
         else:
             rows = {}
-            file_path = self._resbrowser.get_file_info(resource_path).file_abspath
+            file_path = self._resbrowser.get_file_info(resource_path, verify_content=True).file_abspath
             with sqlite3.connect(file_path) as dbconn:
                 c = dbconn.cursor()
                 c.execute('select key, value from cache')
@@ -68,12 +69,15 @@ class FsdLiteMiner(BaseMiner):
 
     def __check_cache(self, resource_path):
         """Check if file is actually SQLite database and has cache table."""
-        file_path = self._resbrowser.get_file_info(resource_path).file_abspath
+        file_path = self._resbrowser.get_file_info(resource_path, verify_content=False).file_abspath
         try:
+            # Quick & cheap way to check if it contains any SQLite database
+            if not has_sqlite_header(file_path):
+                return False
             dbconn = sqlite3.connect(file_path)
             c = dbconn.cursor()
             c.execute('select count(*) from sqlite_master where type = \'table\' and name = \'cache\'')
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             raise
         except:
             has_cache = False

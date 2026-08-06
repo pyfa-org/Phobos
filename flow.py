@@ -27,7 +27,7 @@ class FlowManager(object):
                 # Fetch data from client
                 try:
                     container_data = miner.get_data(container_name=container_name, language=language, verbose=True)
-                except KeyboardInterrupt:
+                except (KeyboardInterrupt, SystemExit):
                     raise
                 except Exception as e:
                     print('    unable to fetch data - {}: {}'.format(type(e).__name__, e))
@@ -36,7 +36,7 @@ class FlowManager(object):
                     for writer in self._writers:
                         try:
                             writer.write(miner_name=miner.name, container_name=container_name, container_data=container_data)
-                        except KeyboardInterrupt:
+                        except (KeyboardInterrupt, SystemExit):
                             raise
                         except Exception as e:
                             print('    unable to write data with {} - {}: {}'.format(type(writer).__name__, type(e).__name__, e))

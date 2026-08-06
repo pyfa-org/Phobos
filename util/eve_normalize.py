@@ -67,7 +67,7 @@ class EveNormalizer(object):
             # we're dealing with FSD binary item for certain
             if inspect.getmodule(type(obj)) is self._loader_module:
                 return self.pythonize_fsdbuilt_item(obj)
-            # FSD contains bunch of vector classes which are defined outside of
+            # FSD contains a bunch of vector classes which are defined outside of
             # loader (shown as defined in builtins), process them separately
             if type(obj).__name__.endswith('_vector'):
                 return self.pythonize_fsdbuilt_item(obj, ignore_attrs=(
@@ -105,7 +105,7 @@ class EveNormalizer(object):
         """
         container = {}
         name_data = obj.schema['aliases']
-        for name, index in name_data.items():
+        for name, index in name_data.iteritems():
             value = obj.data[index]
             proc_name = self._route_object(name)
             proc_value = self._route_object(value)
