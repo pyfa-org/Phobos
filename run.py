@@ -18,7 +18,6 @@ def run(path_eve, server_alias, filter_string, language, path_json, group=None):
     fsdlite_miner = FsdLiteMiner(resbrowser=resource_browser, translator=trans)
     metadata_miner = MetadataMiner(resbrowser=resource_browser)
     sqlite_miner = SqliteMiner(resbrowser=resource_browser, translator=trans)
-    trait_miner = TraitMiner(fsdlite_miner=fsdlite_miner, fsdbuilt_miner=fsdbuilt_miner, translator=trans)
 
     miners = [
         metadata_miner,
@@ -26,7 +25,6 @@ def run(path_eve, server_alias, filter_string, language, path_json, group=None):
         fsdlite_miner,
         fsdbinary_miner,
         sqlite_miner,
-        trait_miner,
         pickle_miner]
 
     writers = [
