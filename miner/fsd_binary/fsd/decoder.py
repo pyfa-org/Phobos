@@ -280,26 +280,11 @@ LOADERS = {
     'string': load_string, 'resPath': load_string, 'unicode': load_unicode,
     'union': load_union, 'list': load_list, 'object': load_object, 'dict': load_dict,
     'vector2': load_vector, 'vector3': load_vector, 'vector4': load_vector, 'color': load_vector,
-    # field-specific int overrides
-    'certificateTemplateID': load_int,
-    'deploymentType': load_int,
-    'dungeonID': load_int,
+    # Field-specific int overrides
     'factionID': load_int,
     'fsdReference': load_int,
-    'groupBehaviorTreeID': load_int,
     'localizationID': load_int,
-    'marketGroupID': load_int,
-    'metaGroupID': load_int,
-    'npcCorporationID': load_int,
-    'npcEnemyFleetTypeID': load_int,
-    'npcFleetCounterTableID': load_int,
-    'npcFleetTypeID': load_int,
-    'npcTag': load_int,
-    'raceID': load_int,
-    'ShipGroupID': load_int,
-    'spawnTableID': load_int,
-    'typeID': load_int,
-    'typeListID': load_int}
+    'typeID': load_int}
 
 
 ####################################################################################################
