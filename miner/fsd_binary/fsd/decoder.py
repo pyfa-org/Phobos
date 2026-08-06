@@ -226,7 +226,7 @@ def load_dict(data, offset, schema, path):
 
 def load_index(data, offset_to_data, schema, path, offset_to_footer=0):
     object_size = u32(data, offset_to_data, path)
-    footer_size_offset = (offset_to_footer - U32.size if offset_to_footer else offset_to_data + object_size)
+    footer_size_offset = offset_to_footer - U32.size if offset_to_footer else offset_to_data + object_size
     if footer_size_offset < 0 or footer_size_offset + U32.size > len(data):
         raise FsdFormatError('index footer size offset {} is outside {} at {}'.format(footer_size_offset, len(data), path))
     footer_size = u32(data, footer_size_offset, path)
