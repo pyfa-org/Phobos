@@ -284,7 +284,8 @@ LOADERS = {
     'factionID': load_int,
     'fsdReference': load_int,
     'localizationID': load_int,
-    'typeID': load_int}
+    'typeID': load_int,
+    'typeListID': load_int}
 
 
 ####################################################################################################
