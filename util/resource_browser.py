@@ -18,7 +18,7 @@ def get_full_alias(short_alias):
 
 class ResourceBrowser(object):
     """
-    Class, responsible for browsing/retrieval of resources.
+    Class, responsible for browsing and retrieval of resources.
     """
 
     def __init__(self, eve_path, server_alias):
@@ -33,6 +33,13 @@ class ResourceBrowser(object):
         for resource_path in self._resource_index:
             yield resource_path
 
+    def get_file_info(self, resource_path, verify_content):
+        """Return metadata for a resource, verifying the resource first if requested."""
+        file_info = self._resource_index[resource_path]
+        if verify_content:
+            self.__verify_file(file_info=file_info)
+        return file_info
+
     def get_file_data(self, resource_path):
         """Return file contents for requested resource."""
         file_info = self._resource_index[resource_path]
@@ -41,17 +48,6 @@ class ResourceBrowser(object):
             data = f.read()
         self.__verify_data(data=data, file_info=file_info)
         return data
-
-    def get_file_info(self, resource_path, verify=True):
-        """Return metadata for a resource, optionally verifying it first.
-
-        Verification is streamed so large static-data files are not copied
-        into memory merely to validate their registry checksum.
-        """
-        file_info = self._resource_index[resource_path]
-        if verify:
-            self.__verify_file(file_info=file_info)
-        return file_info
 
     def __verify_file(self, file_info):
         size = 0
@@ -64,11 +60,9 @@ class ResourceBrowser(object):
                 size += len(chunk)
                 checksum.update(chunk)
         if size != file_info.file_size:
-            raise FileIntegrityError(
-                u'file size mismatch when reading {}'.format(file_info.resource_path))
+            raise FileIntegrityError(u'file size mismatch when reading {}'.format(file_info.resource_path))
         if checksum.hexdigest() != file_info.file_hash:
-            raise FileIntegrityError(
-                u'file hash mismatch when reading {}'.format(file_info.resource_path))
+            raise FileIntegrityError(u'file hash mismatch when reading {}'.format(file_info.resource_path))
 
     def __verify_data(self, data, file_info):
         if len(data) != file_info.file_size:

@@ -967,12 +967,11 @@ class FsdBinaryMiner(BaseMiner):
             self._container_not_found(container_name)
             return
 
-        data_info = self._resbrowser.get_file_info(data_resource)
+        data_info = self._resbrowser.get_file_info(data_resource, verify_content=True)
         schema_resource = self._schemaname_respath_map.get(container_name)
         schema_path = None
         if schema_resource is not None:
-            schema_path = self._resbrowser.get_file_info(
-                schema_resource).file_abspath
+            schema_path = self._resbrowser.get_file_info(schema_resource, verify_content=True).file_abspath
 
         data = load_fsd_file(
             data_info.file_abspath, schema_path=schema_path,
@@ -1000,8 +999,7 @@ class FsdBinaryMiner(BaseMiner):
             match = pattern.match(resource_path)
             if match is None:
                 continue
-            file_info = self._resbrowser.get_file_info(
-                resource_path, verify=False)
+            file_info = self._resbrowser.get_file_info(resource_path, verify_content=False)
             with open(file_info.file_abspath, 'rb') as resource_file:
                 header = resource_file.read(len(_SQLITE_HEADER))
             if header == _SQLITE_HEADER:

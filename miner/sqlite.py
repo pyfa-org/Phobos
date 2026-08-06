@@ -48,7 +48,7 @@ class SqliteMiner(BaseMiner):
         for resource_path in self._resbrowser.respath_iter():
             if not resource_path.endswith(sqlite_ext):
                 continue
-            resource_info = self._resbrowser.get_file_info(resource_path)
+            resource_info = self._resbrowser.get_file_info(resource_path, verify_content=True)
             with sqlite3.connect(resource_info.file_abspath) as dbconn:
                 c = dbconn.cursor()
                 c.execute('select name from sqlite_master where type = \'table\'')

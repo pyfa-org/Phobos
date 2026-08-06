@@ -35,8 +35,8 @@ class FsdBuiltMiner(BaseMiner):
                 msg = 'need 64-bit python under Windows to execute loader'
                 raise PlatformError(msg)
             loader_filename = loader_respath.split('/')[-1]
-            loader_info = self._resbrowser.get_file_info(loader_respath)
-            data_info = self._resbrowser.get_file_info(data_respath)
+            loader_info = self._resbrowser.get_file_info(loader_respath, verify_content=True)
+            data_info = self._resbrowser.get_file_info(data_respath, verify_content=True)
 
             with self._temp_dir() as temp_dir:
                 sys.path.insert(0, temp_dir)

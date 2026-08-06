@@ -26,7 +26,7 @@ class FsdLiteMiner(BaseMiner):
             self._container_not_found(container_name)
         else:
             rows = {}
-            file_path = self._resbrowser.get_file_info(resource_path).file_abspath
+            file_path = self._resbrowser.get_file_info(resource_path, verify_content=True).file_abspath
             with sqlite3.connect(file_path) as dbconn:
                 c = dbconn.cursor()
                 c.execute(u'select key, value from cache')
@@ -70,8 +70,7 @@ class FsdLiteMiner(BaseMiner):
         """Check if file is actually SQLite database and has cache table."""
         # Discovery only needs the path.  Integrity is checked by get_data()
         # for containers which are actually selected for extraction.
-        file_path = self._resbrowser.get_file_info(
-            resource_path, verify=False).file_abspath
+        file_path = self._resbrowser.get_file_info(resource_path, verify_content=False).file_abspath
         try:
             dbconn = sqlite3.connect(file_path)
             c = dbconn.cursor()

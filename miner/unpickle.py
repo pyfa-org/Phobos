@@ -5,7 +5,11 @@ from util import cachedproperty
 
 
 class PickleMiner(BaseMiner):
-    """Class, which attempts to get data from resource pickles (which is not guaranteed to succeed)."""
+    """
+    Class, which attempts to get data from resource pickles.
+
+    This can fail due to data relying on libraries not present in Phobos.
+    """
 
     name = 'resource_pickle'
 
