@@ -8,7 +8,14 @@ from writer import *
 from util import ResourceBrowser, Translator
 
 
-def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_json, group=None):
+SERVER_INFO = {
+    'tq': '172.65.201.188',
+    'sisi': '87.237.38.2',
+    'thunderdome': '87.237.38.16',
+    'serenity': '42.186.79.5'}
+
+
+def run(path_eve, server_alias, path_cache, filter_string, language, path_json, group=None):
     resource_browser = ResourceBrowser(eve_path=path_eve, server_alias=server_alias)
 
     pickle_miner = PickleMiner(resbrowser=resource_browser)
@@ -19,7 +26,11 @@ def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_
     metadata_miner = MetadataMiner(resbrowser=resource_browser)
     sqlite_miner = SqliteMiner(resbrowser=resource_browser, translator=trans)
     trait_miner = TraitMiner(fsdlite_miner=fsdlite_miner, fsdbuilt_miner=fsdbuilt_miner, translator=trans)
-    cached_call_miner = CachedCallsMiner(path_cachedcalls=path_cachedcalls, translator=trans)
+    server_ip = SERVER_INFO[server_alias]
+    cached_call_miner = MachoNetCachedCallsMiner(
+        path_cache=path_cache, server_ip=server_ip, translator=trans)
+    cached_object_miner = MachoNetCachedObjectsMiner(
+        path_cache=path_cache, server_ip=server_ip, translator=trans)
 
     miners = [
         metadata_miner,
@@ -29,7 +40,8 @@ def run(path_eve, server_alias, path_cachedcalls, filter_string, language, path_
         sqlite_miner,
         trait_miner,
         pickle_miner,
-        cached_call_miner]
+        cached_call_miner,
+        cached_object_miner]
 
     writers = [
         JsonWriter(path_json, indent=2, group=group)]
@@ -54,14 +66,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='This script extracts data from EVE client and writes it into JSON files')
     parser.add_argument('-e', '--eve', required=True,
-                        help='Path to EVE client\'s folder')
-    parser.add_argument('-c', '--calls', default='',
-                        help='Path to CachedMethodCalls folder')
+                        help="Path to EVE client's directory")
+    parser.add_argument('-c', '--cache', default='',
+                        help="Path to EVE client's cache directory")
     parser.add_argument('-s', '--server', default='tq',
                         help='Server to pull data from. Default is "tq"',
                         choices=('tq', 'sisi', 'thunderdome', 'serenity'))
     parser.add_argument('-j', '--json', required=True,
-                        help='Output folder for the JSON files')
+                        help='Output directory for the JSON files')
     parser.add_argument('-t', '--translate', default='multi',
                         help='Attempt to translate strings into specified language. Default is "multi"',
                         choices=('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi'))
@@ -73,8 +85,8 @@ if __name__ == '__main__':
 
     # Expand home directory
     path_eve = os.path.expanduser(args.eve)
-    path_cachedcalls = os.path.expanduser(args.calls)
+    path_cache = os.path.expanduser(args.cache)
     path_json = os.path.expanduser(args.json)
 
-    run(path_eve=path_eve, server_alias=args.server, path_cachedcalls=path_cachedcalls, filter_string=args.list,
+    run(path_eve=path_eve, server_alias=args.server, path_cache=path_cache, filter_string=args.list,
         language=args.translate, path_json=path_json, group=args.group)

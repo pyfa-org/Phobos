@@ -99,8 +99,7 @@ class Unmarshaller(object):
         try:
             method = self._readers[type_id]
         except KeyError:
-            raise UnsupportedTypeError('unsupported marshal type {} at offset {}'.format(
-                type_id, self._stream.pos - 1))
+            raise UnsupportedTypeError('unsupported marshal type {} at offset {}'.format(type_id, self._stream.pos - 1))
         return method(self, is_shared)
 
     def _read_header(self):
@@ -356,8 +355,7 @@ class Unmarshaller(object):
         return self._route_object()
 
     def _read_mark(self, is_shared):
-        raise MarshalError('marker token at offset {} is not expected here'.format(
-            self._stream.pos - 1))
+        raise MarshalError('marker token at offset {} is not expected here'.format(self._stream.pos - 1))
 
     _readers = {
         Type.NONE: _read_none,

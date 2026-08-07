@@ -3,11 +3,9 @@ Phobos is licensed under the GNU General Public License v3, see [LICENSE.txt](LI
 This project includes third-party material:
 
 - blue (https://github.com/carbonengine/blue)
-
-  `miner/cached_calls/unmarshal/strings.py` contains the `MARSHAL_STRINGS` table copied from 
-- `src/Marshal.cpp`. Marshal format details reimplemented in 
-- `miner/cached_calls/unmarshal/unmarshaller.py` are derived from the same file, and packed row
-  layout in `miner/cached_calls/unmarshal/dbrow.py` is derived from `src/PyRowSet.cpp`.
+  - `miner/macho_net/unmarshal/strings.py` contains the `MARSHAL_STRINGS` table copied from `src/Marshal.cpp`;
+  - Marshal format in `miner/macho_net/unmarshal/unmarshaller.py` is derived from `src/Marshal.cpp`;
+  - Packed row layout in `miner/macho_net/unmarshal/dbrow.py` is derived from `src/PyRowSet.cpp`.
 
 MIT License
 

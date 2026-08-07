@@ -89,8 +89,8 @@ class FsdBuiltMiner(BaseMiner):
             self.__temp_dir = tempfile.mkdtemp(prefix='phobos-')
         try:
             yield self.__temp_dir
-        # Try to remove folder, but be silent if it fails, as it is to be expected, because
-        # python process which has used library from this folder is still running
+        # Try to remove directory, but be silent if it fails, as it is to be expected, because
+        # python process which has used library from this directory is still running
         finally:
             error_data = []
 
