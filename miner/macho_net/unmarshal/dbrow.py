@@ -4,11 +4,13 @@ Format is reimplemented after PyRowSet.cpp from the blue library
 """
 
 import struct
+from enum import IntEnum, unique
 
 from .exception import MarshalError
 
 
-class DbType:
+@unique
+class DbType(IntEnum):
     """Column types, as defined in the blue's rowset source."""
     EMPTY = 0
     I2 = 2

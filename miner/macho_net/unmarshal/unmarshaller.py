@@ -5,6 +5,7 @@ Format is reimplemented after Marshal.cpp from the blue library
 
 import struct
 import zlib
+from enum import IntEnum, unique
 
 from .dbrow import RowDescriptor
 from .exception import MarshalError, UnsupportedTypeError
@@ -22,7 +23,8 @@ I64 = struct.Struct('<q')
 F64 = struct.Struct('<d')
 
 
-class Type:
+@unique
+class Type(IntEnum):
     """Type tags, as defined in the blue's marshal source."""
     NONE = 1
     GLOBAL = 2
