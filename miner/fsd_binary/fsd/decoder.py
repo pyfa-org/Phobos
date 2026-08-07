@@ -32,8 +32,12 @@ def load_fsd_file(data_abspath, schema_abspath=None):
 def check_range(data, offset, size, path):
     length = len(data)
     if offset < 0 or size < 0 or offset > length or size > length - offset:
-        raise FsdFormatError('read outside {} at offset {} for {} bytes (buffer size {})'.format(
-            path, offset, size, length))
+        raise FsdFormatError('read outside {} at offset {} for {} bytes (buffer size {})'.format(path, offset, size, length))
+
+
+def slice_at(data, offset, size, path):
+    check_range(data, offset, size, path)
+    return data[offset:offset + size]
 
 
 def unpack(unpacker, data, offset, path):
@@ -44,13 +48,8 @@ def unpack(unpacker, data, offset, path):
         raise FsdFormatError('unable to unpack {} bytes at {} offset {}: {}'.format(unpacker.size, path, offset, e))
 
 
-def u32(data, offset, path):
+def unpack_u32(data, offset, path):
     return unpack(U32, data, offset, path)[0]
-
-
-def slice_at(data, offset, size, path):
-    check_range(data, offset, size, path)
-    return data[offset:offset + size]
 
 
 def decode_str(raw, path):
@@ -78,12 +77,12 @@ def load_bool(data, offset, schema, path):
 
 
 def load_string(data, offset, schema, path):
-    size = u32(data, offset, path)
+    size = unpack_u32(data, offset, path)
     return decode_str(slice_at(data, offset + U32.size, size, path), path)
 
 
 def load_unicode(data, offset, schema, path):
-    size = u32(data, offset, path)
+    size = unpack_u32(data, offset, path)
     raw = slice_at(data, offset + U32.size, size, path)
     try:
         return raw.decode('utf-8')
@@ -117,11 +116,10 @@ def load_vector(data, offset, schema, path):
 
 
 def load_union(data, offset, schema, path):
-    type_index = u32(data, offset, path)
+    type_index = unpack_u32(data, offset, path)
     options = schema.get('optionTypes', ())
     if type_index >= len(options):
-        raise FsdFormatError('union option {} is outside {} choices at {}'.format(
-            type_index, len(options), path))
+        raise FsdFormatError('union option {} is outside {} choices at {}'.format(type_index, len(options), path))
     option = options[type_index]
     return decode(data, offset + U32.size, option, path.child('<{}>'.format(option.get('type'))))
 
@@ -150,7 +148,7 @@ def load_object(data, offset, schema, path):
         check_range(data, table_start, U32.size * len(names), path)
         variable_base = table_start + U32.size * len(names)
         for index, name in enumerate(names):
-            variable_offsets[name] = u32(data, table_start + index * U32.size, path)
+            variable_offsets[name] = unpack_u32(data, table_start + index * U32.size, path)
 
     result = {}
     for name, attribute_schema in schema['attributes'].items():
@@ -158,8 +156,7 @@ def load_object(data, offset, schema, path):
         if name in fixed_offsets:
             result[name] = decode(data, offset + fixed_offsets[name], attribute_schema, child_path)
         elif name in variable_offsets:
-            result[name] = decode(
-                data, variable_base + variable_offsets[name], attribute_schema, child_path)
+            result[name] = decode(data, variable_base + variable_offsets[name], attribute_schema, child_path)
         elif 'default' in attribute_schema:
             result[name] = attribute_schema['default']
         elif 'isOptional' not in attribute_schema:
@@ -172,7 +169,7 @@ def load_list(data, offset, schema, path, known_length=None):
     if known_length is not None:
         count, count_offset = known_length, 0
     else:
-        count, count_offset = u32(data, offset, path), U32.size
+        count, count_offset = unpack_u32(data, offset, path), U32.size
     if count < 0:
         raise FsdFormatError('negative list size at {}'.format(path))
 
@@ -188,7 +185,7 @@ def load_list(data, offset, schema, path, known_length=None):
         table_start = offset + count_offset
         check_range(data, table_start, count * U32.size, path)
         for index in range(count):
-            relative = u32(data, table_start + index * U32.size, path)
+            relative = unpack_u32(data, table_start + index * U32.size, path)
             result.append(decode(data, offset + relative, item_schema, path.child('[{}]'.format(index))))
     return tuple(result)
 
@@ -202,7 +199,7 @@ def read_footer(footer_data, schema, path):
         return entries
     sized = 'size' in schema['keyFooter']['itemTypes']['attributes']
     stride = (KEY_OFFSET_SIZE if sized else KEY_OFFSET).size
-    count = u32(footer_data, 0, path)
+    count = unpack_u32(footer_data, 0, path)
     check_range(footer_data, 0, U32.size + count * stride, path)
     fields = array.array('i')
     fields.frombytes(footer_data[U32.size:U32.size + count * stride])
@@ -214,9 +211,9 @@ def read_footer(footer_data, schema, path):
 
 
 def load_dict(data, offset, schema, path):
-    size_of_data = u32(data, offset, path)
+    size_of_data = unpack_u32(data, offset, path)
     footer_size_offset = offset + size_of_data
-    footer_size = u32(data, footer_size_offset, path)
+    footer_size = unpack_u32(data, footer_size_offset, path)
     if footer_size > size_of_data:
         raise FsdFormatError('dictionary footer at {} exceeds dictionary size'.format(path))
     footer_data = slice_at(data, footer_size_offset - footer_size, footer_size, path)
@@ -227,12 +224,11 @@ def load_dict(data, offset, schema, path):
 
 
 def load_index(data, offset_to_data, schema, path, offset_to_footer=0):
-    object_size = u32(data, offset_to_data, path)
-    footer_size_offset = (offset_to_footer - U32.size if offset_to_footer
-                          else offset_to_data + object_size)
+    object_size = unpack_u32(data, offset_to_data, path)
+    footer_size_offset = offset_to_footer - U32.size if offset_to_footer else offset_to_data + object_size
     if footer_size_offset < 0 or footer_size_offset + U32.size > len(data):
         raise FsdFormatError('index footer size offset {} is outside {} at {}'.format(footer_size_offset, len(data), path))
-    footer_size = u32(data, footer_size_offset, path)
+    footer_size = unpack_u32(data, footer_size_offset, path)
     if footer_size_offset - footer_size < offset_to_data + U32.size:
         raise FsdFormatError('invalid index footer bounds at {}'.format(path))
     footer_data = slice_at(data, footer_size_offset - footer_size, footer_size, path)
