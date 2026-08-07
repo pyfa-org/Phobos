@@ -8,7 +8,10 @@ from writer import *
 from util import ResourceBrowser, Translator
 
 
-def run(path_eve, server_alias, filter_string, language, path_json, group=None):
+SERVER_INFO = {'stillness': '75.2.78.145'}
+
+
+def run(path_eve, server_alias, path_cache, filter_string, language, path_json, group=None):
     resource_browser = ResourceBrowser(eve_path=path_eve, server_alias=server_alias)
 
     pickle_miner = PickleMiner(resbrowser=resource_browser)
@@ -18,6 +21,9 @@ def run(path_eve, server_alias, filter_string, language, path_json, group=None):
     fsdlite_miner = FsdLiteMiner(resbrowser=resource_browser, translator=trans)
     metadata_miner = MetadataMiner(resbrowser=resource_browser)
     sqlite_miner = SqliteMiner(resbrowser=resource_browser, translator=trans)
+    server_ip = SERVER_INFO[server_alias]
+    mn_call_miner = MachoNetCallsMiner(path_cache=path_cache, server_ip=server_ip, translator=trans)
+    mn_object_miner = MachoNetObjectsMiner(path_cache=path_cache, server_ip=server_ip, translator=trans)
 
     miners = [
         metadata_miner,
@@ -25,7 +31,9 @@ def run(path_eve, server_alias, filter_string, language, path_json, group=None):
         fsdlite_miner,
         fsdbinary_miner,
         sqlite_miner,
-        pickle_miner]
+        pickle_miner,
+        mn_call_miner,
+        mn_object_miner]
 
     writers = [
         JsonWriter(path_json, indent=2, group=group)]
@@ -50,12 +58,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='This script extracts data from EVE client and writes it into JSON files')
     parser.add_argument('-e', '--eve', required=True,
-                        help='Path to EVE client\'s folder')
+                        help="Path to EVE client's directory")
+    parser.add_argument('-c', '--cache', default='',
+                        help="Path to EVE client's cache directory")
     parser.add_argument('-s', '--server', default='stillness',
                         help='Server to pull data from. Default is "stillness"',
                         choices=('stillness',))
     parser.add_argument('-j', '--json', required=True,
-                        help='Output folder for the JSON files')
+                        help='Output directory for the JSON files')
     parser.add_argument('-t', '--translate', default='multi',
                         help='Attempt to translate strings into specified language. Default is "multi"',
                         choices=('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi'))
@@ -67,7 +77,8 @@ if __name__ == '__main__':
 
     # Expand home directory
     path_eve = os.path.expanduser(args.eve)
+    path_cache = os.path.expanduser(args.cache)
     path_json = os.path.expanduser(args.json)
 
-    run(path_eve=path_eve, server_alias=args.server, filter_string=args.list, language=args.translate,
-        path_json=path_json, group=args.group)
+    run(path_eve=path_eve, server_alias=args.server, path_cache=path_cache, filter_string=args.list,
+        language=args.translate, path_json=path_json, group=args.group)

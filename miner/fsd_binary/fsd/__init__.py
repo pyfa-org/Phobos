@@ -1,1 +1,1 @@
-from .decoder import load_fsd_file
+from .file import FsdFile

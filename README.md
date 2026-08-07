@@ -22,9 +22,10 @@ Install dependencies with `pip install -r requirements.txt`.
 
 ### Arguments:
 
-* `--eve`: Required. Path to EVE client folder, e.g. `C:\CCP\EVE Online`.
-* `--json`: Required. Output folder for JSON files.
+* `--eve`: Required. Path to EVE client directory, e.g. `C:\CCP\EVE Online`.
+* `--json`: Required. Output directory for JSON files.
 * `--server`: Optional. Server to pull data from. Defaults to `stillness`.
+* `--cache`: Optional. Some miners extract data from the client cache directory. To enable those, pass a path to the cache, e.g. `C:\users\<user>\AppData\Local\CCP\EVE\<client directory>\cache`.
 * `--translate`: Optional. Specifies language to which strings will be translated. You can choose either individual languages (run script with `--help` argument for a list) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation, original text is not modified, but new text fields are added, named using `<field name>_<language code>` convention (e.g. `typeName_en-us`). Multi-language translation mode is default.
 * `--list`: Optional. Specifies list of comma-separated 'containers' to extract. It uses names the script prints to stdout. For list of all available names you can launch script without specifying this option, as by default it extracts everything it can find.
 

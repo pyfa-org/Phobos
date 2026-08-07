@@ -76,25 +76,25 @@ class JsonWriter(BaseWriter):
     as JSON files.
     """
 
-    def __init__(self, folder, indent=None, group=None):
-        self.base_folder = folder
+    def __init__(self, directory, indent=None, group=None):
+        self.base_folder = directory
         self.indent = indent
         self.group = group
 
     def write(self, miner_name, container_name, container_data):
-        # Create folder structure to path, if not created yet
-        folder = os.path.join(self.base_folder, self.__secure_name(miner_name))
-        if not os.path.exists(folder):
-            os.makedirs(folder, mode=0o755)
+        # Create directory structure to path, if not created yet
+        directory = os.path.join(self.base_folder, self.__secure_name(miner_name))
+        if not os.path.exists(directory):
+            os.makedirs(directory, mode=0o755)
 
         data_type = type(container_data)
         grouping_method = self._grouping_map.get(data_type)
         if self.group is None or grouping_method is None:
-            filepath = os.path.join(folder, '{}.json'.format(self.__secure_name(container_name)))
+            filepath = os.path.join(directory, '{}.json'.format(self.__secure_name(container_name)))
             self.__write_file(container_data, filepath)
         else:
             for i, group_data in enumerate(grouping_method(self, container_data)):
-                filepath = os.path.join(folder, '{}.{}.json'.format(self.__secure_name(container_name), i))
+                filepath = os.path.join(directory, '{}.{}.json'.format(self.__secure_name(container_name), i))
                 self.__write_file(group_data, filepath)
 
     def _group_dict(self, container_data):
