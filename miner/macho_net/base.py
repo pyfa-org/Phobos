@@ -93,9 +93,10 @@ class MachoNetBase(BaseMiner):
         # Use IP address from server info dictionary, or pick a single directory if directory with
         # that name is not found. In case known IP was not found and there are multiple candidates,
         # raise an exception
-        server_path = os.path.join(machonet_path, self._server_ip)
-        if os.path.isdir(server_path):
-            return server_path
+        if self._server_ip is not None:
+            server_path = os.path.join(machonet_path, self._server_ip)
+            if os.path.isdir(server_path):
+                return server_path
         candidates = self._get_subdirs(machonet_path)
         if len(candidates) != 1:
             infix = '{} or '.format(self._server_ip) if self._server_ip is not None else ''
