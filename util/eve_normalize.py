@@ -157,8 +157,8 @@ class EveNormalizer:
         Regular rowset stores all the necessary data in marshal obj's state, separately header, 
         separately rows themselves. Here they are merged to expose just rows.
         """
-        header = obj.state[b'header']
-        return tuple(self._pythonize_map(dict(zip(header, line))) for line in obj.state[b'lines'])
+        header = obj.state['header']
+        return tuple(self._pythonize_map(dict(zip(header, line))) for line in obj.state['lines'])
 
     def _pythonize_marshal_carbon_rowset(self, obj):
         """

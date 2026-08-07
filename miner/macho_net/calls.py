@@ -32,6 +32,6 @@ class MachoNetCallsMiner(MachoNetBase):
     def _get_payload(self, cached_entity):
         """Cached call carries plenty of call metadata, we are after the returned value only."""
         try:
-            return cached_entity[b'lret']
+            return cached_entity['lret']
         except (TypeError, KeyError):
             raise MarshalError('cached call result does not carry a return value')
