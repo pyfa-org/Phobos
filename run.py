@@ -8,7 +8,7 @@ from writer import *
 from util import ResourceBrowser, Translator
 
 
-SERVER_INFO = {'stillness': '75.2.78.145'}
+SERVER_INFO = {'stillness': '13.248.184.148'}
 
 
 def run(path_eve, server_alias, path_cache, filter_string, language, path_json, group=None):
