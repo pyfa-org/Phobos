@@ -184,16 +184,16 @@ class Unmarshaller:
     # Strings
     ################################################################################################
     def _read_str(self, is_shared):
-        return self._stream.read(self._stream.read_length())
+        return self._read_text(self._stream.read_length())
 
     def _read_str_empty(self, is_shared):
-        return b''
+        return ''
 
     def _read_str_char(self, is_shared):
-        return self._stream.read(1)
+        return self._read_text(1)
 
     def _read_str_short(self, is_shared):
-        return self._stream.read(ord(self._stream.read(1)))
+        return self._read_text(ord(self._stream.read(1)))
 
     def _read_str_table(self, is_shared):
         index = ord(self._stream.read(1))
@@ -203,18 +203,24 @@ class Unmarshaller:
 
 
     def _read_unicode(self, is_shared):
-        # LE UCS-2 for eveo
-        return self._stream.read(self._stream.read_length() * 2).decode('utf-16-le')
+        return self._read_text(self._stream.read_length())
 
     def _read_unicode_0(self, is_shared):
-        return u''
+        return ''
 
     def _read_unicode_1(self, is_shared):
-        # LE UCS-2 for eveo
-        return self._stream.read(2).decode('utf-16-le')
+        return self._read_text(1)
 
     def _read_utf8(self, is_shared):
-        return self._stream.read(self._stream.read_length()).decode('utf-8')
+        return self._read_text(self._stream.read_length())
+
+    def _read_text(self, size):
+        start = self._stream.pos
+        raw = self._stream.read(size)
+        try:
+            return raw.decode('utf-8')
+        except UnicodeDecodeError as e:
+            raise MarshalError('invalid UTF-8 text at offset {}: {}'.format(start, e))
 
     def _read_buffer(self, is_shared):
         data = self._stream.read(self._stream.read_length())
@@ -274,14 +280,14 @@ class Unmarshaller:
     # Objects
     ################################################################################################
     def _read_global(self, is_shared):
-        obj = GlobalReference(self._stream.read(self._stream.read_length()))
+        obj = GlobalReference(self._read_text(self._stream.read_length()))
         if is_shared:
             self._stream.mark_shared(obj)
         return obj
 
     def _read_instance(self, is_shared):
         index = self._stream.mark_shared(None) if is_shared else None
-        guid = self._guid_of(self._route_object())
+        guid = self._route_object()
         state = self._route_object()
         obj = MarshalObject(guid, state=state)
         if index is not None:
@@ -329,12 +335,7 @@ class Unmarshaller:
 
     def _guid_of(self, reference):
         if isinstance(reference, GlobalReference):
-            reference = reference.name
-        if isinstance(reference, bytes):
-            try:
-                return reference.decode('cp1252')
-            except UnicodeDecodeError as e:
-                raise MarshalError('unusable guid at offset {}: {}'.format(self._stream.pos, e))
+            return reference.name
         return reference
 
     def _read_dbrow(self, is_shared):
