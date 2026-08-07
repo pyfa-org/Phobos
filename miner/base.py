@@ -38,4 +38,3 @@ class ContainerNameError(Exception):
     When container with requested name is not available,
     this exception is raised by miners.
     """
-    pass
