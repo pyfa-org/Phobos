@@ -134,6 +134,43 @@ class EveNormalizer(object):
         """
         return self._pythonize_map(obj.__dict__)
 
+    def _pythonize_marshal_set(self, obj):
+        """
+        Set data is stored in marshal obj's argument.
+        """
+        return self._pythonize_iterable(obj.args[0])
+
+    def _pythonize_marshal_keyval(self, obj):
+        """
+        Types with KeyVal guid store their useful info on marshal obj's state, so handle only it.
+        """
+        return self._pythonize_map(obj.state)
+
+    def _pythonize_marshal_rowset(self, obj):
+        """
+        Regular rowset stores all the necessary data in marshal obj's state, separately header, 
+        separately rows themselves. Here they are merged to expose just rows.
+        """
+        header = obj.state['header']
+        return tuple(self._pythonize_map(dict(zip(header, line))) for line in obj.state['lines'])
+
+    def _pythonize_marshal_carbon_rowset(self, obj):
+        """
+        Just a set of rows stored on marshal obj, expose them like regular iterable without extra 
+        processing.
+        """
+        return self._pythonize_iterable(obj.list_items)
+
+    def _pythonize_marshal_carbon_indexed_rowset(self, obj):
+        """
+        Similar to regular carbon rowset, but with an index.
+
+        Old implementation exposed it as a regular rowset, while most of Phobos containers expose
+        data as-is. So, in new implementation I decided to switch to exposing rows with an index,
+        instead of just rows.
+        """
+        return self._pythonize_map(obj.dict_items)
+
     def pythonize_fsdbuilt_item(self, obj, ignore_attrs=()):
         item = {}
         for attr_name in dir(obj):
@@ -168,6 +205,12 @@ class EveNormalizer(object):
         # FSD binary specific classes
         'dict': _pythonize_map,  # cfsd.dict
         'list': _pythonize_iterable,  # cfsd.list
+        # Classes extracted via unmarshalling cached data
+        '__builtin__.set': _pythonize_marshal_set,
+        'utillib.KeyVal': _pythonize_marshal_keyval,
+        'eve.common.script.sys.rowset.Rowset': _pythonize_marshal_rowset,
+        'carbon.common.script.sys.crowset.CRowset': _pythonize_marshal_carbon_rowset,
+        'carbon.common.script.sys.crowset.CIndexedRowset': _pythonize_marshal_carbon_indexed_rowset,
         # Misc
         'universe.SolarSystemWrapper': _pythonize_pyobj}
 

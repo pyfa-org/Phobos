@@ -218,7 +218,7 @@ def load_dict(data, offset, schema, path):
         raise FsdFormatError('dictionary footer at {} exceeds dictionary size'.format(path))
     footer_data = slice_at(data, footer_size_offset - footer_size, footer_size, path)
     result = {}
-    for key, item_offset, unused in read_footer(footer_data, schema, path):
+    for key, item_offset, _ in read_footer(footer_data, schema, path):
         result[key] = decode(data, offset + U32.size + item_offset, schema['valueTypes'], path.child('[{}]'.format(key)))
     return result
 
