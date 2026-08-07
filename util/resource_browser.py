@@ -99,4 +99,4 @@ class ResourceBrowser(object):
 
 
 class FileIntegrityError(Exception):
-    pass
+    """Raised when file size or hash mismatches with data from resource registry."""

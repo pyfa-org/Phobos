@@ -99,4 +99,3 @@ class FilterParseError(Exception):
     When received filter string cannot be parsed,
     this exception is raised.
     """
-    pass

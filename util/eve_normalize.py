@@ -181,4 +181,3 @@ class UnknownContainerTypeError(Exception):
     Raised when normalizer doesn't know what to do
     with passed object.
     """
-    pass

@@ -109,4 +109,3 @@ class FsdBuiltMiner(BaseMiner):
 
 class PlatformError(Exception):
     """Raised when FSD built miner is used on incorrect platform."""
-    pass

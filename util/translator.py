@@ -347,15 +347,8 @@ class Translator(object):
 
 
 class LanguageNotAvailable(Exception):
-    """
-    Raised when translator is asked to translate to language
-    which it does not support.
-    """
-    pass
+    """Raised when translator is asked to translate to language which it does not support."""
 
 
 class LabelError(Exception):
-    """
-    Raised when requested label cannot be found.
-    """
-    pass
+    """Raised when requested label cannot be found."""
