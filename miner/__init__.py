@@ -1,4 +1,4 @@
-from .base import ContainerNameError
+from .base import ContainerNotFoundError
 from .fsd_binary import FsdBinaryMiner
 from .fsd_built import FsdBuiltMiner
 from .fsd_lite import FsdLiteMiner

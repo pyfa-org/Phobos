@@ -4,7 +4,7 @@ import os.path
 from abc import abstractmethod, abstractproperty
 
 from util import EveNormalizer, cachedproperty
-from miner.base import BaseMiner
+from miner.base import BaseMiner, DiscoveredData, DiscoveryError
 from .unmarshal import Unmarshaller
 
 
@@ -35,13 +35,17 @@ class MachoNetBase(BaseMiner):
         self._server_ip = server_ip
         self._translator = translator
 
+    def discovery_error_iter(self):
+        for discovery_error in self._contname_filepath_map.errors:
+            yield discovery_error
+
     def contname_iter(self):
-        for container_name in sorted(self._contname_filepath_map):
+        for container_name in sorted(self._contname_filepath_map.data):
             yield container_name
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            file_path = self._contname_filepath_map[container_name]
+            file_path = self._contname_filepath_map.data[container_name]
         except KeyError:
             self._container_not_found(container_name)
             return
@@ -54,22 +58,32 @@ class MachoNetBase(BaseMiner):
     def _contname_filepath_map(self):
         """
         Map between container names and absolute paths to them.
-        Format: {container name: path to file}
+        Format: DiscoveredData(data={container name: path to file})
         """
-        contname_filepath_map = {}
+        contname_filepath_map = DiscoveredData(data={})
         if not self._path_cache:
             return contname_filepath_map
-        directory = self._get_cache_dir()
+        try:
+            directory = self._get_cache_dir()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        # One error in case of being unable to figure what directory to use/how to reach it
+        except Exception as e:
+            msg = u'unable to locate cached data - {}: {}'.format(type(e).__name__, e)
+            contname_filepath_map.errors.append(DiscoveryError(msg))
+            return contname_filepath_map
         for file_path in glob.glob(os.path.join(directory, '*.cache')):
             try:
                 entity_name = self._read_cached_entity_name(file_path)
                 container_name = self._get_container_name(entity_name)
             except (KeyboardInterrupt, SystemExit):
                 raise
+            # Per-file errors in case of decoding
             except Exception as e:
-                print(u'  unable to load cache file {}: {}'.format(os.path.basename(file_path), e))
+                msg = u'unable to load cache file {} - {}: {}'.format(os.path.basename(file_path), type(e).__name__, e)
+                contname_filepath_map.errors.append(DiscoveryError(msg))
                 continue
-            contname_filepath_map[container_name] = file_path
+            contname_filepath_map.data[container_name] = file_path
         return contname_filepath_map
 
     def _read_cached_entity_name(self, file_path):

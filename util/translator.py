@@ -1,7 +1,7 @@
 import re
 import types
 
-from miner import ContainerNameError
+from miner import ContainerNotFoundError
 
 
 class Translator(object):
@@ -230,7 +230,7 @@ class Translator(object):
         """
         try:
             lang_data_eve = self._load_pickle(u'res:/localizationfsd/localization_fsd_{}'.format(language))
-        except ContainerNameError:
+        except ContainerNotFoundError:
             msg = u'data for language "{}" cannot be loaded'.format(language)
             raise LanguageNotAvailable(msg)
         msg_map_phb = lang_data_eve[1]

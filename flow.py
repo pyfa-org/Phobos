@@ -13,14 +13,18 @@ class FlowManager(object):
     def run(self, filter_string, language):
         filter_set = self._parse_filter(name_filter=filter_string)
         missing_set = set(filter_set)
-        # Filter something out only if filter was actually specified
         for miner in self._miners:
+            discovery_errors = list(miner.discovery_error_iter())
+            # Filter something out only if filter was actually specified
             container_names = [
                 cn for cn in miner.contname_iter()
                 if not filter_set or cn in filter_set]
-            if not container_names:
+            # Do not announce miner if there is no data from it whatsoever
+            if not container_names and not discovery_errors:
                 continue
             print(u'Miner {}:'.format(miner.raw_name))
+            for discovery_error in discovery_errors:
+                print(u'  discovery failed, {}'.format(discovery_error))
             for container_name in sorted(container_names):
                 print(u'  processing {}'.format(container_name))
                 missing_set.discard(container_name)
