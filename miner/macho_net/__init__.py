@@ -1,2 +1,2 @@
-from .calls import MachoNetCachedCallsMiner
-from .objects import MachoNetCachedObjectsMiner
+from .calls import MachoNetCallsMiner
+from .objects import MachoNetObjectsMiner

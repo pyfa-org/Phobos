@@ -2,7 +2,7 @@ from .base import MachoNetBase
 from .unmarshal import MarshalError
 
 
-class MachoNetCachedCallsMiner(MachoNetBase):
+class MachoNetCallsMiner(MachoNetBase):
     """Class, responsible for fetching data from EVE client's remote service call cache."""
 
     name = 'mn_cached_calls'

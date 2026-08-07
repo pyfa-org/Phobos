@@ -4,7 +4,7 @@ from .base import MachoNetBase
 from .unmarshal import MarshalError, Unmarshaller
 
 
-class MachoNetCachedObjectsMiner(MachoNetBase):
+class MachoNetObjectsMiner(MachoNetBase):
     """Class, responsible for fetching data from EVE client's cached object store."""
 
     name = 'mn_cached_objects'

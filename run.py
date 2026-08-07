@@ -27,10 +27,8 @@ def run(path_eve, server_alias, path_cache, filter_string, language, path_json, 
     sqlite_miner = SqliteMiner(resbrowser=resource_browser, translator=trans)
     trait_miner = TraitMiner(fsdlite_miner=fsdlite_miner, fsdbuilt_miner=fsdbuilt_miner, translator=trans)
     server_ip = SERVER_INFO[server_alias]
-    cached_call_miner = MachoNetCachedCallsMiner(
-        path_cache=path_cache, server_ip=server_ip, translator=trans)
-    cached_object_miner = MachoNetCachedObjectsMiner(
-        path_cache=path_cache, server_ip=server_ip, translator=trans)
+    mn_call_miner = MachoNetCallsMiner(path_cache=path_cache, server_ip=server_ip, translator=trans)
+    mn_object_miner = MachoNetObjectsMiner(path_cache=path_cache, server_ip=server_ip, translator=trans)
 
     miners = [
         metadata_miner,
@@ -40,8 +38,8 @@ def run(path_eve, server_alias, path_cache, filter_string, language, path_json, 
         sqlite_miner,
         trait_miner,
         pickle_miner,
-        cached_call_miner,
-        cached_object_miner]
+        mn_call_miner,
+        mn_object_miner]
 
     writers = [
         JsonWriter(path_json, indent=2, group=group)]
