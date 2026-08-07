@@ -1,7 +1,7 @@
 import glob
 import os
 import os.path
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import abstractmethod, abstractproperty
 
 from util import EveNormalizer, cachedproperty
 from miner.base import BaseMiner
@@ -14,7 +14,6 @@ class MachoNetDirError(Exception):
 
 class MachoNetBase(BaseMiner):
     """Parts shared across all MachoNet miners."""
-    __metaclass__ = ABCMeta
 
     @abstractproperty
     def _cache_dir(self):
