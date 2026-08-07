@@ -79,13 +79,13 @@ class JsonWriter(BaseWriter):
     """
 
     def __init__(self, directory, indent=None, group=None):
-        self.base_folder = directory
+        self.base_dir = directory
         self.indent = indent
         self.group = group
 
     def write(self, miner_name, container_name, container_data):
         # Create directory structure to path, if not created yet
-        directory = os.path.join(self.base_folder, self.__secure_name(miner_name))
+        directory = os.path.join(self.base_dir, self.__secure_name(miner_name))
         if not os.path.exists(directory):
             os.makedirs(directory, mode=0o755)
 
