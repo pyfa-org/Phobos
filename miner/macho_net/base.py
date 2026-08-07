@@ -96,9 +96,9 @@ class MachoNetBase(BaseMiner):
         return os.path.join(server_path, self._get_protocol_dir(server_path), self._cache_dir)
 
     def _get_server_directory(self, machonet_path):
-        # Use IP address from server info dictionary, or pick a single directory if folder with that
-        # name is not found. In case known IP was not found and there are multiple candidates, raise
-        # an exception
+        # Use IP address from server info dictionary, or pick a single directory if directory with
+        # that name is not found. In case known IP was not found and there are multiple candidates,
+        # raise an exception
         if self._server_ip is not None:
             server_path = os.path.join(machonet_path, self._server_ip)
             if os.path.isdir(server_path):
