@@ -60,9 +60,9 @@ class ResourceBrowser:
                 size += len(chunk)
                 checksum.update(chunk)
         if size != file_info.file_size:
-            raise FileIntegrityError(u'file size mismatch when reading {}'.format(file_info.resource_path))
+            raise FileIntegrityError('file size mismatch when reading {}'.format(file_info.resource_path))
         if checksum.hexdigest() != file_info.file_hash:
-            raise FileIntegrityError(u'file hash mismatch when reading {}'.format(file_info.resource_path))
+            raise FileIntegrityError('file hash mismatch when reading {}'.format(file_info.resource_path))
 
     def __verify_data(self, data, file_info):
         if len(data) != file_info.file_size:
@@ -76,7 +76,7 @@ class ResourceBrowser:
     def _resource_index(self):
         index = {}
         res_index_path = os.path.join(self._eve_path, self._server_alias, 'resfileindex.txt')
-        with open(res_index_path) as f:
+        with open(res_index_path, encoding='utf-8', newline='') as f:
             for resource_path, file_relpath, file_hash, file_size, compressed_size in csv.reader(f):
                 index[resource_path] = FileInfo(
                     resource_path=resource_path,
@@ -86,7 +86,7 @@ class ResourceBrowser:
                     file_size=int(file_size),
                     compressed_size=int(compressed_size))
         app_index_path = os.path.join(self._eve_path, 'index_{}.txt'.format(get_full_alias(self._server_alias)))
-        with open(app_index_path) as f:
+        with open(app_index_path, encoding='utf-8', newline='') as f:
             for resource_path, file_relpath, file_hash, file_size, compressed_size, version in csv.reader(f):
                 index[resource_path] = FileInfo(
                     resource_path=resource_path,

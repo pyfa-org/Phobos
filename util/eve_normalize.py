@@ -1,5 +1,4 @@
 import inspect
-import types
 import typing
 from collections import OrderedDict, abc
 
@@ -191,7 +190,7 @@ class EveNormalizer:
         return item
 
     _primitives = (
-        types.NoneType,
+        type(None),
         bool,
         float,
         int,

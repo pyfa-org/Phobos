@@ -91,7 +91,7 @@ class NameSet(set):
     def add(self, name):
         name = name.strip()
         if name:
-            set.add(self, name)
+            super().add(name)
 
 
 class FilterParseError(Exception):

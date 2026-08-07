@@ -29,7 +29,7 @@ class MetadataMiner(BaseMiner):
             # Read client version
             try:
                 config = ConfigParser()
-                config.read(file_info.file_abspath)
+                config.read(file_info.file_abspath, encoding='utf-8')
                 eve_version = config.getint('main', 'build')
             except (KeyboardInterrupt, SystemExit):
                 raise

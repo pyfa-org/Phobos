@@ -1,16 +1,35 @@
-import codecs
 import json
 import os.path
 import re
 from collections import OrderedDict
+from enum import IntEnum, unique
 
 from .base import BaseWriter
 
 
-def natural_sort(i):
-    if isinstance(i, str):
-        return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', i)]
-    return i
+@unique
+class Kind(IntEnum):
+    NUMBER = 0
+    TEXT = 1
+    SEQUENCE = 2
+    OTHER = 3
+
+
+def natural_sort(key):
+    """
+    Sort key which puts numbers before text, and orders text the way a human would - that is,
+    'slot2' before 'slot10'.
+    """
+    if isinstance(key, str):
+        # Splitting on a group alternates text and digits, so chunks of two keys always meet
+        # chunks of their own type
+        chunks = re.split('([0-9]+)', key)
+        return Kind.TEXT, tuple(int(c) if c.isdigit() else c.lower() for c in chunks)
+    if isinstance(key, (int, float)):
+        return Kind.NUMBER, key
+    if isinstance(key, (tuple, list)):
+        return Kind.SEQUENCE, tuple(natural_sort(item) for item in key)
+    return Kind.OTHER, str(key)
 
 
 class CustomEncoder(json.JSONEncoder):
@@ -21,11 +40,11 @@ class CustomEncoder(json.JSONEncoder):
 
     def encode(self, obj, *args, **kwargs):
         obj = self._route_object(obj)
-        return json.JSONEncoder.encode(self, obj, *args, **kwargs)
+        return super().encode(obj, *args, **kwargs)
 
     def iterencode(self, obj, *args, **kwargs):
         obj = self._route_object(obj)
-        return json.JSONEncoder.iterencode(self, obj, *args, **kwargs)
+        return super().iterencode(obj, *args, **kwargs)
 
     def _route_object(self, obj):
         obj_type = type(obj)
@@ -123,7 +142,7 @@ class JsonWriter(BaseWriter):
         list: _group_list}
 
     def __write_file(self, data, filepath):
-        with codecs.open(filepath, 'wb', encoding='utf-8') as f:
+        with open(filepath, 'w', encoding='utf-8', newline='\n') as f:
             json.dump(
                 data,
                 f,
