@@ -34,7 +34,7 @@ Install dependencies with `pip install -r requirements.txt`.
     $ python run.py --eve=E:\eve\client\ --json=~\Desktop\phobos_tq_en-us --list="evetypes, marketgroups, metadata"
 
 ### Phobos-specific data
-Besides raw data Phobos pulls from client, it provides two custom containers.
+Besides raw data Phobos pulls from client, it provides a custom container.
 
 #### phobos/metadata
 Contains just two parameters: client version and UNIX timestamp of the time script was invoked.
