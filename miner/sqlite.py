@@ -1,13 +1,11 @@
 import sqlite3
 
 from util import cachedproperty
-from .base import BaseMiner
+from .base import BaseMiner, DiscoveredData, DiscoveryError
 
 
 class SqliteMiner(BaseMiner):
-    """
-    Extract data from SQLite databases bundled with client.
-    """
+    """Extract data from SQLite databases bundled with client."""
 
     name = 'sqlite'
 
@@ -16,13 +14,17 @@ class SqliteMiner(BaseMiner):
         self._resbrowser = resbrowser
         self._translator = translator
 
+    def discovery_error_iter(self):
+        for discovery_error in self._contname_dbtable_map.errors:
+            yield discovery_error
+
     def contname_iter(self):
-        for container_name in sorted(self._contname_dbtable_map):
+        for container_name in sorted(self._contname_dbtable_map.data):
             yield container_name
 
     def get_data(self, container_name, language=None, verbose=False, **kwargs):
         try:
-            dbpath, table_name = self._contname_dbtable_map[container_name]
+            dbpath, table_name = self._contname_dbtable_map.data[container_name]
         except KeyError:
             self._container_not_found(container_name)
         else:
@@ -41,26 +43,30 @@ class SqliteMiner(BaseMiner):
     def _contname_dbtable_map(self):
         """
         Map between container names and DB tables where data is stored.
-        Format: {container name: (db alias, table name)}
+        Format: DiscoveredData(data={container name: (db alias, table name)})
         """
         sqlite_ext = '.db'
-        contname_dbtable_map = {}
+        contname_dbtable_map = DiscoveredData(data={})
         for resource_path in self._resbrowser.respath_iter():
             if not resource_path.endswith(sqlite_ext):
                 continue
             resource_info = self._resbrowser.get_file_info(resource_path, verify_content=True)
-            for table_name in self.__get_table_names(resource_info.file_abspath):
+            try:
+                table_names = self.__get_table_names(resource_info.file_abspath)
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            # Per-database error logging
+            except Exception as e:
+                msg = 'unable to read database {} - {}: {}'.format(resource_path, type(e).__name__, e)
+                contname_dbtable_map.errors.append(DiscoveryError(msg))
+                continue
+            for table_name in table_names:
                 container_name = '{}_{}'.format(resource_path[:-len(sqlite_ext)], table_name)
-                contname_dbtable_map[container_name] = (resource_info.file_abspath, table_name)
+                contname_dbtable_map.data[container_name] = (resource_info.file_abspath, table_name)
         return contname_dbtable_map
 
     def __get_table_names(self, file_path):
-        try:
-            with sqlite3.connect(file_path) as dbconn:
-                c = dbconn.cursor()
-                c.execute('select name from sqlite_master where type = \'table\'')
-                return [row[0] for row in c]
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except sqlite3.DatabaseError:
-            return []
+        with sqlite3.connect(file_path) as dbconn:
+            c = dbconn.cursor()
+            c.execute('select name from sqlite_master where type = \'table\'')
+            return [row[0] for row in c]
