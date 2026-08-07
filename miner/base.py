@@ -1,12 +1,11 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class BaseMiner(object):
+class BaseMiner(ABC):
     """
     Abstract class, which defines interface to all data miners
     used in Phobos.
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def contname_iter(self):

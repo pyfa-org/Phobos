@@ -8,7 +8,7 @@ import struct
 from .exception import MarshalError
 
 
-class DbType(object):
+class DbType:
     """Column types, as defined in the blue's rowset source."""
     EMPTY = 0
     I2 = 2
@@ -30,7 +30,7 @@ class DbType(object):
     DBTIMESTAMP = 135
 
 
-class RowDescriptor(object):
+class RowDescriptor:
     """Tells where each column of a packed row sits within its data."""
 
     @classmethod

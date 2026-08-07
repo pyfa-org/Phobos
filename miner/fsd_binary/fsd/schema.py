@@ -9,7 +9,7 @@ from .shared import U32
 MAX_SCHEMA_SIZE = 64 * 1024 * 1024
 
 
-class SchemaReader(object):
+class SchemaReader:
 
     def __init__(self, stream, schema_abspath, data_abspath):
         self._stream = stream

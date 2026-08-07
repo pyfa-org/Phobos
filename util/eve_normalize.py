@@ -4,7 +4,7 @@ import typing
 from collections import OrderedDict, abc
 
 
-class EveNormalizer(object):
+class EveNormalizer:
     """
     Class, which 'flattens' indexed structures into list of
     'rows' and converts all eve-specific data structures into

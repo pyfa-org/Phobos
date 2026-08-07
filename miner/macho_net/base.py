@@ -1,7 +1,7 @@
 import glob
 import os
 import os.path
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 
 from util import EveNormalizer, cachedproperty
 from miner.base import BaseMiner
@@ -12,7 +12,7 @@ class MachoNetDirError(Exception):
     """Raised when directory with cached data cannot be located."""
 
 
-class MachoNetBase(BaseMiner, metaclass=ABCMeta):
+class MachoNetBase(BaseMiner):
     """Parts shared across all MachoNet miners."""
 
     @property

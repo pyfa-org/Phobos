@@ -22,7 +22,7 @@ I64 = struct.Struct('<q')
 F64 = struct.Struct('<d')
 
 
-class Type(object):
+class Type:
     """Type tags, as defined in the blue's marshal source."""
     NONE = 1
     GLOBAL = 2
@@ -72,7 +72,7 @@ class Type(object):
     SIGNATURE2 = 125
 
 
-class Unmarshaller(object):
+class Unmarshaller:
     """
     Class, which reads objects out of marshal data, picking a reader for every object according
     to the type tag which precedes it.
@@ -406,7 +406,7 @@ class Unmarshaller(object):
         Type.MARK: _read_mark}
 
 
-class Stream(object):
+class Stream:
     """Cursor over marshal data"""
 
     def __init__(self, data):
@@ -462,7 +462,7 @@ class Stream(object):
         return obj
 
 
-class GlobalReference(object):
+class GlobalReference:
     """Stand-in for a client class referred to by name."""
 
     def __init__(self, name):
@@ -472,7 +472,7 @@ class GlobalReference(object):
         return 'GlobalReference({!r})'.format(self.name)
 
 
-class MarshalObject(object):
+class MarshalObject:
 
     def __init__(self, guid, state=None, args=None, list_items=None, dict_items=None):
         self.__guid__ = guid

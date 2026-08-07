@@ -16,7 +16,7 @@ def get_full_alias(short_alias):
     return full_aliases.get(short_alias, short_alias)
 
 
-class ResourceBrowser(object):
+class ResourceBrowser:
     """
     Class, responsible for browsing and retrieval of resources.
     """

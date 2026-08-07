@@ -8,7 +8,7 @@ from .shared import (
     V2F32, V2F64, V3F32, V3F64, V4F32, V4F64)
 
 
-class FsdDecoder(object):
+class FsdDecoder:
     """
     Class, which decodes values out of a buffer with binary FSD data, picking a loader for every
     value according to the type its schema declares.
@@ -269,7 +269,7 @@ class FsdDecoder(object):
         'typeListID': _load_int}
 
 
-class FsdPath(object):
+class FsdPath:
     """Keep track of current path just for the sake of error reporting."""
 
     def __init__(self, value, parent=None):

@@ -1,7 +1,7 @@
 import re
 
 
-class FlowManager(object):
+class FlowManager:
     """
     Class for handling high-level flow of script.
     """

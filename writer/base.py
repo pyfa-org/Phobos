@@ -1,12 +1,11 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class BaseWriter(object):
+class BaseWriter(ABC):
     """
     Abstract class, which defines interface to classes
     which write data into some kind of persistent storage.
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def write(self, miner_name, container_name, container_data):

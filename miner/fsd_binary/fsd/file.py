@@ -2,7 +2,7 @@ from .decoder import FsdDecoder, FsdPath
 from .schema import SchemaReader
 
 
-class FsdFile(object):
+class FsdFile:
 
     # Schema is optional: it's either provided as an external file, or embedded into data file
     def __init__(self, data_abspath, schema_abspath=None):

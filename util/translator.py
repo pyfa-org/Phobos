@@ -4,7 +4,7 @@ import types
 from miner import ContainerNameError
 
 
-class Translator(object):
+class Translator:
     """
     Class responsible for text localization.
     """
