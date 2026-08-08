@@ -26,7 +26,10 @@ Install dependencies with `pip install -r requirements.txt`.
 * `--json`: Required. Output directory for JSON files.
 * `--server`: Optional. Server to pull data from. Defaults to `tq`. Other options are `sisi`, `thunderdome` and `serenity`.
 * `--cache`: Optional. Some miners extract data from the client cache directory. To enable those, pass a path to the cache, e.g. `C:\users\<user>\AppData\Local\CCP\EVE\<client directory>\cache`.
-* `--translate`: Optional. Specifies language to which strings will be translated. You can choose either individual languages (run script with `--help` argument for a list) or 'multi' option. For individual language, translation will be done in-place (replaces original text with localized text), for multi-language translation, original text is not modified, but new text fields are added, named using `<field name>_<language code>` convention (e.g. `typeName_en-us`). Multi-language translation mode is default.
+* `--translate`: Optional. Specifies language to which strings will be translated.
+  * When option is not specified, nothing is translated.
+  * When individual language is chosen (run script with `--help` argument for a list), localized text is written into the text field, replacing whatever was there. In case translation for requested language is not available, `en-us` translation is used as a fallback.
+  * When `multi` option is passed, the text field is replaced by map with language and localized text instead, e.g. `"typeName": {"en-us": "Rifter", "ru": "Rifter"}`. Only languages which actually have a translation are listed, there are no fallbacks. When the field held a value of its own before translation, that value is kept in the same map under the `orig` key.
 * `--list`: Optional. Specifies list of comma-separated 'containers' to extract. It uses names the script prints to stdout. For list of all available names you can launch script without specifying this option, as by default it extracts everything it can find.
 
 ### Example
@@ -44,7 +47,7 @@ Traits for various ships. Data has the following format:
 
     Returned value:
       For single language: ({'typeID': int, 'traits': traits}, ...)
-      For multi-language: ({'typeID': int, 'traits_en-us': traits, 'traits_ru': traits, ...}, ...)
+      For multi-language: ({'typeID': int, 'traits': {'en-us': traits, 'ru': traits, ...}}, ...)
       Traits: {'skills': (skill section, ...), 'role': role section, 'misc': misc section}
         // skills, role and misc fields are optional
       Section: {'header': string, 'bonuses': (bonus, ...)}

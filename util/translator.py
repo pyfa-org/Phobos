@@ -19,18 +19,16 @@ class Translator(object):
 
     def translate_container(self, container_data, language, spec=None, verbose=False):
         """
-        Translate text fields in passed container
-        to specified language.
+        Translate text fields in passed container to specified language.
 
-        By default it attempts to do automatic translation
-        (finds all pairs of fields in fieldName-fieldNameID
-        format, uses ID to find translation and substitutes
-        into fieldName[_language] field.
+        By default, it attempts to do automatic translation (finds all pairs of fields in
+        fieldName-fieldNameID format, uses ID to find translation and substitutes into fieldName
+        field. In multi-language mode fieldName receives a map between language and text instead of
+        plain text.
 
-        If spec argument is passed (list of fieldNames which
-        should be inserted into row, if fieldNameID is present),
-        then it is used to detect translatable fields instead
-        of automatic detection.
+        If spec argument is passed (list of fieldNames which should be inserted into row, if
+        fieldNameID is present), then it is used to detect translatable fields instead of automatic
+        detection.
         """
         if not language:
             return
@@ -67,19 +65,13 @@ class Translator(object):
         # Now, try to actually translate stuff
         for text_fname, msgid_fname in self.__translatable_fields_iter(obj, spec):
             self.__increment_stats(stats, text_fname, 0)
-            orig_text = obj.get(text_fname, '')
             msgid = obj[msgid_fname]
-            # Following are priorities when translating:
-            # 1) Translation to target language
-            # 2) Translation to english
-            # 3) Original value
-            # 4) Empty string
-            # If 1st is not available (gets evaluated as False), we go to next
-            # point and check its availability, and so on
+            # Multi-mode translation just stores all the data it can fetch with no extra logic;
+            # all that logic is supposed to be handled by user of the data.
             if language == 'multi':
-                self.__translation_multimode(obj, text_fname, msgid, orig_text, stats)
+                self.__translation_multimode(obj, text_fname, msgid, stats)
             else:
-                self.__translation_singlemode(obj, text_fname, msgid, language, orig_text, stats)
+                self.__translation_singlemode(obj, text_fname, msgid, language, stats)
 
     def _translate_iterable(self, obj, language, spec, stats):
         """
@@ -92,47 +84,48 @@ class Translator(object):
     _translation_map = {
         types.DictType: _translate_map,
         types.TupleType: _translate_iterable,
-        types.ListType: _translate_iterable
-    }
+        types.ListType: _translate_iterable}
 
-    def __translation_multimode(self, row, text_fname, msgid, orig_text, stats):
+    def __translation_multimode(self, data_row, text_fname, msgid, stats):
         """
-        Translate one field into multiple languages, and write them as
-        additional fields (in the <field name>_<language> format). Leave
-        original field untouched.
+        Translate one field into every language which has a translation for it, and write them
+        into the field itself, as {language: text}. If translation row overwrites some value,
+        that value is stored in "orig" field of the translation row.
         """
-        for language in self.available_langs:
-            new_text_fname = u'{}_{}'.format(text_fname, language)
-            if msgid is not None:
-                trans_text = (
-                    self.get_by_message(msgid, language) or
-                    orig_text or
-                    ''
-                )
-            else:
-                trans_text = orig_text or ''
-            # Always write translation, even if it's the same as
-            # original text - rows should have the same set of
-            # fields,regardless of translation availability
-            row[new_text_fname] = trans_text
-            # Increment counter only when translation is different
-            if trans_text != orig_text:
+        trans_row = {}
+        if msgid is not None:
+            for language in self.available_langs:
+                # In multimode fallback is not used; languages without translations are not written
+                trans_text = self.get_by_message(msgid, language, fallback_lang=None)
+                if not trans_text:
+                    continue
+                trans_row[language] = trans_text
                 self.__increment_stats(stats, text_fname, 1)
+        if text_fname in data_row:
+            trans_row[u'orig'] = data_row[text_fname]
+        # No data - not writing translation row to passed data row
+        if trans_row:
+            data_row[text_fname] = trans_row
 
-    def __translation_singlemode(self, row, text_fname, msgid, language, orig_text, stats):
+    def __translation_singlemode(self, data_row, text_fname, msgid, language, stats):
         """
-        Translate one text field into single language. Translation
-        is inplace.
+        Translate one text field into single language.
+
+        The translation follows those priorities:
+        1) Translation to target language
+        2) Translation to english
+        3) Original value
+        4) Empty string
         """
         if msgid is None:
             return
+        orig_text = data_row.get(text_fname)
         trans_text = (
-            self.get_by_message(msgid, language) or
+            self.get_by_message(msgid, language, 'en-us') or
             orig_text or
-            ''
-        )
-        row[text_fname] = trans_text
-        if trans_text != orig_text:
+            '')
+        data_row[text_fname] = trans_text
+        if trans_text and trans_text != orig_text:
             self.__increment_stats(stats, text_fname, 1)
 
     # Regular expression to detect message ID fields for translation
@@ -250,11 +243,10 @@ class Translator(object):
 
     _msg_data_stub = ('', None, {})
 
-    def get_by_message(self, msgid, lang, fallback_lang='en-us', **kwargs):
+    def get_by_message(self, msgid, lang, fallback_lang, **kwargs):
         """
-        Fetch message text for specified language and message ID.
-        If text is empty, attempt to use fallback language. If
-        it is not found too, return empty string.
+        Fetch message text for specified language and message ID. If text is empty, attempt to use
+        fallback language, if it was set.
         """
         try:
             lang_data = self._get_language_data(lang)
@@ -270,7 +262,7 @@ class Translator(object):
         text = self._format_message(msg_data, kwargs)
         return text
 
-    def get_by_label(self, label, *args, **kwargs):
+    def get_by_label(self, label, lang, fallback_lang, **kwargs):
         """
         Fetch message text for specified language and label.
         If label cannot be found, raise exception. If no text
@@ -281,7 +273,7 @@ class Translator(object):
         except KeyError:
             msg = u'label {} does not exist'.format(label)
             raise LabelError(msg)
-        return self.get_by_message(msgid, *args, **kwargs)
+        return self.get_by_message(msgid, lang, fallback_lang, **kwargs)
 
     def _format_message(self, msg_data, kwargs):
         """

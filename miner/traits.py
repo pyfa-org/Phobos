@@ -24,6 +24,7 @@ class TraitMiner(BaseMiner):
         self._fsdbuilt_miner = fsdbuilt_miner
         self._translator = translator
         self._container_name = 'traits'
+        self._fallback_lang = 'en-us'
         # Format: {language: {type ID: type name}}
         self._type_name_map_all = {}
         # Format: {language: {unit ID: unit display name}}
@@ -32,18 +33,20 @@ class TraitMiner(BaseMiner):
     def contname_iter(self):
         yield self._container_name
 
-    def get_data(self, container_name, language='en-us', **kwargs):
+    def get_data(self, container_name, language=None, **kwargs):
         if container_name != self._container_name:
             self._container_not_found(container_name)
         else:
-            return self._all_traits(language)
+            # Traits are composed out of localized text only, so unlike other containers this
+            # one has nothing to expose without a language - english is used when none is asked for
+            return self._all_traits(language or self._fallback_lang)
 
     def _all_traits(self, language):
         """
         Compose list of traits. Format:
         Returned value:
         For single language: ({'typeID': int, 'traits': traits}, ...)
-        For multi-language: ({'typeID': int, 'traits_en-us': traits, 'traits_ru': traits, ...}, ...)
+        For multi-language: ({'typeID': int, 'traits': {'en-us': traits, 'ru': traits, ...}}, ...)
         Traits: {'skills': (skill section, ...), 'role': role section, 'misc': misc section}
           skills, role and misc fields are optional
         Section: {'header': string, 'bonuses': (bonus, ...)}
@@ -55,18 +58,14 @@ class TraitMiner(BaseMiner):
         for type_id, trait_data in bubble_data['infoBubbleTypeBonuses'].iteritems():
             type_id = int(type_id)
             trait_row = {'typeID': type_id}
-            # For multi-language, each trait row will contain traits for
-            # all languages in fields named like traits_en-us
+            # For multi-language, format row similarly to translation rows
             if language == 'multi':
-                for mlanguage in self._translator.available_langs:
-                    traits_header = u'traits_{}'.format(mlanguage)
-                    traits = self._type_traits(trait_data, mlanguage)
-                    trait_row[traits_header] = traits
-            # For single language, we will have just single field named
-            # traits
+                trait_row['traits'] = dict(
+                    (l, self._type_traits(trait_data, l))
+                    for l in self._translator.available_langs)
+            # For single language, traits field carries traits themselves
             else:
-                traits = self._type_traits(trait_data, language)
-                trait_row['traits'] = traits
+                trait_row['traits'] = self._type_traits(trait_data, language)
             trait_rows.append(trait_row)
         return tuple(trait_rows)
 
@@ -82,7 +81,11 @@ class TraitMiner(BaseMiner):
                 skill_rows = []
                 for skill_typeid in skill_ids:
                     skill_name = self._get_type_name(skill_typeid, language)
-                    section_header = self._translator.get_by_label('UI/ShipTree/SkillNameCaption', language, skillName=skill_name)
+                    section_header = self._translator.get_by_label(
+                        'UI/ShipTree/SkillNameCaption',
+                        language,
+                        self._fallback_lang,
+                        skillName=skill_name)
                     section_data = trait_data[u"types"][unicode(skill_typeid)]
                     bonuses = self._section_bonuses(section_data, language)
                     skill_row = {'header': section_header, 'bonuses': bonuses}
@@ -96,7 +99,7 @@ class TraitMiner(BaseMiner):
         ):
             if special_type not in trait_data:
                 continue
-            section_header = self._translator.get_by_label(special_label, language)
+            section_header = self._translator.get_by_label(special_label, language, self._fallback_lang)
             section_data = trait_data[special_type]
             if len(section_data) == 0:
                 continue
@@ -120,7 +123,7 @@ class TraitMiner(BaseMiner):
         for bonus_data in sorted_bonuses:
             #bonus_data = section_data[unicode(bonus_index)]
             bonus_msgid = bonus_data['nameID']
-            bonus_text = self._translator.get_by_message(bonus_msgid, language)
+            bonus_text = self._translator.get_by_message(bonus_msgid, language, self._fallback_lang)
             bonus_amt = bonus_data.get('bonus')
             # Bonuses can be with numerical value and without it, they have different
             # processing. Also, they are flooded with various HTML tags, we strip them
@@ -136,6 +139,7 @@ class TraitMiner(BaseMiner):
                 bonus = self._translator.get_by_label(
                     'UI/InfoWindow/TraitWithNumber',
                     language,
+                    self._fallback_lang,
                     color='',
                     value=bonus_amt,
                     unit=unit,
@@ -146,6 +150,7 @@ class TraitMiner(BaseMiner):
                 bonus = self._translator.get_by_label(
                     'UI/InfoWindow/TraitWithoutNumber',
                     language,
+                    self._fallback_lang,
                     color='',
                     bonusText=bonus_text)
                 text = striptags(bonus)
