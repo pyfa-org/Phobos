@@ -66,8 +66,8 @@ if __name__ == '__main__':
                         choices=('stillness',))
     parser.add_argument('-j', '--json', required=True,
                         help='Output directory for the JSON files')
-    parser.add_argument('-t', '--translate', default='multi',
-                        help='Attempt to translate strings into specified language. Default is "multi"',
+    parser.add_argument('-t', '--translate', default=None,
+                        help='Attempt to translate strings into specified language. Default is no translation',
                         choices=('de', 'en-us', 'es', 'fr', 'it', 'ja', 'ru', 'zh', 'multi'))
     parser.add_argument('-l', '--list', default='',
                         help='Comma-separated list of container names to extract. If not specified, extracts everything')
